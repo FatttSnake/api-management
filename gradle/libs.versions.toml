@@ -1,0 +1,81 @@
+[versions]
+kotlin = "2.3.21"
+spring-boot = "4.1.1"
+dokka = "2.2.0"
+
+bcprov-jdk18on = "1.85.2"
+jwt = "4.6.0"
+hikaricp = "7.1.0"
+dynamic-datasource = "4.5.0"
+mybatis-plus = "3.5.17"
+flyway = "13.3.0"
+avatar-generator = "1.1.2"
+oshi = "7.6.0"
+commons-codec = "1.22.1"
+zxing = "3.5.4"
+aircompressor = "3.7"
+aws-sdk = "2.54.1"
+retrofit = "3.0.0"
+knife4j = "4.5.0"
+swagger-annotations = "2.2.22"
+junit-platform = "1.10.0"
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+
+[libraries]
+# Kotlin
+kotlin-reflect = { group = "org.jetbrains.kotlin", name = "kotlin-reflect", version.ref = "kotlin" }
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core" }
+# Spring Boot
+spring-boot-starter-web = { group = "org.springframework.boot", name = "spring-boot-starter-web" }
+spring-boot-starter-validation = { group = "org.springframework.boot", name = "spring-boot-starter-validation" }
+spring-boot-starter-aspectj = { group = "org.springframework.boot", name = "spring-boot-starter-aspectj" }
+spring-boot-starter-security = { group = "org.springframework.boot", name = "spring-boot-starter-security" }
+spring-boot-starter-mail = { group = "org.springframework.boot", name = "spring-boot-starter-mail" }
+spring-boot-starter-thymeleaf = { group = "org.springframework.boot", name = "spring-boot-starter-thymeleaf" }
+spring-boot-starter-data-redis = { group = "org.springframework.boot", name = "spring-boot-starter-data-redis" }
+# Jackson 3
+jackson-module-kotlin = { group = "tools.jackson.module", name = "jackson-module-kotlin" }
+jackson-dataformat-yaml = { group = "tools.jackson.dataformat", name = "jackson-dataformat-yaml" }
+# Bouncy Castle Provider
+bcprov-jdk18on = { group = "org.bouncycastle", name = "bcprov-jdk18on", version.ref = "bcprov-jdk18on" }
+# JWT
+java-jwt = { group = "com.auth0", name = "java-jwt", version.ref = "jwt" }
+# Database
+mysql-connector-j = { group = "com.mysql", name = "mysql-connector-j" }
+sqlite-jdbc = { group = "org.xerial", name = "sqlite-jdbc" }
+hikaricp = { group = "com.zaxxer", name = "HikariCP", version.ref = "hikaricp" }
+dynamic-datasource = { group = "com.baomidou", name = "dynamic-datasource-spring-boot4-starter", version.ref = "dynamic-datasource" }
+mybatis-plus-bom = { group = "com.baomidou", name = "mybatis-plus-bom", version.ref = "mybatis-plus" }
+mybatis-plus = { group = "com.baomidou", name = "mybatis-plus-spring-boot4-starter" }
+mybatis-plus-jsqlparser = { group = "com.baomidou", name = "mybatis-plus-jsqlparser" }
+flyway-mysql = { group = "org.flywaydb", name = "flyway-mysql", version.ref = "flyway" }
+# Avatar Generator
+avatar-generator = { group = "top.fatweb", name = "avatar-generator", version.ref = "avatar-generator" }
+# OSHI
+oshi-core-ffm = { group = "com.github.oshi", name = "oshi-core-ffm", version.ref = "oshi" }
+# Apache Commons Codec
+commons-codec = { group = "commons-codec", name = "commons-codec", version.ref = "commons-codec"}
+# ZXing
+zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
+# Aircompressor
+aircompressor-v3 = { group = "io.airlift", name = "aircompressor-v3", version.ref = "aircompressor" }
+# S3
+aws-sdk-bom = { group = "software.amazon.awssdk", name = "bom", version.ref = "aws-sdk" }
+aws-sdk-s3 = { group = "software.amazon.awssdk", name = "s3" }
+# HTTP Client
+retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
+# Knife4j
+knife4j-starter = { group = "com.github.xiaoymin", name = "knife4j-openapi3-jakarta-spring-boot-starter", version.ref = "knife4j" }
+# Swagger annotations
+swagger-annotations-jakarta = { group = "io.swagger.core.v3", name = "swagger-annotations-jakarta", version.ref = "swagger-annotations" }
+# Test
+junit-platform-launcher = { group = "org.junit.platform", name = "junit-platform-launcher", version.ref = "junit-platform" }
+kotlin-test-junit5 = { group = "org.jetbrains.kotlin", name = "kotlin-test-junit5", version.ref = "kotlin" }
+spring-boot-starter-test = { group = "org.springframework.boot", name = "spring-boot-starter-test" }
+spring-boot-starter-security-test = { group = "org.springframework.boot", name = "spring-boot-starter-security-test" }
+mybatis-plus-test = { group = "com.baomidou", name = "mybatis-plus-spring-boot3-starter-test" }

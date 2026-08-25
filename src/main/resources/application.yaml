@@ -1,0 +1,41 @@
+spring:
+  profiles:
+    active: config
+  datasource:
+    dynamic:
+      primary: master
+      strict: false
+      datasource:
+        master:
+          type: com.zaxxer.hikari.HikariDataSource
+          driver-class-name: com.mysql.cj.jdbc.Driver
+        sqlite:
+          type: com.zaxxer.hikari.HikariDataSource
+          driver-class-name: org.sqlite.JDBC
+          url: jdbc:sqlite:data/db/sqlite.db
+  jackson:
+    date-format: yyyy-MM-dd'T'HH:mm:ss.SSS'Z'
+    time-zone: GMT
+  flyway:
+    enabled: false
+    baseline-on-migrate: true
+    baseline-version: 0
+
+mybatis-plus:
+  global-config:
+    db-config:
+      logic-delete-field: deleted
+      logic-not-delete-value: 0
+      logic-delete-value: id
+      id-type: assign_id
+
+logging:
+  pattern:
+    level: "%5p [%X{traceId:-}]"
+  level:
+    root: info
+  file:
+    name: data/log/api-management.log
+
+knife4j:
+  enable: true

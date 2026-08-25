@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="top.fatweb.apimanagement.mapper.permission.OperationMapper">
+    <resultMap id="operationMap" type="top.fatweb.apimanagement.entity.permission.Operation">
+        <id property="id" column="operation_id"/>
+        <result property="name" column="operation_name"/>
+        <result property="code" column="operation_code"/>
+        <result property="scopeId" column="operation_scope_id"/>
+    </resultMap>
+</mapper>

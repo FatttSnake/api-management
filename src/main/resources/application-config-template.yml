@@ -1,0 +1,78 @@
+app:
+#  admin:
+#    username: admin # Username of administrator
+#    password: admin # Default password of administrator
+#    nickname: Administrator # Nickname of administrator
+#    email: admin@mail.com # Email of administrator
+  security:
+#    header-key: "Authorization" # Key of head to get token
+#    token-prefix: "Bearer " # Token prefix
+    token-secret: $uuid$ # Secret to generate token
+#    token-issuer: ApiManagement # Issuer of token
+#    access-token-ttl: 2 # Life of access token
+#    access-token-ttl-unit: hours # Life util of access token [nanoseconds, microseconds, milliseconds, seconds, minutes, hours, days]
+#    refresh-token-ttl: 128 # Life of refresh token
+#    refresh-token-ttl-unit: days # Life util of refresh token [nanoseconds, microseconds, milliseconds, seconds, minutes, hours, days]
+  storage:
+    mode: local # File storage mode [local, s3]
+#    local:
+#      root: data/objects # File storage root path
+#    s3:
+#      endpoint: http://localhost:9000 # S3 endpoint
+#      accessKey: xxxxxx # S3 access key
+#      secretKey: xxxxxx # S3 secret key
+#      region: auto # S3 region
+#      pathStyle: path # S3 path style [path, virtualHosted]
+#      bucket: xxx # S3 bucket
+#      prefix: # S3 storage path prefix
+
+#server:
+#  port: 8080 # Server port (Will be replaced by environment variables in Docker)
+#  compression:
+#    enabled: false
+
+spring:
+  datasource:
+    dynamic:
+      datasource:
+        master:
+          url: jdbc:mysql://localhost # MySQL url
+          username: root # MySQL username
+          password: root # MySQL password
+#    hikari:
+#      pool-name: HikariCP # Connection pool name
+#      minimum-idle: 5 # Minimum number of connection in pool
+#      idle-timeout: 600000 # The lifetime of connection when idle
+#      maximum-pool-size: 10 # Maximum number of connection in pool
+#      auto-commit: true # Auto commit
+#      max-lifetime: 1800000 # Maximum lifetime of connection
+#      connection-timeout: 30000 # Connection timeout
+#      connection-test-query: select 1 # Test query then connect
+
+
+#  data:
+#    redis:
+#      database: 0 # Redis database (default: 0)
+#      host: localhost # Redis host (default: localhost)
+#      port: 6379 # Redis port (default: 6379)
+#      password:  # Password of redis
+#      connect-timeout: 3000 # Redis connect timeout
+#      lettuce:
+#        pool:
+#          min-idle: 0
+#          max-idle: 8
+#          max-active: 8
+#          max-wait: -1ms
+
+logging:
+  level:
+    root: info # Logging level
+  file:
+    name: data/log/api-management.log # Logging path and name
+#  logback:
+#    rollingpolicy:
+#      max-file-size: 10MB # Maximum log file size
+#      max-history: 7 # Maximum number of archive log files to keep
+
+knife4j:
+  production: true # Production environment mode will block doc

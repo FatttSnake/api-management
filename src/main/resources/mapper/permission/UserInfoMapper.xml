@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="top.fatweb.apimanagement.mapper.permission.UserInfoMapper">
+    <resultMap id="userInfoMap" type="top.fatweb.apimanagement.entity.permission.UserInfo">
+        <id property="id" column="user_info_id"/>
+        <result property="userId" column="user_info_user_id"/>
+        <result property="nickname" column="user_info_nickname"/>
+        <result property="avatar" column="user_info_avatar"/>
+        <result property="email" column="user_info_email"/>
+        <result property="createTime" column="user_info_create_time"/>
+        <result property="updateTime" column="user_info_update_time"/>
+        <result property="deleted" column="user_info_deleted"/>
+        <result property="version" column="user_info_version"/>
+    </resultMap>
+</mapper>

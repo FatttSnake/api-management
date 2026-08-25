@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="top.fatweb.apimanagement.mapper.permission.MenuMapper">
+    <resultMap id="menuMap" type="top.fatweb.apimanagement.entity.permission.Menu">
+        <id property="id" column="menu_id"/>
+        <result property="name" column="menu_name"/>
+        <result property="url" column="menu_url"/>
+        <result property="parentId" column="menu_parent_id"/>
+        <result property="moduleId" column="menu_module_id"/>
+    </resultMap>
+</mapper>
