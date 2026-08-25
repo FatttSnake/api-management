@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="top.fatweb.apimanagement.mapper.permission.RoleMapper">
+    <select id="selectPage" resultType="long">
+        select id
+        from t_s_role
+        <where>
+            deleted = 0
+            <if test="searchName != null and searchName != ''">
+                <choose>
+                    <when test="searchRegex == true">
+                        and t_s_role.name regexp #{searchName}
+                    </when>
+                    <otherwise>
+                        and t_s_role.name like concat('%' ,#{searchName}, '%')
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+    </select>
+
+    <select id="selectListWithPowerByIds" resultMap="roleWithPowerMap">
+        select distinct t_s_role.id as role_id,
+        t_s_role.name as role_name,
+        t_s_role.enable as role_enable,
+        t_s_role.create_time as role_create_time,
+        t_s_role.update_time as role_update_time,
+        t_s_role.deleted as role_deleted,
+        t_s_role.version as role_version,
+        tsm.id as module_id,
+        tsm.name as module_name,
+        tsmn.id as menu_id,
+        tsmn.name as menu_name,
+        tsmn.url as menu_url,
+        tsmn.parent_id as menu_parent_id,
+        tsmn.module_id as menu_module_id,
+        tss.id as scope_id,
+        tss.name as scope_name,
+        tss.menu_id as scope_menu_id,
+        tso.id as operation_id,
+        tso.name as operation_name,
+        tso.code as operation_code,
+        tso.scope_id as operation_scope_id
+        from (select * from t_s_role where deleted = 0) as t_s_role
+        left join (select * from t_r_power_role where deleted = 0) as trpr on t_s_role.id = trpr.role_id
+        left join t_s_power tsp on tsp.id = trpr.power_id
+        left join t_s_module tsm on tsp.id = tsm.id
+        left join t_s_menu tsmn on tsp.id = tsmn.id
+        left join t_s_scope tss on tsp.id = tss.id
+        left join t_s_operation tso on tsp.id = tso.id
+        <where>
+            <foreach collection="roleIds" item="item" index="index" open="and t_s_role.id in (" separator="," close=")"
+                     nullable="true">
+                #{item}
+            </foreach>
+        </where>
+        <foreach collection="roleIds" item="item" index="index" open="order by field(t_s_role.id," separator=","
+                 close=")" nullable="true">
+            #{item}
+        </foreach>
+    </select>
+
+    <select id="selectOneById" resultMap="roleWithPowerMap">
+        select distinct t_s_role.id          as role_id,
+                        t_s_role.name        as role_name,
+                        t_s_role.enable      as role_enable,
+                        t_s_role.create_time as role_create_time,
+                        t_s_role.update_time as role_update_time,
+                        t_s_role.deleted     as role_deleted,
+                        t_s_role.version     as role_version,
+                        tsm.id               as module_id,
+                        tsm.name             as module_name,
+                        tsmn.id              as menu_id,
+                        tsmn.name            as menu_name,
+                        tsmn.url             as menu_url,
+                        tsmn.parent_id       as menu_parent_id,
+                        tsmn.module_id       as menu_module_id,
+                        tss.id               as scope_id,
+                        tss.name             as scope_name,
+                        tss.menu_id          as scope_menu_id,
+                        tso.id               as operation_id,
+                        tso.name             as operation_name,
+                        tso.code             as operation_code,
+                        tso.scope_id          as operation_scope_id
+        from (select * from t_s_role where deleted = 0) as t_s_role
+                 left join (select * from t_r_power_role where deleted = 0) as trpr on t_s_role.id = trpr.role_id
+                 left join t_s_power tsp on tsp.id = trpr.power_id
+                 left join t_s_module tsm on tsp.id = tsm.id
+                 left join t_s_menu tsmn on tsp.id = tsmn.id
+                 left join t_s_scope tss on tsp.id = tss.id
+                 left join t_s_operation tso on tsp.id = tso.id
+        where t_s_role.id = #{id}
+    </select>
+
+    <resultMap id="roleMap" type="top.fatweb.apimanagement.entity.permission.Role">
+        <id property="id" column="role_id"/>
+        <result property="name" column="role_name"/>
+        <result property="enable" column="role_enable"/>
+        <result property="createTime" column="role_create_time"/>
+        <result property="updateTime" column="role_update_time"/>
+        <result property="deleted" column="role_deleted"/>
+        <result property="version" column="role_version"/>
+    </resultMap>
+
+    <resultMap id="roleWithPowerMap" type="top.fatweb.apimanagement.entity.permission.Role" extends="roleMap">
+        <collection property="modules" resultMap="top.fatweb.apimanagement.mapper.permission.ModuleMapper.moduleMap"/>
+        <collection property="menus" resultMap="top.fatweb.apimanagement.mapper.permission.MenuMapper.menuMap"/>
+        <collection property="scopes" resultMap="top.fatweb.apimanagement.mapper.permission.ScopeMapper.scopeMap"/>
+        <collection property="operations"
+                    resultMap="top.fatweb.apimanagement.mapper.permission.OperationMapper.operationMap"/>
+    </resultMap>
+</mapper>
