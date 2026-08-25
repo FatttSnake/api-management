@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="top.fatweb.apimanagement.mapper.permission.GroupMapper">
+    <select id="selectPage" resultType="long">
+        select id
+        from t_s_group
+        <where>
+            deleted = 0
+            <if test="searchName != null and searchName != ''">
+                <choose>
+                    <when test="searchRegex == true">
+                        and t_s_group.name regexp #{searchName}
+                    </when>
+                    <otherwise>
+                        and t_s_group.name like concat('%' ,#{searchName}, '%')
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+    </select>
+
+    <select id="selectListWithRoleByIds" resultMap="groupWithRoleMap">
+        select t_s_group.id as group_id,
+        t_s_group.name as group_name,
+        t_s_group.enable as group_enable,
+        t_s_group.create_time as group_create_time,
+        t_s_group.update_time as group_update_time,
+        t_s_group.deleted as group_deleted,
+        t_s_group.version as group_version,
+        tsr.id as role_id,
+        tsr.name as role_name,
+        tsr.enable as role_enable,
+        tsr.create_time as role_create_time,
+        tsr.update_time as role_update_time,
+        tsr.deleted as role_deleted,
+        tsr.version as role_version
+        from (select * from t_s_group where deleted = 0) as t_s_group
+        left join (select * from t_r_role_group where deleted = 0) as trrg on t_s_group.id = trrg.group_id
+        left join (select * from t_s_role where deleted = 0) as tsr on tsr.id = trrg.role_id
+        <where>
+            <foreach collection="groupIds" item="item" index="index" open="and t_s_group.id in (" separator=","
+                     close=")"
+                     nullable="true">
+                #{item}
+            </foreach>
+        </where>
+        <foreach collection="groupIds" item="item" index="index" open="order by field(t_s_group.id," separator=","
+                 close=")" nullable="true">
+            #{item}
+        </foreach>
+    </select>
+
+    <select id="selectOneById" resultMap="groupWithRoleMap">
+        select t_s_group.id          as group_id,
+               t_s_group.name        as group_name,
+               t_s_group.enable      as group_enable,
+               t_s_group.create_time as group_create_time,
+               t_s_group.update_time as group_update_time,
+               t_s_group.deleted     as group_deleted,
+               t_s_group.version     as group_version,
+               tsr.id                as role_id,
+               tsr.name              as role_name,
+               tsr.enable            as role_enable,
+               tsr.create_time       as role_create_time,
+               tsr.update_time       as role_update_time,
+               tsr.deleted           as role_deleted,
+               tsr.version           as role_version
+        from (select * from t_s_group where deleted = 0) as t_s_group
+                 left join (select * from t_r_role_group where deleted = 0) as trrg on t_s_group.id = trrg.group_id
+                 left join (select * from t_s_role where deleted = 0) as tsr on tsr.id = trrg.role_id
+        where t_s_group.id = #{id}
+    </select>
+
+    <resultMap id="groupMap" type="top.fatweb.apimanagement.entity.permission.Group">
+        <id property="id" column="group_id"/>
+        <result property="name" column="group_name"/>
+        <result property="enable" column="group_enable"/>
+        <result property="createTime" column="group_create_time"/>
+        <result property="updateTime" column="group_update_time"/>
+        <result property="deleted" column="group_deleted"/>
+        <result property="version" column="group_version"/>
+    </resultMap>
+
+    <resultMap id="groupWithRoleMap" type="top.fatweb.apimanagement.entity.permission.Group" extends="groupMap">
+        <collection property="roles" resultMap="top.fatweb.apimanagement.mapper.permission.RoleMapper.roleMap"/>
+    </resultMap>
+</mapper>

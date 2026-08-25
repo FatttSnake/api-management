@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+          name="viewport">
+    <meta content="ie=edge" http-equiv="X-UA-Compatible">
+    <title>验证您的账号</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            color: #4D4D4D;
+        }
+
+        a {
+            color: #4E47BB;
+        }
+
+        body {
+            display: flex;
+            background-color: #F1F2F7;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .view {
+            display: flex;
+            width: 800px;
+            max-width: 100vw;
+            align-content: center;
+        }
+
+        .card {
+            margin: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            flex: 1;
+            background-color: white;
+        }
+
+        .title {
+            margin-bottom: 10px;
+            text-align: center;
+            font-weight: bolder;
+            font-size: 1.6em;
+            color: #4E47BB;
+        }
+
+        .verify-button {
+            display: flex;
+            margin: 20px;
+            padding-bottom: 60px;
+            justify-content: center;
+
+        }
+
+        .verify-button a {
+            padding: 20px 30px;
+            color: white;
+            text-decoration: none;
+            font-size: 1.2em;
+            background-color: #4E47BB;
+            border-radius: 10px;
+        }
+
+        .not-reply {
+            margin-top: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<div class="view">
+    <div class="card">
+        <div class="title">账&nbsp;号&nbsp;激&nbsp;活</div>
+        <div><strong th:text="${username}">用户</strong>，您好：</div>
+        <div style="text-indent: 2em">感谢注册 <a target="_blank" th:href="@{${homeUrl}}"
+                                                  th:text="|${systemName}(${homeUrl})|">应用名称(URL)</a>，在继续使用之前，我们需要确定您的电子邮箱地址的有效性，请在
+            <u><i>两小时内</i></u> 点击下面的按钮帮助我们验证：
+        </div>
+        <div class="verify-button"><a target="_blank" th:href="@{${verifyUrl}}">验证邮箱</a></div>
+        <div>如果以上按钮无法点击，请复制此链接到浏览器地址栏中访问：<a target="_blank" th:href="@{${verifyUrl}}"
+                                                                      th:text="${verifyUrl}">URL</a>
+        </div>
+        <div class="not-reply">此邮件由系统自动发送，请勿回复！</div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="top.fatweb.apimanagement.mapper.system.StorageBlobMapper">
+    <insert id="increaseReferenceCount">
+        insert into t_s_storage_blob (file_hash, reference_count)
+        values (#{fileHash}, 1)
+        on duplicate key update reference_count = reference_count + 1,
+                                update_time     = utc_timestamp()
+    </insert>
+</mapper>

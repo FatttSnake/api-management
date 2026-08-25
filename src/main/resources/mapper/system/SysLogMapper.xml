@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="top.fatweb.apimanagement.mapper.system.SysLogMapper">
+    <select id="selectPage" resultMap="sysLogMap">
+        select t_l_sys_log.id as sys_log_id,
+        t_l_sys_log.log_type as sys_log_log_type,
+        t_l_sys_log.trace_id as sys_log_trace_id,
+        t_l_sys_log.operate_user_id as sys_log_operate_user_id,
+        t_l_sys_log.operate_time as sys_log_operate_time,
+        t_l_sys_log.request_uri as sys_log_request_uri,
+        t_l_sys_log.request_method as sys_log_request_method,
+        t_l_sys_log.request_params as sys_log_request_params,
+        t_l_sys_log.request_ip as sys_log_request_ip,
+        t_l_sys_log.request_server_address as sys_log_request_server_address,
+        t_l_sys_log.exception as sys_log_exception,
+        t_l_sys_log.exception_info as sys_log_exception_info,
+        t_l_sys_log.start_time as sys_log_start_time,
+        t_l_sys_log.end_time as sys_log_end_time,
+        t_l_sys_log.execute_time as sys_log_execute_time,
+        t_l_sys_log.user_agent as sys_log_user_agent
+        from t_l_sys_log
+        <where>
+            <foreach collection="logType" item="item" index="index" open="and t_l_sys_log.log_type in (" separator=","
+                     close=")" nullable="true">
+                #{item}
+            </foreach>
+            <if test="traceId != null and traceId != ''">
+                and t_l_sys_log.trace_id like #{traceId}
+            </if>
+            <foreach collection="requestMethod" item="item" index="index" open="and t_l_sys_log.request_method in ("
+                     separator="," close=")" nullable="true">
+                #{item}
+            </foreach>
+            <if test="searchRequestUrl != null and searchRequestUrl != ''">
+                and ((t_l_sys_log.request_server_address || t_l_sys_log.request_uri ||
+                (case when length(t_l_sys_log.request_params) != 0 then '?' || t_l_sys_log.request_params else '' end))
+                like #{searchRequestUrl})
+            </if>
+            <if test="searchStartTime != null and searchEndTime != null">
+                and t_l_sys_log.start_time between #{searchStartTime} and #{searchEndTime}
+            </if>
+        </where>
+    </select>
+
+    <resultMap id="sysLogMap" type="top.fatweb.apimanagement.entity.system.SysLog">
+        <id property="id" column="sys_log_id"/>
+        <result property="logType" column="sys_log_log_type"/>
+        <result property="traceId" column="sys_log_trace_id"/>
+        <result property="operateUserId" column="sys_log_operate_user_id"/>
+        <result property="operateTime" column="sys_log_operate_time"/>
+        <result property="requestUri" column="sys_log_request_uri"/>
+        <result property="requestMethod" column="sys_log_request_method"/>
+        <result property="requestParams" column="sys_log_request_params"/>
+        <result property="requestIp" column="sys_log_request_ip"/>
+        <result property="requestServerAddress" column="sys_log_request_server_address"/>
+        <result property="exception" column="sys_log_exception"/>
+        <result property="exceptionInfo" column="sys_log_exception_info"/>
+        <result property="startTime" column="sys_log_start_time"/>
+        <result property="endTime" column="sys_log_end_time"/>
+        <result property="executeTime" column="sys_log_execute_time"/>
+        <result property="userAgent" column="sys_log_user_agent"/>
+    </resultMap>
+</mapper>
