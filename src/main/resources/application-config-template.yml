@@ -16,6 +16,7 @@ app:
 #    refresh-token-cookie-secure: true # Whether the cookie can only be transmitted over HTTPS
 #    refresh-token-cookie-same-site: Lax # Controls when the cookie is sent with cross-site requests [Strict, Lax, None]
 #    refresh-token-cookie-path: /token # The URL path for which the cookie is valid
+#    secret-key-prefix: "Basic " # Secret key prefix
   storage:
     mode: local # File storage mode [local, s3]
 #    local:

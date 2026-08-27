@@ -69,3 +69,24 @@ fun md5(content: String): String {
     }
     return hex.toString()
 }
+
+/**
+ * Get SHA-256 of a string
+ *
+ * @param content Content
+ * @return SHA-256 hex of content
+ * @author FatttSnake, fatttsnake@gmail.com
+ * @since 1.0.0
+ */
+fun sha256(content: String): String {
+    val hash = MessageDigest.getInstance("SHA-256").digest(content.toByteArray())
+    val hex = StringBuilder(hash.size * 2)
+    for (b in hash) {
+        var str = Integer.toHexString(b.toInt())
+        if (b < 0x10) {
+            str = "0$str"
+        }
+        hex.append(str.substring(str.length - 2))
+    }
+    return hex.toString()
+}

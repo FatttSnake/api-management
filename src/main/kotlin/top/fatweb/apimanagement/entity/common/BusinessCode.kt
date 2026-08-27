@@ -32,10 +32,18 @@ enum class BusinessCode(val code: Int) {
     DATABASE(300),
 
     /**
+     * API platform
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    API_PLATFORM(400),
+
+    /**
      * Avatar API
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    API_AVATAR(401)
+    API_AVATAR(501)
 }

@@ -18,7 +18,11 @@ import java.time.LocalDateTime
 @TableName("t_l_statistics_log")
 class StatisticsLog : Serializable {
     enum class KeyItem(@field:EnumValue @field:JsonValue val code: String) {
-        ONLINE_USERS_COUNT("ONLINE_USER_COUNT")
+        ONLINE_USERS_COUNT("ONLINE_USER_COUNT"),
+        API_REQUEST_COUNT("API_REQUEST_COUNT"),
+        API_ERROR_COUNT("API_ERROR_COUNT"),
+        API_LATENCY_MS("API_LATENCY_MS"),
+        API_ACTIVE_KEYS("API_ACTIVE_KEYS")
     }
 
     /**
