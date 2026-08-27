@@ -9,9 +9,8 @@ import top.fatweb.apimanagement.entity.system.ApiUsage
 import top.fatweb.apimanagement.mapper.system.ApiUsageMapper
 import top.fatweb.apimanagement.properties.ServerProperties
 import top.fatweb.apimanagement.service.system.IApiMonitorService
-import top.fatweb.apimanagement.service.system.IApiService
+import top.fatweb.apimanagement.service.system.IApiPluginService
 import top.fatweb.apimanagement.vo.system.ApiMonitorDashboardVo
-import top.fatweb.apimanagement.vo.system.ApiMonitorItemVo
 import top.fatweb.apimanagement.vo.system.ApiTopVo
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -24,7 +23,7 @@ import java.time.ZoneOffset
  * @since 1.0.0
  * @see ServerProperties
  * @see RedisProvider
- * @see IApiService
+ * @see IApiPluginService
  * @see IApiMonitorService
  */
 @Service
@@ -33,14 +32,14 @@ class ApiMonitorServiceImpl(
     private val serverProperties: ServerProperties,
     private val redisProvider: RedisProvider,
     private val apiUsageMapper: ApiUsageMapper,
-    private val apiService: IApiService
+    private val apiPluginService: IApiPluginService
 ) : IApiMonitorService {
     override fun dashboard(): ApiMonitorDashboardVo {
         val prefix = "${serverProperties.security.tokenIssuer}_apimetrics"
         val countKeys = redisProvider.keys("${prefix}_count:*")
-        val live = countKeys.mapNotNull { key ->
+        val live = countKeys.map { key ->
             val apiCode = key.removePrefix("${prefix}_count:")
-            ApiMonitorItemVo(
+            ApiMonitorDashboardVo.ApiMonitorItemVo(
                 apiCode = apiCode,
                 count = redisProvider.getObject<String>(key)?.toLongOrNull() ?: 0L,
                 error = redisProvider.getObject<String>("${prefix}_error:$apiCode")?.toLongOrNull() ?: 0L,
@@ -79,7 +78,7 @@ class ApiMonitorServiceImpl(
             val apiCode = row["api_code"] as? String ?: ""
             ApiTopVo(
                 apiCode = apiCode,
-                apiName = apiService.getByCode(apiCode)?.name,
+                apiName = apiPluginService.getByCode(apiCode)?.name,
                 count = (row["count"] as? Number)?.toLong() ?: 0L,
                 cost = (row["cost"] as? Number)?.let { BigDecimal(it.toString()) } ?: BigDecimal.ZERO
             )

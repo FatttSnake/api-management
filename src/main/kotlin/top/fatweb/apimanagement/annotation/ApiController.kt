@@ -20,13 +20,41 @@ import org.springframework.web.bind.annotation.RestController
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
 annotation class ApiController(
+    /**
+     * Unique plugin ID (lowercase kebab-case), e.g. "avatar".
+     * Namespaces every endpoint of this plugin under /api/{plugin}/v{version}/...
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    val plugin: String,
+
+    /**
+     * API version
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
     val version: Int = 1,
 
     @get:AliasFor(annotation = RestController::class, attribute = "value") val value: String = "",
 
+    /**
+     * Interface sub-path within the plugin namespace, default [""]
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
     @get:AliasFor(annotation = RequestMapping::class, attribute = "path") val path: Array<String> = [""],
 
-    @get:AliasFor(annotation = Tag::class, attribute = "name") val name: String,
+    /**
+     * Plugin display name; used as the Swagger tag so all versions of a plugin
+     * are grouped together, and as the plugin's display name in the permission tree.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @get:AliasFor(annotation = Tag::class, attribute = "name") val pluginName: String,
 
     @get:AliasFor(annotation = Tag::class, attribute = "description") val description: String
 )

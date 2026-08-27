@@ -46,11 +46,11 @@ class ApiUsageServiceImpl : ServiceImpl<ApiUsageMapper, ApiUsage>(), IApiUsageSe
             apiUsageGetParam?.endTime?.let { le(ApiUsage::createTime, it) }
         }
 
-        return this.page(page, wrapper).toVoPage()
+        return page(page, wrapper).toVoPage()
     }
 
     override fun saveUsage(apiUsage: ApiUsage): Long {
-        saveOrThrowException { this.save(apiUsage) }
+        saveOrThrowException { save(apiUsage) }
         return apiUsage.id ?: throw ApiUsageIdNotGeneratedException()
     }
 }

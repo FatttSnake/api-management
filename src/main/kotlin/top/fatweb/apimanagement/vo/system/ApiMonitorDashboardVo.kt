@@ -56,49 +56,49 @@ data class ApiMonitorDashboardVo(
      */
     @field:Schema(description = "Top API")
     val topApis: List<ApiTopVo>?
-)
-
-/**
- * API monitor item value object
- *
- * @author FatttSnake, fatttsnake@gmail.com
- * @since 1.0.0
- */
-@Schema(description = "API 监控单项返回参数")
-data class ApiMonitorItemVo(
+) {
     /**
-     * API scoping code
+     * API monitor item value object
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "API 编码")
-    val apiCode: String?,
+    @Schema(description = "API 监控单项返回参数")
+    data class ApiMonitorItemVo(
+        /**
+         * API scoping code
+         *
+         * @author FatttSnake, fatttsnake@gmail.com
+         * @since 1.0.0
+         */
+        @field:Schema(description = "API 编码")
+        val apiCode: String?,
 
-    /**
-     * Request count
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    @field:Schema(description = "请求次数")
-    val count: Long?,
+        /**
+         * Request count
+         *
+         * @author FatttSnake, fatttsnake@gmail.com
+         * @since 1.0.0
+         */
+        @field:Schema(description = "请求次数")
+        val count: Long?,
 
-    /**
-     * Error count
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    @field:Schema(description = "错误次数")
-    val error: Long?,
+        /**
+         * Error count
+         *
+         * @author FatttSnake, fatttsnake@gmail.com
+         * @since 1.0.0
+         */
+        @field:Schema(description = "错误次数")
+        val error: Long?,
 
-    /**
-     * Total latency in ms
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    @field:Schema(description = "总耗时(ms)")
-    val latencyMs: Long?
-)
+        /**
+         * Total latency in ms
+         *
+         * @author FatttSnake, fatttsnake@gmail.com
+         * @since 1.0.0
+         */
+        @field:Schema(description = "总耗时(ms)")
+        val latencyMs: Long?
+    )
+}

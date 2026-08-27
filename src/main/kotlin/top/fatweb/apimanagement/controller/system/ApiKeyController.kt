@@ -75,7 +75,7 @@ class ApiKeyController(
     @PreAuthorize("hasAnyAuthority('system:api:key:add')")
     fun add(@ProcessParam @Valid @RequestBody apiKeyAddParam: ApiKeyAddParam): ResponseResult<ApiKeyWithSecretVo> =
         ResponseResult.databaseSuccess(
-            ResponseCode.API_KEY_CREATE_SUCCESS, data = apiKeyService.add(true, apiKeyAddParam)
+            ResponseCode.API_PLATFORM_KEY_CREATE_SUCCESS, data = apiKeyService.add(true, apiKeyAddParam)
         )
 
     /**
@@ -131,7 +131,7 @@ class ApiKeyController(
     @PreAuthorize("hasAnyAuthority('system:api:key:secret')")
     fun regenerate(@PathVariable id: Long): ResponseResult<ApiKeyWithSecretVo> =
         ResponseResult.databaseSuccess(
-            ResponseCode.API_KEY_REGENERATE_SUCCESS, data = apiKeyService.regenerate(true, id)
+            ResponseCode.API_PLATFORM_KEY_REGENERATE_SUCCESS, data = apiKeyService.regenerate(true, id)
         )
 
     /**

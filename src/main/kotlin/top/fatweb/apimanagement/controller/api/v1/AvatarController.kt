@@ -19,7 +19,13 @@ import top.fatweb.apimanagement.vo.api.v1.avatar.AvatarBase64Vo
  * @since 1.0.0
  * @see IAvatarService
  */
-@ApiController(value = "avatarControllerV1", path = ["/avatar"], name = "随机头像 V1", description = "随机头像相关接口")
+@ApiController(
+    plugin = "avatar",
+    pluginName = "随机头像",
+    version = 1,
+    value = "avatarControllerV1",
+    description = "随机头像相关接口"
+)
 class AvatarController(
     private val avatarService: IAvatarService
 ) {
@@ -33,7 +39,7 @@ class AvatarController(
      * @see AvatarBaseParam
      * @see ByteArray
      */
-    @Operation(summary = "获取随机头像")
+    @Operation(summary = "获取随机头像", operationId = "getRandom")
     @GetMapping(produces = [MediaType.IMAGE_PNG_VALUE])
     fun getRandom(@Valid avatarBaseParam: AvatarBaseParam?): ByteArray =
         avatarService.random(avatarBaseParam)
@@ -49,7 +55,7 @@ class AvatarController(
      * @see ResponseResult
      * @see AvatarBase64Vo
      */
-    @Operation(summary = "获取随机头像 Base64")
+    @Operation(summary = "获取随机头像 Base64", operationId = "getRandomBase64")
     @GetMapping("/base64")
     fun getRandomBase64(
         @Valid avatarBaseParam: AvatarBaseParam?
@@ -68,7 +74,7 @@ class AvatarController(
      * @see AvatarBaseParam
      * @see ByteArray
      */
-    @Operation(summary = "三角形头像")
+    @Operation(summary = "三角形头像", operationId = "triangle")
     @GetMapping("/triangle", produces = [MediaType.IMAGE_PNG_VALUE])
     fun triangle(@Valid avatarBaseParam: AvatarBaseParam?): ByteArray =
         avatarService.triangle(avatarBaseParam)
@@ -84,7 +90,7 @@ class AvatarController(
      * @see ResponseResult
      * @see AvatarBase64Vo
      */
-    @Operation(summary = "三角形头像 Base64")
+    @Operation(summary = "三角形头像 Base64", operationId = "triangleBase64")
     @GetMapping("/triangle/base64")
     fun triangleBase64(
         @Valid avatarBaseParam: AvatarBaseParam?
@@ -104,7 +110,7 @@ class AvatarController(
      * @see AvatarBaseParam
      * @see ByteArray
      */
-    @Operation(summary = "正方形头像")
+    @Operation(summary = "正方形头像", operationId = "square")
     @GetMapping("/square", produces = [MediaType.IMAGE_PNG_VALUE])
     fun square(@Valid avatarBaseParam: AvatarBaseParam?): ByteArray =
         avatarService.square(avatarBaseParam)
@@ -120,7 +126,7 @@ class AvatarController(
      * @see ResponseResult
      * @see AvatarBase64Vo
      */
-    @Operation(summary = "正方形头像 Base64")
+    @Operation(summary = "正方形头像 Base64", operationId = "squareBase64")
     @GetMapping("/square/base64")
     fun squareBase64(
         @Valid avatarBaseParam: AvatarBaseParam?
@@ -140,7 +146,7 @@ class AvatarController(
      * @see AvatarBaseParam
      * @see ByteArray
      */
-    @Operation(summary = "Identicon 头像")
+    @Operation(summary = "Identicon 头像", operationId = "identicon")
     @GetMapping("/identicon", produces = [MediaType.IMAGE_PNG_VALUE])
     fun identicon(@Valid avatarBaseParam: AvatarBaseParam?): ByteArray =
         avatarService.identicon(avatarBaseParam)
@@ -156,7 +162,7 @@ class AvatarController(
      * @see ResponseResult
      * @see AvatarBase64Vo
      */
-    @Operation(summary = "Identicon 头像 Base64")
+    @Operation(summary = "Identicon 头像 Base64", operationId = "identiconBase64")
     @GetMapping("/identicon/base64")
     fun identiconBase64(
         @Valid avatarBaseParam: AvatarBaseParam?
@@ -176,7 +182,7 @@ class AvatarController(
      * @see AvatarGitHubParam
      * @see ByteArray
      */
-    @Operation(summary = "GitHub 头像")
+    @Operation(summary = "GitHub 头像", operationId = "github")
     @GetMapping("/github", produces = [MediaType.IMAGE_PNG_VALUE])
     fun github(@Valid avatarGitHubParam: AvatarGitHubParam?): ByteArray =
         avatarService.github(avatarGitHubParam)
@@ -192,7 +198,7 @@ class AvatarController(
      * @see ResponseResult
      * @see AvatarBase64Vo
      */
-    @Operation(summary = "GitHub 头像 Base64")
+    @Operation(summary = "GitHub 头像 Base64", operationId = "githubBase64")
     @GetMapping("/github/base64")
     fun githubBase64(
         @Valid avatarGitHubParam: AvatarGitHubParam?

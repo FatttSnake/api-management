@@ -1,22 +1,23 @@
 package top.fatweb.apimanagement.converter.system
 
 import com.baomidou.mybatisplus.core.metadata.IPage
-import top.fatweb.apimanagement.entity.system.Api
-import top.fatweb.apimanagement.param.system.api.ApiUpdateParam
+import top.fatweb.apimanagement.entity.system.ApiInterface
+import top.fatweb.apimanagement.param.system.api.ApiInterfaceUpdateParam
 import top.fatweb.apimanagement.vo.PageVo
-import top.fatweb.apimanagement.vo.system.ApiVo
+import top.fatweb.apimanagement.vo.system.ApiInterfaceVo
 
 /**
- * Convert to ApiVo object
+ * Convert to ApiInterfaceVo object
  *
- * @return ApiVo object
+ * @return ApiInterfaceVo object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see Api
- * @see ApiVo
+ * @see ApiInterface
+ * @see ApiInterfaceVo
  */
-fun Api.toVo() = ApiVo(
+fun ApiInterface.toVo() = ApiInterfaceVo(
     id = this.id,
+    pluginId = this.pluginId,
     code = this.code,
     name = this.name,
     description = this.description,
@@ -33,33 +34,33 @@ fun Api.toVo() = ApiVo(
 )
 
 /**
- * Convert to PageVo<ApiVo> object
+ * Convert to PageVo<ApiInterfaceVo> object
  *
- * @return PageVo<ApiVo> object
+ * @return PageVo<ApiInterfaceVo> object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  * @see IPage
- * @see Api
+ * @see ApiInterface
  * @see PageVo
  */
-fun IPage<Api>.toVoPage() = PageVo(
+fun IPage<ApiInterface>.toVoPage() = PageVo(
     total = this.total,
     pages = this.pages,
     size = this.size,
     current = this.current,
-    records = this.records.map(Api::toVo)
+    records = this.records.map(ApiInterface::toVo)
 )
 
 /**
- * Convert to Api object
+ * Convert to ApiInterface object
  *
- * @return Api object
+ * @return ApiInterface object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ApiUpdateParam
- * @see Api
+ * @see ApiInterfaceUpdateParam
+ * @see ApiInterface
  */
-fun ApiUpdateParam.toEntity() = Api().apply {
+fun ApiInterfaceUpdateParam.toEntity() = ApiInterface().apply {
     id = this@toEntity.id
     price = this@toEntity.price
     billingMode = this@toEntity.billingMode

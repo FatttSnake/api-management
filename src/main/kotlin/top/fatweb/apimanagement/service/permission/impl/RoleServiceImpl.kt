@@ -64,14 +64,14 @@ class RoleServiceImpl(
     override fun getOne(id: Long): RoleWithPowerVo =
         queryOrThrowException { baseMapper.selectOneById(id) }.let(Role::toVoWithPower)
 
-    override fun getList(): List<RoleVo> = this.list().map(Role::toVo)
+    override fun getList(): List<RoleVo> = list().map(Role::toVo)
 
     @Transactional
     override fun add(roleAddParam: RoleAddParam): RoleVo {
         val fullPowerIds = roleAddParam.powerIds?.let(::getFullPowerIds)
 
         val role = roleAddParam.toEntity()
-        saveOrThrowException { this.save(role) }
+        saveOrThrowException { save(role) }
 
         if (fullPowerIds.isNullOrEmpty()) {
             return role.toVo()
@@ -94,7 +94,7 @@ class RoleServiceImpl(
 
         val role = roleUpdateParam.toEntity()
 
-        updateOrThrowException { this.updateById(role) }
+        updateOrThrowException { updateById(role) }
 
         val oldPowerList = rPowerRoleService.list(
             KtQueryWrapper(RPowerRole()).select(RPowerRole::powerId).eq(RPowerRole::roleId, roleUpdateParam.id)
@@ -140,12 +140,12 @@ class RoleServiceImpl(
 
     @Transactional
     override fun deleteOne(id: Long) {
-        this.delete(RoleDeleteParam(listOf(id)))
+        delete(RoleDeleteParam(listOf(id)))
     }
 
     @Transactional
     override fun delete(roleDeleteParam: RoleDeleteParam) {
-        this.removeBatchByIds(roleDeleteParam.ids)
+        removeBatchByIds(roleDeleteParam.ids)
         rPowerRoleService.remove(KtQueryWrapper(RPowerRole()).`in`(RPowerRole::roleId, roleDeleteParam.ids))
         offlineUser(*roleDeleteParam.ids!!.toLongArray())
     }

@@ -92,7 +92,7 @@ class AuthenticationServiceImpl(
         response: HttpServletResponse,
         registerParam: RegisterParam
     ): RegisterVo {
-        this.verifyCaptcha(registerParam.captchaCode, "register")
+        verifyCaptcha(registerParam.captchaCode, "register")
         sensitiveWordService.checkSensitiveWord(registerParam.username!!)
 
         val user = User().apply {
@@ -118,7 +118,7 @@ class AuthenticationServiceImpl(
 
         sendVerifyMail(user.username!!, user.verify!!, registerParam.email!!)
 
-        val loginVo = this.login(
+        val loginVo = login(
             request = request,
             response = response,
             account = registerParam.username!!,
@@ -191,7 +191,7 @@ class AuthenticationServiceImpl(
 
     @Transactional
     override fun forget(request: HttpServletRequest, forgetParam: ForgetParam) {
-        this.verifyCaptcha(forgetParam.captchaCode, "forget")
+        verifyCaptcha(forgetParam.captchaCode, "forget")
 
         val user = queryOrThrowException(UserNotFoundException()) {
             userService.getUserWithPowerByAccount(forgetParam.email!!)
@@ -221,7 +221,7 @@ class AuthenticationServiceImpl(
 
     @Transactional
     override fun retrieve(request: HttpServletRequest, retrieveParam: RetrieveParam) {
-        this.verifyCaptcha(retrieveParam.captchaCode, "retrieve")
+        verifyCaptcha(retrieveParam.captchaCode, "retrieve")
 
         val codeStrings = retrieveParam.code!!.split("-")
         if (codeStrings.size != 16) {
@@ -264,10 +264,10 @@ class AuthenticationServiceImpl(
     @EventLogRecord(EventLog.Event.LOGIN)
     override fun login(request: HttpServletRequest, response: HttpServletResponse, loginParam: LoginParam): LoginVo {
         if (loginParam.twoFactorCode.isNullOrBlank()) {
-            this.verifyCaptcha(loginParam.captchaCode, "login")
+            verifyCaptcha(loginParam.captchaCode, "login")
         }
 
-        return this.login(
+        return login(
             request = request,
             response = response,
             account = loginParam.account!!,

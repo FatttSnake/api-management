@@ -99,4 +99,8 @@ class ApiKeyPrincipal : UserDetails {
 
     @JsonIgnore
     override fun isEnabled(): Boolean = status == 1
+
+    override fun toString(): String {
+        return "ApiKeyPrincipal(keyId=$keyId, userId=$userId, accessKey=$accessKey, status=$status, permissions=$permissions, rateLimit=$rateLimit, quota=$quota, quotaPeriod=$quotaPeriod)"
+    }
 }

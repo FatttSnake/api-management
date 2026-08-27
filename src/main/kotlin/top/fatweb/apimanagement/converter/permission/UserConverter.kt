@@ -1,7 +1,6 @@
 package top.fatweb.apimanagement.converter.permission
 
 import com.baomidou.mybatisplus.core.metadata.IPage
-import top.fatweb.avatargenerator.GitHubAvatar
 import top.fatweb.apimanagement.entity.permission.*
 import top.fatweb.apimanagement.param.permission.user.UserAddParam
 import top.fatweb.apimanagement.param.permission.user.UserUpdateParam
@@ -9,6 +8,7 @@ import top.fatweb.apimanagement.vo.PageVo
 import top.fatweb.apimanagement.vo.permission.UserWithInfoVo
 import top.fatweb.apimanagement.vo.permission.UserWithPowerInfoVo
 import top.fatweb.apimanagement.vo.permission.UserWithRoleInfoVo
+import top.fatweb.avatargenerator.GitHubAvatar
 
 /**
  * Convert to UserWithPowerInfoVo object

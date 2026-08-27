@@ -1,25 +1,43 @@
-drop table if exists t_s_api;
-create table t_s_api
+drop table if exists t_s_api_plugin;
+create table t_s_api_plugin
+(
+    id                 bigint         not null primary key,
+    plugin_id          varchar(64)    not null comment 'Plugin ID',
+    name               varchar(100)   not null comment 'Plugin name',
+    description        varchar(255)   null comment 'Description',
+    enabled            int            not null default 1 comment 'Enabled status',
+    default_price      decimal(10, 4) null comment 'Default price per call (null=free)',
+    default_rate_limit int            null comment 'Default rate limit per minute (null=unlimited)',
+    create_time        datetime       not null default (utc_timestamp()) comment 'Create time',
+    update_time        datetime       not null default (utc_timestamp()) comment 'Update time',
+    deleted            bigint         not null default 0,
+    version            int            not null default 0,
+    constraint t_s_api_plugin_unique_plugin_id unique (plugin_id, deleted)
+) comment 'API Platform - Plugin';
+
+drop table if exists t_s_api_interface;
+create table t_s_api_interface
 (
     id           bigint         not null primary key,
+    plugin_id    varchar(64)    not null comment 'Plugin ID',
     code         varchar(100)   not null comment 'API scoping code',
     name         varchar(100)   not null comment 'API name',
     description  varchar(255)   null comment 'Description',
     path         varchar(200)   not null comment 'Request path',
     method       varchar(10)    not null comment 'HTTP method',
     api_version  int            not null default 1 comment 'API version',
-    price        decimal(10, 4) not null default 0 comment 'Price per call',
+    price        decimal(10, 4) null comment 'Price per call (null=inherit plugin default)',
     billing_mode varchar(20)    not null default 'SUCCESS_ONLY' comment 'Billing mode [FREE, SUCCESS_ONLY, ALWAYS]',
     need_key     int            not null default 1 comment 'Need API key status',
-    rate_limit   int            not null default 0 comment 'Per-API rate limit per minute (0=unlimited)',
+    rate_limit   int            null comment 'Rate limit per minute (null=inherit plugin default)',
     enabled      int            not null default 1 comment 'Enabled status',
     create_time  datetime       not null default (utc_timestamp()) comment 'Create time',
     update_time  datetime       not null default (utc_timestamp()) comment 'Update time',
     deleted      bigint         not null default 0,
     version      int            not null default 0,
-    constraint t_s_api_unique_code unique (code, deleted),
-    constraint t_s_api_unique_path_method unique (path, method, deleted)
-) comment 'System - API';
+    constraint t_s_api_interface_unique_code unique (code, deleted),
+    constraint t_s_api_interface_unique_path_method unique (plugin_id, path, method, deleted)
+) comment 'API Platform - Interface';
 
 drop table if exists t_s_api_key;
 create table t_s_api_key

@@ -1,11 +1,7 @@
 package top.fatweb.apimanagement.service.system.impl
 
 import org.springframework.stereotype.Service
-import top.fatweb.apimanagement.param.system.ApiSettingsParam
-import top.fatweb.apimanagement.param.system.BaseSettingsParam
-import top.fatweb.apimanagement.param.system.MailSendParam
-import top.fatweb.apimanagement.param.system.MailSettingsParam
-import top.fatweb.apimanagement.param.system.TwoFactorSettingsParam
+import top.fatweb.apimanagement.param.system.*
 import top.fatweb.apimanagement.properties.ServerProperties
 import top.fatweb.apimanagement.service.system.ISettingsService
 import top.fatweb.apimanagement.settings.*

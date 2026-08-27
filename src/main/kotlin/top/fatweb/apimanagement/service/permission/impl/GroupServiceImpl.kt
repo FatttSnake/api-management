@@ -61,12 +61,12 @@ class GroupServiceImpl(
     override fun getOne(id: Long): GroupWithRoleVo =
         queryOrThrowException { baseMapper.selectOneById(id) }.let(Group::toVoWithRole)
 
-    override fun getList(): List<GroupVo> = this.list().map(Group::toVo)
+    override fun getList(): List<GroupVo> = list().map(Group::toVo)
 
     @Transactional
     override fun add(groupAddParam: GroupAddParam): GroupVo {
         val group = groupAddParam.toEntity()
-        saveOrThrowException { this.save(group) }
+        saveOrThrowException { save(group) }
 
         if (group.roles.isNullOrEmpty()) {
             return group.toVo()
@@ -88,7 +88,7 @@ class GroupServiceImpl(
     override fun update(groupUpdateParam: GroupUpdateParam) {
         val group = groupUpdateParam.toEntity()
 
-        updateOrThrowException { this.updateById(group) }
+        updateOrThrowException { updateById(group) }
 
         val oldRoleList = rRoleGroupService.list(
             KtQueryWrapper(RRoleGroup()).select(RRoleGroup::roleId).eq(RRoleGroup::groupId, groupUpdateParam.id)
@@ -134,12 +134,12 @@ class GroupServiceImpl(
 
     @Transactional
     override fun deleteOne(id: Long) {
-        this.delete(GroupDeleteParam(listOf(id)))
+        delete(GroupDeleteParam(listOf(id)))
     }
 
     @Transactional
     override fun delete(groupDeleteParam: GroupDeleteParam) {
-        this.removeBatchByIds(groupDeleteParam.ids)
+        removeBatchByIds(groupDeleteParam.ids)
         rRoleGroupService.remove(KtQueryWrapper(RRoleGroup()).`in`(RRoleGroup::groupId, groupDeleteParam.ids))
         offlineUser(*groupDeleteParam.ids!!.toLongArray())
     }

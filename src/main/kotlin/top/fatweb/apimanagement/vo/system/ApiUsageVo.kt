@@ -3,7 +3,7 @@ package top.fatweb.apimanagement.vo.system
 import io.swagger.v3.oas.annotations.media.Schema
 import tools.jackson.databind.annotation.JsonSerialize
 import tools.jackson.databind.ser.std.ToStringSerializer
-import top.fatweb.apimanagement.entity.system.Api
+import top.fatweb.apimanagement.entity.system.ApiInterface
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
@@ -138,10 +138,10 @@ data class ApiUsageVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Api.BillingMode
+     * @see ApiInterface.BillingMode
      */
     @field:Schema(description = "计费模式")
-    val billingMode: Api.BillingMode?,
+    val billingMode: ApiInterface.BillingMode?,
 
     /**
      * Create time
