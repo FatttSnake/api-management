@@ -199,7 +199,7 @@ fun ByteArray.sha256(): ByteArray =
  * @see ByteArray
  */
 fun ByteArray.sha256HexString(): String =
-    this.sha256().toHexString()
+    sha256().toHexString()
 
 /**
  * Compresses the data in this [ByteArray] using the specified output stream factory
@@ -325,7 +325,7 @@ fun ByteArray.saveToFileSafe(
     vararg subpaths: String,
     compressStreamFactory: ((OutputStream) -> OutputStream)? = null
 ): Result<Path> = runCatching {
-    this.saveToFile(base = base, *subpaths, compressStreamFactory = compressStreamFactory)
+    saveToFile(base = base, *subpaths, compressStreamFactory = compressStreamFactory)
 }
 
 /**
@@ -348,9 +348,9 @@ fun Path.readFile(
 ): ByteArray =
     decompressStreamFactory
         ?.let {
-            this.readBytes().decompress(it)
+            readBytes().decompress(it)
         }
-        ?: this.readBytes()
+        ?: readBytes()
 
 /**
  * Safely reads the contents of the file at this [Path] as a [ByteArray], wrapping the result in a [Result]
@@ -371,5 +371,5 @@ fun Path.readFile(
 fun Path.readFileSafe(
     decompressStreamFactory: ((InputStream) -> InputStream)? = null
 ): Result<ByteArray> = runCatching {
-    this.readFile(decompressStreamFactory)
+    readFile(decompressStreamFactory)
 }

@@ -29,19 +29,19 @@ class LocalFileStorageProvider(
 ) : FileStorageProvider {
     private fun String.splitFileName() =
         Pair(
-            this.substring(0, 2),
-            this.substring(2)
+            substring(0, 2),
+            substring(2)
         )
 
     private fun String.resolvePath(): Path {
-        val (dir, fileName) = this.splitFileName()
+        val (dir, fileName) = splitFileName()
 
         return Path(serverProperties.storage.local.root, dir, fileName)
     }
 
     override fun save(content: ByteArray): String {
         val key = content.sha256HexString()
-        if (this.exists(key)) {
+        if (exists(key)) {
             return key
         }
 
@@ -58,10 +58,10 @@ class LocalFileStorageProvider(
     }
 
     override fun save(content: String): String =
-        this.save(content.toByteArray())
+        save(content.toByteArray())
 
     override fun load(key: String): ByteArray? {
-        if (!this.exists(key)) {
+        if (!exists(key)) {
             return null
         }
 
@@ -77,7 +77,7 @@ class LocalFileStorageProvider(
         }.getOrDefault(false)
 
     override fun size(key: String): Long? {
-        if (!this.exists(key)) {
+        if (!exists(key)) {
             return null
         }
 

@@ -19,10 +19,10 @@ import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.servlet.resource.NoResourceFoundException
-import top.fatweb.avatargenerator.AvatarException
 import top.fatweb.apimanagement.entity.common.ResponseCode
 import top.fatweb.apimanagement.entity.common.ResponseResult
 import top.fatweb.apimanagement.exception.*
+import top.fatweb.avatargenerator.AvatarException
 
 /**
  * Exception handler
@@ -270,62 +270,62 @@ class ExceptionHandler {
             /* API Platform */
             is ApiKeyInvalidException -> {
                 logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_KEY_INVALID, e.localizedMessage, null)
+                ResponseResult.fail(ResponseCode.API_PLATFORM_KEY_INVALID, e.localizedMessage, null)
             }
 
             is ApiKeySecretMismatchException -> {
                 logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_KEY_SECRET_MISMATCH, e.localizedMessage, null)
+                ResponseResult.fail(ResponseCode.API_PLATFORM_KEY_SECRET_MISMATCH, e.localizedMessage, null)
             }
 
             is ApiKeyDisabledException -> {
                 logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_KEY_DISABLED, e.localizedMessage, null)
+                ResponseResult.fail(ResponseCode.API_PLATFORM_KEY_DISABLED, e.localizedMessage, null)
             }
 
             is ApiKeyExpiredException -> {
                 logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_KEY_EXPIRED, e.localizedMessage, null)
+                ResponseResult.fail(ResponseCode.API_PLATFORM_KEY_EXPIRED, e.localizedMessage, null)
             }
 
             is ApiKeyIpNotAllowedException -> {
                 logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_KEY_IP_NOT_ALLOWED, e.localizedMessage, null)
+                ResponseResult.fail(ResponseCode.API_PLATFORM_KEY_IP_NOT_ALLOWED, e.localizedMessage, null)
             }
 
             is ApiKeyPermissionDeniedException -> {
                 logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_KEY_PERMISSION_DENIED, e.localizedMessage, null)
+                ResponseResult.fail(ResponseCode.API_PLATFORM_KEY_PERMISSION_DENIED, e.localizedMessage, null)
             }
 
             is ApiKeyRequiredException -> {
                 logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_KEY_REQUIRED, e.localizedMessage, null)
+                ResponseResult.fail(ResponseCode.API_PLATFORM_KEY_REQUIRED, e.localizedMessage, null)
             }
 
             is ApiDisabledException -> {
                 logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_DISABLED, e.localizedMessage, null)
+                ResponseResult.fail(ResponseCode.API_PLATFORM_DISABLED, e.localizedMessage, null)
             }
 
             is QuotaExceededException -> {
                 logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_QUOTA_EXCEEDED, e.localizedMessage, null)
+                ResponseResult.fail(ResponseCode.API_PLATFORM_QUOTA_EXCEEDED, e.localizedMessage, null)
             }
 
             is InsufficientBalanceException -> {
                 logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_INSUFFICIENT_BALANCE, e.localizedMessage, null)
+                ResponseResult.fail(ResponseCode.API_PLATFORM_INSUFFICIENT_BALANCE, e.localizedMessage, null)
             }
 
             is ApiAccountNotFoundException -> {
                 logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_ACCOUNT_NOT_FOUND, e.localizedMessage, null)
+                ResponseResult.fail(ResponseCode.API_PLATFORM_ACCOUNT_NOT_FOUND, e.localizedMessage, null)
             }
 
             is ApiUsageIdNotGeneratedException -> {
                 logger.debug(e.localizedMessage, e)
-                ResponseResult.databaseFail(ResponseCode.API_USAGE_ID_NOT_GENERATED, e.localizedMessage, null)
+                ResponseResult.databaseFail(ResponseCode.API_PLATFORM_USAGE_ID_NOT_GENERATED, e.localizedMessage, null)
             }
 
             else -> {

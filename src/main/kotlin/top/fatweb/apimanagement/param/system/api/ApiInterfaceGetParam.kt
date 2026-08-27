@@ -5,22 +5,22 @@ import top.fatweb.apimanagement.annotation.ParamProcessor
 import top.fatweb.apimanagement.param.PageSortParam
 
 /**
- * Get API parameters
+ * Get API interface parameters
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  * @see PageSortParam
  */
 @ParamProcessor
-@Schema(description = "API 查询请求参数")
-data class ApiGetParam(
+@Schema(description = "API 接口查询请求参数")
+data class ApiInterfaceGetParam(
     /**
      * API code to search for
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "查询 API 编码", example = "api:v1:avatar:getRandom")
+    @field:Schema(description = "查询 API 编码", example = "api:avatar:v1:getRandom")
     var searchCode: String?,
 
     /**
@@ -29,8 +29,17 @@ data class ApiGetParam(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "查询 API 名称", example = "随机头像")
+    @field:Schema(description = "查询 API 名称", example = "getRandom")
     var searchName: String?,
+
+    /**
+     * Owning plugin ID to filter by
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @field:Schema(description = "所属插件 ID", example = "avatar")
+    var pluginId: String?,
 
     /**
      * Enabled status

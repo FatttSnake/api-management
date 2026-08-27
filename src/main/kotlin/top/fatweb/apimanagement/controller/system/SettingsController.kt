@@ -11,11 +11,7 @@ import top.fatweb.apimanagement.entity.common.ResponseResult
 import top.fatweb.apimanagement.param.system.*
 import top.fatweb.apimanagement.service.system.ISensitiveWordService
 import top.fatweb.apimanagement.service.system.ISettingsService
-import top.fatweb.apimanagement.vo.system.ApiSettingsVo
-import top.fatweb.apimanagement.vo.system.BaseSettingsVo
-import top.fatweb.apimanagement.vo.system.MailSettingsVo
-import top.fatweb.apimanagement.vo.system.SensitiveWordVo
-import top.fatweb.apimanagement.vo.system.TwoFactorSettingsVo
+import top.fatweb.apimanagement.vo.system.*
 
 /**
  * System settings management controller

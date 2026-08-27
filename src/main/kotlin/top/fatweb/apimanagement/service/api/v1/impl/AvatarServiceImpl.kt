@@ -1,16 +1,16 @@
 package top.fatweb.apimanagement.service.api.v1.impl
 
 import org.springframework.stereotype.Service
-import top.fatweb.avatargenerator.GitHubAvatar
-import top.fatweb.avatargenerator.IdenticonAvatar
-import top.fatweb.avatargenerator.SquareAvatar
-import top.fatweb.avatargenerator.TriangleAvatar
-import top.fatweb.avatargenerator.layer.background.ColorPaintBackgroundLayer
 import top.fatweb.apimanagement.param.api.v1.avatar.AvatarBaseParam
 import top.fatweb.apimanagement.param.api.v1.avatar.AvatarGitHubParam
 import top.fatweb.apimanagement.service.api.v1.IAvatarService
 import top.fatweb.apimanagement.util.getRandomLong
 import top.fatweb.apimanagement.vo.api.v1.avatar.AvatarBase64Vo
+import top.fatweb.avatargenerator.GitHubAvatar
+import top.fatweb.avatargenerator.IdenticonAvatar
+import top.fatweb.avatargenerator.SquareAvatar
+import top.fatweb.avatargenerator.TriangleAvatar
+import top.fatweb.avatargenerator.layer.background.ColorPaintBackgroundLayer
 import java.awt.Color
 import kotlin.io.encoding.Base64
 
@@ -25,10 +25,10 @@ import kotlin.io.encoding.Base64
 class AvatarServiceImpl : IAvatarService {
     override fun random(avatarBaseParam: AvatarBaseParam?): ByteArray =
         when ((1..4).random()) {
-            1 -> this.triangle(avatarBaseParam)
-            2 -> this.square(avatarBaseParam)
-            3 -> this.identicon(avatarBaseParam)
-            else -> this.github(AvatarGitHubParam().apply {
+            1 -> triangle(avatarBaseParam)
+            2 -> square(avatarBaseParam)
+            3 -> identicon(avatarBaseParam)
+            else -> github(AvatarGitHubParam().apply {
                 seed = avatarBaseParam?.seed
                 size = avatarBaseParam?.size
                 margin = avatarBaseParam?.margin
@@ -39,10 +39,10 @@ class AvatarServiceImpl : IAvatarService {
         }
 
     override fun randomBase64(avatarBaseParam: AvatarBaseParam?): AvatarBase64Vo = when ((1..4).random()) {
-        1 -> this.triangleBase64(avatarBaseParam)
-        2 -> this.squareBase64(avatarBaseParam)
-        3 -> this.identiconBase64(avatarBaseParam)
-        else -> this.githubBase64(AvatarGitHubParam().apply {
+        1 -> triangleBase64(avatarBaseParam)
+        2 -> squareBase64(avatarBaseParam)
+        3 -> identiconBase64(avatarBaseParam)
+        else -> githubBase64(AvatarGitHubParam().apply {
             seed = avatarBaseParam?.seed
             size = avatarBaseParam?.size
             margin = avatarBaseParam?.margin

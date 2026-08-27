@@ -40,7 +40,10 @@ data class ApiKeyAddParam(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "权限 API 编码列表（属主权限子集，空则快照属主全部）", example = "[\"api:v1:avatar:getRandom\"]")
+    @field:Schema(
+        description = "权限 API 编码列表（属主权限子集，空则快照属主全部）",
+        example = "[\"api:v1:avatar:getRandom\"]"
+    )
     var permissionCodes: List<String>?,
 
     /**

@@ -58,11 +58,11 @@ class ApiAccountServiceImpl(
 
         val transaction = ApiTransaction().apply {
             this.userId = targetUserId
-            orderNo = apiTopUpParam.orderNo
-            type = ApiTransaction.Type.TOPUP
+            this.orderNo = apiTopUpParam.orderNo
+            this.type = ApiTransaction.Type.TOPUP
             this.amount = amount
-            balanceAfter = getBalance(targetUserId)
-            remark = apiTopUpParam.remark
+            this.balanceAfter = getBalance(targetUserId)
+            this.remark = apiTopUpParam.remark
         }
         saveOrThrowException { apiTransactionService.save(transaction) }
         return transaction.toVo()
@@ -81,14 +81,14 @@ class ApiAccountServiceImpl(
     }
 
     private fun getOrCreate(userId: Long): ApiAccount {
-        this.getOne(KtQueryWrapper(ApiAccount()).eq(ApiAccount::userId, userId))?.let { return it }
+        getOne(KtQueryWrapper(ApiAccount()).eq(ApiAccount::userId, userId))?.let { return it }
 
         val account = ApiAccount().apply {
             this.userId = userId
-            balance = BigDecimal.ZERO
-            status = 1
+            this.balance = BigDecimal.ZERO
+            this.status = 1
         }
-        saveOrThrowException { this.save(account) }
+        saveOrThrowException { save(account) }
         return account
     }
 

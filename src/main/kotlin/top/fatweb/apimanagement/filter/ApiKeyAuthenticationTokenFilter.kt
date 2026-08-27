@@ -19,7 +19,7 @@ import top.fatweb.apimanagement.util.getRequestIp
 import top.fatweb.apimanagement.util.sha256
 import java.time.LocalDateTime
 import java.time.ZoneOffset
-import java.util.Base64
+import java.util.*
 import java.util.concurrent.TimeUnit
 
 /**
@@ -78,14 +78,15 @@ class ApiKeyAuthenticationTokenFilter(
         checkIpWhitelist(apiKey, request)
 
         val principal = ApiKeyPrincipal().apply {
-            keyId = apiKey.id
-            userId = apiKey.userId
+            this.keyId = apiKey.id
+            this.userId = apiKey.userId
             this.accessKey = apiKey.accessKey
-            status = apiKey.status
-            permissions = apiKey.permissions?.split(",")?.map(String::trim)?.filter(String::isNotEmpty) ?: emptyList()
-            rateLimit = apiKey.rateLimit
-            quota = apiKey.quota
-            quotaPeriod = apiKey.quotaPeriod
+            this.status = apiKey.status
+            this.permissions =
+                apiKey.permissions?.split(",")?.map(String::trim)?.filter(String::isNotEmpty) ?: emptyList()
+            this.rateLimit = apiKey.rateLimit
+            this.quota = apiKey.quota
+            this.quotaPeriod = apiKey.quotaPeriod
         }
 
         SecurityContextHolder.getContext().authentication =

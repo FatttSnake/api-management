@@ -91,6 +91,6 @@ class ApiAccount : Serializable {
     var version: Int? = null
 
     override fun toString(): String {
-        return "ApiAccount(id=$id, userId=$userId, balance=$balance, status=$status)"
+        return "ApiAccount(id=$id, userId=$userId, balance=$balance, status=$status, createTime=$createTime, updateTime=$updateTime, deleted=$deleted, version=$version)"
     }
 }

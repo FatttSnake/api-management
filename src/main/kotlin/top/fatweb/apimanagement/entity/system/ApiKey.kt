@@ -181,6 +181,6 @@ class ApiKey : Serializable {
     var version: Int? = null
 
     override fun toString(): String {
-        return "ApiKey(id=$id, userId=$userId, accessKey=$accessKey, name=$name, status=$status, expireTime=$expireTime)"
+        return "ApiKey(id=$id, userId=$userId, accessKey=$accessKey, secretKeyHash=$secretKeyHash, name=$name, permissions=$permissions, status=$status, expireTime=$expireTime, ipWhitelist=$ipWhitelist, rateLimit=$rateLimit, quota=$quota, quotaPeriod=$quotaPeriod, lastUsedTime=$lastUsedTime, remark=$remark, createTime=$createTime, updateTime=$updateTime, deleted=$deleted, version=$version)"
     }
 }

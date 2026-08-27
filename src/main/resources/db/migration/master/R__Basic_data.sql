@@ -1,10 +1,3 @@
-insert into t_s_power_type (id, name)
-    values (1, 'module'),
-           (2, 'menu'),
-           (3, 'scope'),
-           (4, 'operation') as new_value
-on duplicate key update name = new_value.name;
-
 insert into t_s_power (id, type_id)
     values (1000000, 1),
            (1990000, 2),

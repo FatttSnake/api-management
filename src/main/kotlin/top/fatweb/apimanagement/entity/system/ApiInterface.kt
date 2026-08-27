@@ -7,13 +7,16 @@ import java.math.BigDecimal
 import java.time.LocalDateTime
 
 /**
- * API registry entity
+ * API interface entity
+ *
+ * One row per registered interface (endpoint) of a plugin. Price and rate limit
+ * are nullable: when null, the caller inherits the owning plugin's defaults.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-@TableName("t_s_api")
-class Api : Serializable {
+@TableName("t_s_api_interface")
+class ApiInterface : Serializable {
     /**
      * Billing mode enum
      *
@@ -34,7 +37,16 @@ class Api : Serializable {
     var id: Long? = null
 
     /**
-     * API scoping code
+     * Owning plugin ID
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @TableField("plugin_id")
+    var pluginId: String? = null
+
+    /**
+     * API scoping code, e.g. api:avatar:v1:getRandom
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -88,7 +100,7 @@ class Api : Serializable {
     var apiVersion: Int? = null
 
     /**
-     * Price per call
+     * Price per call (null = inherit plugin default)
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -117,7 +129,7 @@ class Api : Serializable {
     var needKey: Int? = null
 
     /**
-     * Per-API rate limit per minute
+     * Rate limit per minute (null = inherit plugin default)
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -175,6 +187,6 @@ class Api : Serializable {
     var version: Int? = null
 
     override fun toString(): String {
-        return "Api(id=$id, code=$code, name=$name, path=$path, method=$method, apiVersion=$apiVersion, price=$price, billingMode=$billingMode, needKey=$needKey, rateLimit=$rateLimit, enabled=$enabled)"
+        return "ApiInterface(id=$id, pluginId=$pluginId, code=$code, name=$name, description=$description, path=$path, method=$method, apiVersion=$apiVersion, price=$price, billingMode=$billingMode, needKey=$needKey, rateLimit=$rateLimit, enabled=$enabled, createTime=$createTime, updateTime=$updateTime, deleted=$deleted, version=$version)"
     }
 }

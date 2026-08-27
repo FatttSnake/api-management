@@ -30,8 +30,8 @@ class EventLogServiceImpl : ServiceImpl<EventLogMapper, EventLog>(), IEventLogSe
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     override fun saveEvent(annotation: EventLogRecord, userId: Long) {
         try {
-            this.save(EventLog().apply {
-                this.event = annotation.event
+            save(EventLog().apply {
+                event = annotation.event
                 operateUserId = userId
             })
         } catch (e: Exception) {

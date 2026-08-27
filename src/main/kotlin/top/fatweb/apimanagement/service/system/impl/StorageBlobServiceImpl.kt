@@ -39,7 +39,7 @@ class StorageBlobServiceImpl(
 
     @Transactional
     override fun saveFile(str: String): String =
-        this.saveFile(str.toByteArray())
+        saveFile(str.toByteArray())
 
     @Transactional
     override fun removeFile(fileHash: String): Long {

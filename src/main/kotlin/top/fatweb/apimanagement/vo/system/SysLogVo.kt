@@ -1,8 +1,8 @@
 package top.fatweb.apimanagement.vo.system
 
+import io.swagger.v3.oas.annotations.media.Schema
 import tools.jackson.databind.annotation.JsonSerialize
 import tools.jackson.databind.ser.std.ToStringSerializer
-import io.swagger.v3.oas.annotations.media.Schema
 import top.fatweb.apimanagement.entity.system.SysLog
 import java.time.LocalDateTime
 

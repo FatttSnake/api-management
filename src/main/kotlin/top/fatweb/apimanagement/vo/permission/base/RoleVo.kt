@@ -1,8 +1,8 @@
 package top.fatweb.apimanagement.vo.permission.base
 
+import io.swagger.v3.oas.annotations.media.Schema
 import tools.jackson.databind.annotation.JsonSerialize
 import tools.jackson.databind.ser.std.ToStringSerializer
-import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
 
 /**
