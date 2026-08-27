@@ -76,5 +76,10 @@ data class SecurityProperties(
      * @since 1.0.0
      * @see TimeUnit
      */
-    val refreshTokenTtlUnit: TimeUnit = TimeUnit.DAYS
+    val refreshTokenTtlUnit: TimeUnit = TimeUnit.DAYS,
+
+    /**
+     * Prefix of secret key
+     */
+    @field:NotBlank val secretKeyPrefix: String = "Basic "
 )

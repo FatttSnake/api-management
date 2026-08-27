@@ -1,6 +1,7 @@
 package top.fatweb.apimanagement.service.system.impl
 
 import org.springframework.stereotype.Service
+import top.fatweb.apimanagement.param.system.ApiSettingsParam
 import top.fatweb.apimanagement.param.system.BaseSettingsParam
 import top.fatweb.apimanagement.param.system.MailSendParam
 import top.fatweb.apimanagement.param.system.MailSettingsParam
@@ -10,6 +11,7 @@ import top.fatweb.apimanagement.service.system.ISettingsService
 import top.fatweb.apimanagement.settings.*
 import top.fatweb.apimanagement.util.MailUtil
 import top.fatweb.apimanagement.util.md5
+import top.fatweb.apimanagement.vo.system.ApiSettingsVo
 import top.fatweb.apimanagement.vo.system.BaseSettingsVo
 import top.fatweb.apimanagement.vo.system.MailSettingsVo
 import top.fatweb.apimanagement.vo.system.TwoFactorSettingsVo
@@ -89,6 +91,28 @@ class SettingsServiceImpl : ISettingsService {
         twoFactorSettingsParam.run {
             SettingsOperator.setValue(TwoFactorSettings::issuer, issuer)
             SettingsOperator.setValue(TwoFactorSettings::secretKeyLength, secretKeyLength)
+        }
+    }
+
+    override fun getApi() = ApiSettingsVo(
+        defaultRateLimitPerMin = SettingsOperator.getValue(ApiSettings::defaultRateLimitPerMin, 0),
+        defaultQuota = SettingsOperator.getValue(ApiSettings::defaultQuota, 0),
+        defaultQuotaPeriodSeconds = SettingsOperator.getValue(ApiSettings::defaultQuotaPeriodSeconds, 86400),
+        accessKeyLength = SettingsOperator.getValue(ApiSettings::accessKeyLength, 20),
+        secretKeyLength = SettingsOperator.getValue(ApiSettings::secretKeyLength, 40),
+        balanceCheckEnabled = SettingsOperator.getValue(ApiSettings::balanceCheckEnabled, true),
+        cacheTtlSeconds = SettingsOperator.getValue(ApiSettings::cacheTtlSeconds, 300)
+    )
+
+    override fun updateApi(apiSettingsParam: ApiSettingsParam) {
+        apiSettingsParam.run {
+            SettingsOperator.setValue(ApiSettings::defaultRateLimitPerMin, defaultRateLimitPerMin)
+            SettingsOperator.setValue(ApiSettings::defaultQuota, defaultQuota)
+            SettingsOperator.setValue(ApiSettings::defaultQuotaPeriodSeconds, defaultQuotaPeriodSeconds)
+            SettingsOperator.setValue(ApiSettings::accessKeyLength, accessKeyLength)
+            SettingsOperator.setValue(ApiSettings::secretKeyLength, secretKeyLength)
+            SettingsOperator.setValue(ApiSettings::balanceCheckEnabled, balanceCheckEnabled)
+            SettingsOperator.setValue(ApiSettings::cacheTtlSeconds, cacheTtlSeconds)
         }
     }
 }

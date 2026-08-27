@@ -13,6 +13,7 @@ app:
 #    access-token-ttl-unit: hours # Life util of access token [nanoseconds, microseconds, milliseconds, seconds, minutes, hours, days]
 #    refresh-token-ttl: 128 # Life of refresh token
 #    refresh-token-ttl-unit: days # Life util of refresh token [nanoseconds, microseconds, milliseconds, seconds, minutes, hours, days]
+#    secretKeyPrefix: "Basic " # Secret key prefix
   storage:
     mode: local # File storage mode [local, s3]
 #    local:

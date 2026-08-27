@@ -12,6 +12,7 @@ import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
+import top.fatweb.apimanagement.filter.ApiKeyAuthenticationTokenFilter
 import top.fatweb.apimanagement.filter.JwtAuthenticationTokenFilter
 import top.fatweb.apimanagement.handler.JwtAccessDeniedHandler
 import top.fatweb.apimanagement.handler.JwtAuthenticationEntryPointHandler
@@ -21,6 +22,7 @@ import top.fatweb.apimanagement.handler.JwtAuthenticationEntryPointHandler
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
+ * @see ApiKeyAuthenticationTokenFilter
  * @see JwtAuthenticationTokenFilter
  * @see JwtAuthenticationEntryPointHandler
  * @see JwtAccessDeniedHandler
@@ -28,6 +30,7 @@ import top.fatweb.apimanagement.handler.JwtAuthenticationEntryPointHandler
 @Configuration
 @EnableMethodSecurity
 class SecurityConfig(
+    private val apiKeyAuthenticationTokenFilter: ApiKeyAuthenticationTokenFilter,
     private val jwtAuthenticationTokenFilter: JwtAuthenticationTokenFilter,
     private val authenticationEntryPointHandler: JwtAuthenticationEntryPointHandler,
     private val accessDeniedHandler: JwtAccessDeniedHandler
@@ -87,7 +90,8 @@ class SecurityConfig(
                     "/tool/base/**",
                     "/tool/store",
                     "/tool/store/*",
-                    "/system/user/info/*"
+                    "/system/user/info/*",
+                    "/api/**"
                 ).permitAll()
                 .anyRequest().authenticated()
         }
@@ -105,5 +109,6 @@ class SecurityConfig(
             )
         }
 
+        .addFilterBefore(apiKeyAuthenticationTokenFilter, UsernamePasswordAuthenticationFilter::class.java)
         .addFilterBefore(jwtAuthenticationTokenFilter, UsernamePasswordAuthenticationFilter::class.java).build()
 }

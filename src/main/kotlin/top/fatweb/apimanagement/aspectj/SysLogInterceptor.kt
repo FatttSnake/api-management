@@ -18,6 +18,7 @@ import top.fatweb.apimanagement.entity.common.ResponseResult
 import top.fatweb.apimanagement.entity.system.SysLog
 import top.fatweb.apimanagement.service.system.ISysLogService
 import top.fatweb.apimanagement.util.TraceIdUtil
+import top.fatweb.apimanagement.util.getApiKeyPrincipal
 import top.fatweb.apimanagement.util.getLoginUserId
 import top.fatweb.apimanagement.util.getRequestIp
 import top.fatweb.apimanagement.vo.permission.LoginVo
@@ -53,7 +54,8 @@ class SysLogInterceptor(
     override fun preHandle(request: HttpServletRequest, response: HttpServletResponse, handler: Any): Boolean {
         val sysLog = SysLog().apply {
             traceId = TraceIdUtil.get()
-            operateUserId = getLoginUserId() ?: -1
+            operateUserId = getLoginUserId() ?: getApiKeyPrincipal()?.userId ?: -1
+            apiKeyId = getApiKeyPrincipal()?.keyId
             startTime = LocalDateTime.now(ZoneOffset.UTC)
             requestUri = URI(request.requestURI).path
             requestParams = formatParams(request.parameterMap)
