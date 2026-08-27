@@ -232,4 +232,52 @@ object SettingsOperator {
     @JvmName("getTwoFactorValue")
     fun <V> getValue(field: KMutableProperty1<TwoFactorSettings, V?>, default: V): V =
         systemSettings.twoFactor.let(field) ?: default
+
+    /**
+     * Set API platform settings value
+     *
+     * @param field Field to set value. e.g. ApiSettings::defaultRateLimitPerMin
+     * @param value Value to set
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see KMutableProperty1
+     * @see ApiSettings
+     */
+    @JvmName("setApiValue")
+    fun <V> setValue(field: KMutableProperty1<ApiSettings, V?>, value: V?) {
+        systemSettings.api.let {
+            field.set(it, value)
+        }
+
+        saveSettingsToFile()
+    }
+
+    /**
+     * Get value from API platform settings
+     *
+     * @param field Field to get value from. e.g. ApiSettings::defaultRateLimitPerMin
+     * @return Value
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see KMutableProperty1
+     * @see ApiSettings
+     */
+    @JvmName("getApiValue")
+    fun <V> getValue(field: KMutableProperty1<ApiSettings, V?>): V? =
+        this.getValue(field, null)
+
+    /**
+     * Get value from API platform settings with default value
+     *
+     * @param field Field to get value from. e.g. ApiSettings::defaultRateLimitPerMin
+     * @param default Return default value when setting not found
+     * @return Value
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see KMutableProperty1
+     * @see ApiSettings
+     */
+    @JvmName("getApiValue")
+    fun <V> getValue(field: KMutableProperty1<ApiSettings, V?>, default: V): V =
+        systemSettings.api.let(field) ?: default
 }

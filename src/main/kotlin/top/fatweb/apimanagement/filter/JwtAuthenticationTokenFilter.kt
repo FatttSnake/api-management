@@ -34,9 +34,16 @@ class JwtAuthenticationTokenFilter(
     override fun doFilterInternal(
         request: HttpServletRequest, response: HttpServletResponse, filterChain: FilterChain
     ) {
+        if (SecurityContextHolder.getContext().authentication != null) {
+            filterChain.doFilter(request, response)
+            return
+        }
+
         val tokenWithPrefix = request.getHeader(serverProperties.security.headerKey)
 
-        if (!StringUtils.hasText(tokenWithPrefix) || "/error/thrown" == request.servletPath) {
+        if (!StringUtils.hasText(tokenWithPrefix) || "/error/thrown" == request.servletPath ||
+            !tokenWithPrefix.startsWith(serverProperties.security.tokenPrefix)
+        ) {
             filterChain.doFilter(request, response)
             return
         }

@@ -34,5 +34,13 @@ data class SystemSettings(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    var twoFactor: TwoFactorSettings = TwoFactorSettings()
+    var twoFactor: TwoFactorSettings = TwoFactorSettings(),
+
+    /**
+     * API platform setting
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    var api: ApiSettings = ApiSettings()
 )

@@ -67,6 +67,15 @@ class SysLog : Serializable {
     var operateUserId: Long? = null
 
     /**
+     * API key ID
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @TableField("api_key_id")
+    var apiKeyId: Long? = null
+
+    /**
      * Operate time
      *
      * @author FatttSnake, fatttsnake@gmail.com

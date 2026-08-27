@@ -11,6 +11,7 @@ import top.fatweb.apimanagement.entity.common.ResponseResult
 import top.fatweb.apimanagement.param.system.*
 import top.fatweb.apimanagement.service.system.ISensitiveWordService
 import top.fatweb.apimanagement.service.system.ISettingsService
+import top.fatweb.apimanagement.vo.system.ApiSettingsVo
 import top.fatweb.apimanagement.vo.system.BaseSettingsVo
 import top.fatweb.apimanagement.vo.system.MailSettingsVo
 import top.fatweb.apimanagement.vo.system.SensitiveWordVo
@@ -217,6 +218,40 @@ class SettingsController(
     @PreAuthorize("hasAnyAuthority('system:settings:two-factor:modify')")
     fun updateTwoFactor(@ProcessParam @RequestBody twoFactorSettingsParam: TwoFactorSettingsParam): ResponseResult<Unit> {
         settingsService.updateTwoFactor(twoFactorSettingsParam)
+
+        return ResponseResult.success()
+    }
+
+    /**
+     * Get API platform settings
+     *
+     * @return Response object includes API platform settings information
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ResponseResult
+     * @see ApiSettingsVo
+     */
+    @Operation(summary = "获取 API 平台设置")
+    @GetMapping("/api")
+    @PreAuthorize("hasAnyAuthority('system:settings:query:api')")
+    fun getApi(): ResponseResult<ApiSettingsVo> =
+        ResponseResult.success(data = settingsService.getApi())
+
+    /**
+     * Update API platform settings
+     *
+     * @param apiSettingsParam API platform settings parameters
+     * @return Response object
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiSettingsParam
+     * @see ResponseResult
+     */
+    @Operation(summary = "更新 API 平台设置")
+    @PutMapping("/api")
+    @PreAuthorize("hasAnyAuthority('system:settings:modify:api')")
+    fun updateApi(@ProcessParam @RequestBody apiSettingsParam: ApiSettingsParam): ResponseResult<Unit> {
+        settingsService.updateApi(apiSettingsParam)
 
         return ResponseResult.success()
     }

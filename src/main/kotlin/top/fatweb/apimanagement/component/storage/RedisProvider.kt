@@ -117,6 +117,24 @@ class RedisProvider(
     fun delObject(collection: Collection<String>): Long = redisTemplate.delete(collection)
 
     /**
+     * Increment cached value atomically
+     *
+     * @param key Cache key
+     * @param delta Delta to increment
+     * @param ttlSeconds Time to live in seconds; -1 means no expire, expired when first value created
+     * @return Value after increment
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    fun increment(key: String, delta: Long = 1, ttlSeconds: Long = -1): Long {
+        val value = redisTemplate.opsForValue().increment(key, delta) ?: 0L
+        if (ttlSeconds > 0 && value <= delta) {
+            redisTemplate.expire(key, ttlSeconds, TimeUnit.SECONDS)
+        }
+        return value
+    }
+
+    /**
      * Cache list of objects
      *
      * @param key Cache key
@@ -163,6 +181,25 @@ class RedisProvider(
      * @since 1.0.0
      */
     fun <T> getSet(key: String): Set<T>? = redisTemplate.opsForSet().members(key) as? Set<T>
+
+    /**
+     * Add value into cached set
+     *
+     * @param key Cache key
+     * @param values Values to add
+     * @param ttlSeconds Time to live in seconds; -1 means no expire, expired when set created
+     * @return Number of added values
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    fun setAdd(key: String, vararg values: Any, ttlSeconds: Long = -1): Long {
+        val existed = redisTemplate.hasKey(key)
+        val result = redisTemplate.opsForSet().add(key, *values) ?: 0L
+        if (ttlSeconds > 0 && !existed) {
+            redisTemplate.expire(key, ttlSeconds, TimeUnit.SECONDS)
+        }
+        return result
+    }
 
     /**
      * Cache map of objects

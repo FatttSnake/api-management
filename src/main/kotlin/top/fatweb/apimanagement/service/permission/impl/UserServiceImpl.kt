@@ -93,7 +93,7 @@ class UserServiceImpl(
         }.let(User::toVoWithInfo)
 
     override fun updateInfo(userInfoUpdateParam: UserInfoUpdateParam) {
-        val userId = getLoginUserId() ?: throw AccessDeniedException("Access denied")
+        val userId = getLoginUserIdOrThrow()
         updateOrThrowException {
             userInfoService.update(
                 KtUpdateWrapper(UserInfo()).eq(UserInfo::userId, userId)
@@ -110,7 +110,7 @@ class UserServiceImpl(
     override fun password(userChangePasswordParam: UserChangePasswordParam) {
         val user = queryOrThrowException(UserNotFoundException()) {
             this.getById(
-                getLoginUserId() ?: throw AccessDeniedException("Access denied")
+                getLoginUserIdOrThrow()
             )
         }
 

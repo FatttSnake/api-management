@@ -1,9 +1,11 @@
 package top.fatweb.apimanagement.service.system
 
+import top.fatweb.apimanagement.param.system.ApiSettingsParam
 import top.fatweb.apimanagement.param.system.BaseSettingsParam
 import top.fatweb.apimanagement.param.system.MailSendParam
 import top.fatweb.apimanagement.param.system.MailSettingsParam
 import top.fatweb.apimanagement.param.system.TwoFactorSettingsParam
+import top.fatweb.apimanagement.vo.system.ApiSettingsVo
 import top.fatweb.apimanagement.vo.system.BaseSettingsVo
 import top.fatweb.apimanagement.vo.system.MailSettingsVo
 import top.fatweb.apimanagement.vo.system.TwoFactorSettingsVo
@@ -84,4 +86,24 @@ interface ISettingsService {
      * @see TwoFactorSettingsParam
      */
     fun updateTwoFactor(twoFactorSettingsParam: TwoFactorSettingsParam)
+
+    /**
+     * Get API platform settings
+     *
+     * @return ApiSettingsVo object
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiSettingsVo
+     */
+    fun getApi(): ApiSettingsVo
+
+    /**
+     * Update API platform settings
+     *
+     * @param apiSettingsParam API platform settings parameters
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiSettingsParam
+     */
+    fun updateApi(apiSettingsParam: ApiSettingsParam)
 }

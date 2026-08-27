@@ -1,9 +1,11 @@
 package top.fatweb.apimanagement.util
 
 import jakarta.servlet.http.HttpServletRequest
+import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.core.context.SecurityContextHolder
 import top.fatweb.apimanagement.component.storage.RedisProvider
 import top.fatweb.apimanagement.entity.permission.LoginUser
+import top.fatweb.apimanagement.entity.system.ApiKeyPrincipal
 import top.fatweb.apimanagement.properties.ServerProperties
 
 /**
@@ -28,6 +30,17 @@ fun getLoginUser(): LoginUser? =
 fun getLoginUserId(): Long? = getLoginUser()?.user?.id
 
 /**
+ * Get ID of the user currently calling api, throw when not logged in
+ *
+ * @return User ID
+ * @author FatttSnake, fatttsnake@gmail.com
+ * @since 1.0.0
+ * @see AccessDeniedException
+ */
+fun getLoginUserIdOrThrow(): Long =
+    getLoginUserId() ?: throw AccessDeniedException("Not logged in")
+
+/**
  * Get username of the user currently calling api
  *
  * @return Username
@@ -35,6 +48,17 @@ fun getLoginUserId(): Long? = getLoginUser()?.user?.id
  * @since 1.0.0
  */
 fun getLoginUsername(): String? = getLoginUser()?.user?.username
+
+/**
+ * Get the API key principal currently calling api
+ *
+ * @return ApiKeyPrincipal object
+ * @author FatttSnake, fatttsnake@gmail.com
+ * @since 1.0.0
+ * @see ApiKeyPrincipal
+ */
+fun getApiKeyPrincipal(): ApiKeyPrincipal? =
+    SecurityContextHolder.getContext().authentication?.principal as? ApiKeyPrincipal
 
 /**
  * Get token of the user currently calling api

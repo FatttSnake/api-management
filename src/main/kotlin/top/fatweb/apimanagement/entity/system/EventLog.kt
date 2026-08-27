@@ -18,7 +18,9 @@ import java.time.LocalDateTime
 @TableName("t_l_event_log")
 class EventLog : Serializable {
     enum class Event(@field:EnumValue @field:JsonValue val code: String) {
-        LOGIN("LOGIN"), LOGOUT("LOGOUT"), REGISTER("REGISTER"), VERIFY("VERIFY"), API("API")
+        LOGIN("LOGIN"), LOGOUT("LOGOUT"), REGISTER("REGISTER"), VERIFY("VERIFY"), API("API"),
+        KEY_CREATE("KEY_CREATE"), KEY_UPDATE("KEY_UPDATE"), KEY_DELETE("KEY_DELETE"), KEY_STATUS("KEY_STATUS"),
+        KEY_REGENERATE("KEY_REGENERATE"), KEY_TOPUP("KEY_TOPUP")
     }
 
     /**
@@ -58,7 +60,16 @@ class EventLog : Serializable {
     @TableField("operate_time")
     var operateTime: LocalDateTime? = null
 
+    /**
+     * Event detail
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @TableField("detail")
+    var detail: String? = null
+
     override fun toString(): String {
-        return "EventLog(id=$id, event=$event, operateUserId=$operateUserId, operateTime=$operateTime)"
+        return "EventLog(id=$id, event=$event, operateUserId=$operateUserId, operateTime=$operateTime, detail=$detail)"
     }
 }
