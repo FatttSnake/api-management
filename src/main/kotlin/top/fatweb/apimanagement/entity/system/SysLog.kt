@@ -199,6 +199,6 @@ class SysLog : Serializable {
     var operateUsername: String? = null
 
     override fun toString(): String {
-        return "SysLog(id=$id, logType=$logType, traceId=$traceId, operateUserId=$operateUserId, operateTime=$operateTime, requestUri=$requestUri, requestMethod=$requestMethod, requestParams=$requestParams, requestIp=$requestIp, requestServerAddress=$requestServerAddress, exception=$exception, exceptionInfo=$exceptionInfo, startTime=$startTime, endTime=$endTime, executeTime=$executeTime, userAgent=$userAgent, operateUsername=$operateUsername)"
+        return "SysLog(id=$id, logType=$logType, traceId=$traceId, operateUserId=$operateUserId, apiKeyId=$apiKeyId, operateTime=$operateTime, requestUri=$requestUri, requestMethod=$requestMethod, requestParams=$requestParams, requestIp=$requestIp, requestServerAddress=$requestServerAddress, exception=$exception, exceptionInfo=$exceptionInfo, startTime=$startTime, endTime=$endTime, executeTime=$executeTime, userAgent=$userAgent, operateUsername=$operateUsername)"
     }
 }

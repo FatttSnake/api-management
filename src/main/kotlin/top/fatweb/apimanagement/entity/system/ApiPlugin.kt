@@ -6,13 +6,17 @@ import java.math.BigDecimal
 import java.time.LocalDateTime
 
 /**
- * API account entity
+ * API plugin entity
+ *
+ * One row per plugin. Holds the plugin's registration metadata plus plugin-level
+ * defaults (default price / default rate limit) that interfaces inherit when they
+ * are not configured themselves.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-@TableName("t_s_api_account")
-class ApiAccount : Serializable {
+@TableName("t_s_api_plugin")
+class ApiPlugin : Serializable {
     /**
      * ID
      *
@@ -23,32 +27,59 @@ class ApiAccount : Serializable {
     var id: Long? = null
 
     /**
-     * Owner user ID
+     * Unique plugin ID, e.g. "avatar"
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @TableField("user_id")
-    var userId: Long? = null
+    @TableField("plugin_id")
+    var pluginId: String? = null
 
     /**
-     * Prepaid balance
+     * Plugin display name
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @TableField("name")
+    var name: String? = null
+
+    /**
+     * Description
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @TableField("description")
+    var description: String? = null
+
+    /**
+     * Enabled status
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @TableField("enabled")
+    var enabled: Int? = null
+
+    /**
+     * Default price per call (null = free)
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      * @see BigDecimal
      */
-    @TableField("balance")
-    var balance: BigDecimal? = null
+    @TableField("default_price")
+    var defaultPrice: BigDecimal? = null
 
     /**
-     * Account status
+     * Default rate limit per minute (null = unlimited)
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @TableField("status")
-    var status: Int? = null
+    @TableField("default_rate_limit")
+    var defaultRateLimit: Int? = null
 
     /**
      * Create time
@@ -91,6 +122,6 @@ class ApiAccount : Serializable {
     var version: Int? = null
 
     override fun toString(): String {
-        return "ApiAccount(id=$id, userId=$userId, balance=$balance, status=$status, createTime=$createTime, updateTime=$updateTime, deleted=$deleted, version=$version)"
+        return "ApiPlugin(id=$id, pluginId=$pluginId, name=$name, description=$description, enabled=$enabled, defaultPrice=$defaultPrice, defaultRateLimit=$defaultRateLimit, createTime=$createTime, updateTime=$updateTime, deleted=$deleted, version=$version)"
     }
 }

@@ -40,13 +40,6 @@ create table t_s_user_info
     constraint t_s_user_info_unique_email unique (email, deleted)
 ) comment 'System - User Info';
 
-drop table if exists t_s_power_type;
-create table t_s_power_type
-(
-    id   bigint      not null primary key,
-    name varchar(50) not null comment 'Name'
-) comment 'System - Power Type';
-
 drop table if exists t_s_power;
 create table t_s_power
 (

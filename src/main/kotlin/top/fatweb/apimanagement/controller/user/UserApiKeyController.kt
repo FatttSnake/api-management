@@ -2,7 +2,6 @@ package top.fatweb.apimanagement.controller.user
 
 import io.swagger.v3.oas.annotations.Operation
 import jakarta.validation.Valid
-import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.*
 import top.fatweb.apimanagement.annotation.BaseController
 import top.fatweb.apimanagement.annotation.ProcessParam
@@ -11,9 +10,9 @@ import top.fatweb.apimanagement.entity.common.ResponseResult
 import top.fatweb.apimanagement.param.system.apiKey.*
 import top.fatweb.apimanagement.service.system.IApiKeyService
 import top.fatweb.apimanagement.vo.PageVo
+import top.fatweb.apimanagement.vo.system.ApiInterfaceVo
 import top.fatweb.apimanagement.vo.system.ApiKeyVo
 import top.fatweb.apimanagement.vo.system.ApiKeyWithSecretVo
-import top.fatweb.apimanagement.vo.system.ApiVo
 
 /**
  * User-facing API key self-service controller
@@ -75,7 +74,7 @@ class UserApiKeyController(
     @PostMapping
     fun add(@ProcessParam @Valid @RequestBody apiKeyAddParam: ApiKeyAddParam): ResponseResult<ApiKeyWithSecretVo> =
         ResponseResult.databaseSuccess(
-            ResponseCode.API_KEY_CREATE_SUCCESS, data = apiKeyService.add(false, apiKeyAddParam)
+            ResponseCode.API_PLATFORM_KEY_CREATE_SUCCESS, data = apiKeyService.add(false, apiKeyAddParam)
         )
 
     /**
@@ -128,7 +127,7 @@ class UserApiKeyController(
     @PostMapping("/{id}/regenerate")
     fun regenerate(@PathVariable id: Long): ResponseResult<ApiKeyWithSecretVo> =
         ResponseResult.databaseSuccess(
-            ResponseCode.API_KEY_REGENERATE_SUCCESS, data = apiKeyService.regenerate(false, id)
+            ResponseCode.API_PLATFORM_KEY_REGENERATE_SUCCESS, data = apiKeyService.regenerate(false, id)
         )
 
     /**
@@ -167,16 +166,16 @@ class UserApiKeyController(
     }
 
     /**
-     * Get APIs I am allowed to grant to a key
+     * Get API interfaces I am allowed to grant to a key
      *
-     * @return Response object includes API list
+     * @return Response object includes API interface list
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      * @see ResponseResult
-     * @see ApiVo
+     * @see ApiInterfaceVo
      */
     @Operation(summary = "获取我可授权的 API 列表")
     @GetMapping("/available-apis")
-    fun availableApis(): ResponseResult<List<ApiVo>> =
+    fun availableApis(): ResponseResult<List<ApiInterfaceVo>> =
         ResponseResult.databaseSuccess(data = apiKeyService.availableApis())
 }

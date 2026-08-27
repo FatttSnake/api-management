@@ -1,5 +1,11 @@
+insert into t_s_module (id, name)
+    values (2000000, 'API') as new_value
+on duplicate key update name = new_value.name;
+
 insert into t_s_power (id, type_id)
-    values (1540000, 2),
+    values (2000000, 1),
+           (2990000, 2),
+           (1540000, 2),
            (1540100, 3),
            (1540200, 3),
            (1540300, 3),
@@ -28,7 +34,8 @@ insert into t_s_power (id, type_id)
 on duplicate key update type_id = new_value.type_id;
 
 insert into t_s_menu (id, name, url, parent_id, module_id)
-    values (1540000, 'API 平台', '^/system/api(/.*)?$', 1990000, 1000000) as new_value
+    values (1540000, 'API 平台', '^/system/api(/.*)?$', 1990000, 1000000),
+           (2990000, 'API 插件', NULL, NULL, 2000000) as new_value
 on duplicate key update name      =new_value.name,
                         url       =new_value.url,
                         parent_id =new_value.parent_id;

@@ -16,11 +16,11 @@ import java.time.ZoneOffset
 @Component
 class DataMetaObjectHandler : MetaObjectHandler {
     override fun insertFill(metaObject: MetaObject?) {
-        this.strictInsertFill(metaObject, "createTime", LocalDateTime::class.java, LocalDateTime.now(ZoneOffset.UTC))
-        this.strictInsertFill(metaObject, "updateTime", LocalDateTime::class.java, LocalDateTime.now(ZoneOffset.UTC))
+        strictInsertFill(metaObject, "createTime", LocalDateTime::class.java, LocalDateTime.now(ZoneOffset.UTC))
+        strictInsertFill(metaObject, "updateTime", LocalDateTime::class.java, LocalDateTime.now(ZoneOffset.UTC))
     }
 
     override fun updateFill(metaObject: MetaObject?) {
-        this.strictUpdateFill(metaObject, "updateTime", LocalDateTime::class.java, LocalDateTime.now(ZoneOffset.UTC))
+        strictUpdateFill(metaObject, "updateTime", LocalDateTime::class.java, LocalDateTime.now(ZoneOffset.UTC))
     }
 }

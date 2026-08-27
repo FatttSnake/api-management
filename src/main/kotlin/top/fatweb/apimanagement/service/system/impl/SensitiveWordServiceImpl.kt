@@ -30,24 +30,24 @@ import top.fatweb.apimanagement.vo.system.SensitiveWordVo
 @Service
 class SensitiveWordServiceImpl : ServiceImpl<SensitiveWordMapper, SensitiveWord>(), ISensitiveWordService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    override fun get(): List<SensitiveWordVo> = this.list().map(SensitiveWord::toVo)
+    override fun get(): List<SensitiveWordVo> = list().map(SensitiveWord::toVo)
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     override fun add(sensitiveWordAddParam: SensitiveWordAddParam) {
         checkSensitiveWord(sensitiveWordAddParam.word!!)
-        saveOrThrowException { this.save(sensitiveWordAddParam.toEntity()) }
+        saveOrThrowException { save(sensitiveWordAddParam.toEntity()) }
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     override fun update(sensitiveWordUpdateParam: SensitiveWordUpdateParam) {
         saveOrThrowException {
-            this.update(
+            update(
                 KtUpdateWrapper(SensitiveWord())
                     .set(SensitiveWord::enable, false)
             )
         }
         saveOrThrowException {
-            this.update(
+            update(
                 KtUpdateWrapper(SensitiveWord())
                     .`in`(SensitiveWord::id, sensitiveWordUpdateParam.ids)
                     .set(SensitiveWord::enable, true)
@@ -57,12 +57,12 @@ class SensitiveWordServiceImpl : ServiceImpl<SensitiveWordMapper, SensitiveWord>
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     override fun delete(id: Long) {
-        this.removeById(id)
+        removeById(id)
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     override fun checkSensitiveWord(str: String) {
-        this.list(
+        list(
             KtQueryWrapper(SensitiveWord())
                 .eq(SensitiveWord::enable, 1)
         ).map(SensitiveWord::word).forEach {

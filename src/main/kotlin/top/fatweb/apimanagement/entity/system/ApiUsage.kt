@@ -136,10 +136,10 @@ class ApiUsage : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Api.BillingMode
+     * @see ApiInterface.BillingMode
      */
     @TableField("billing_mode")
-    var billingMode: Api.BillingMode? = null
+    var billingMode: ApiInterface.BillingMode? = null
 
     /**
      * Create time
@@ -182,6 +182,6 @@ class ApiUsage : Serializable {
     var version: Int? = null
 
     override fun toString(): String {
-        return "ApiUsage(id=$id, apiKeyId=$apiKeyId, apiCode=$apiCode, success=$success, cost=$cost, executeTime=$executeTime)"
+        return "ApiUsage(id=$id, apiKeyId=$apiKeyId, apiId=$apiId, apiCode=$apiCode, userId=$userId, requestPath=$requestPath, requestMethod=$requestMethod, responseCode=$responseCode, success=$success, executeTime=$executeTime, requestIp=$requestIp, traceId=$traceId, cost=$cost, billingMode=$billingMode, createTime=$createTime, updateTime=$updateTime, deleted=$deleted, version=$version)"
     }
 }

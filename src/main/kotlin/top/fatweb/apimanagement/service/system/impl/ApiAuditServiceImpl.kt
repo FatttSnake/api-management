@@ -45,6 +45,6 @@ class ApiAuditServiceImpl : ServiceImpl<EventLogMapper, EventLog>(), IApiAuditSe
             apiAuditGetParam?.endTime?.let { le(EventLog::operateTime, it) }
         }
 
-        return this.page(page, wrapper).toAuditPage()
+        return page(page, wrapper).toAuditPage()
     }
 }

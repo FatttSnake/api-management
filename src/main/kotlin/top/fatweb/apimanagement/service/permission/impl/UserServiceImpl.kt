@@ -109,7 +109,7 @@ class UserServiceImpl(
 
     override fun password(userChangePasswordParam: UserChangePasswordParam) {
         val user = queryOrThrowException(UserNotFoundException()) {
-            this.getById(
+            getById(
                 getLoginUserIdOrThrow()
             )
         }
@@ -119,7 +119,7 @@ class UserServiceImpl(
         }
 
         updateOrThrowException {
-            this.update(
+            update(
                 KtUpdateWrapper(User())
                     .eq(User::id, user.id)
                     .set(User::password, passwordEncoder.encode(userChangePasswordParam.newPassword))
@@ -171,7 +171,7 @@ class UserServiceImpl(
             }-${UUID.randomUUID()}-${UUID.randomUUID()}-${UUID.randomUUID()}"
         }
 
-        saveOrThrowException { this.save(user) }
+        saveOrThrowException { save(user) }
 
         saveOrThrowException { user.userInfo!!.apply { userId = user.id }.let(userInfoService::save) }
 
@@ -233,9 +233,9 @@ class UserServiceImpl(
         removeGroupIds.removeAll(addGroupIds)
         oldGroupList.toSet().let(addGroupIds::removeAll)
 
-        updateOrThrowException { this.updateById(user) }
+        updateOrThrowException { updateById(user) }
         updateOrThrowException {
-            this.update(
+            update(
                 KtUpdateWrapper(User()).eq(User::id, user.id)
                     .set(
                         User::verify,
@@ -306,9 +306,9 @@ class UserServiceImpl(
             throw AccessDeniedException("Access denied")
         }
 
-        val user = queryOrThrowException { this.getById(userUpdatePasswordParam.id) }
+        val user = queryOrThrowException { getById(userUpdatePasswordParam.id) }
         updateOrThrowException {
-            this.update(
+            update(
                 KtUpdateWrapper(User())
                     .eq(User::id, user.id)
                     .set(User::password, passwordEncoder.encode(userUpdatePasswordParam.password))
@@ -335,7 +335,7 @@ class UserServiceImpl(
             return
         }
 
-        this.delete(UserDeleteParam(listOf(id)))
+        delete(UserDeleteParam(listOf(id)))
     }
 
     @Transactional
@@ -345,7 +345,7 @@ class UserServiceImpl(
             return
         }
 
-        this.removeBatchByIds(ids)
+        removeBatchByIds(ids)
         userInfoService.remove(KtQueryWrapper(UserInfo()).`in`(UserInfo::userId, ids))
         rUserRoleService.remove(KtQueryWrapper(RUserRole()).`in`(RUserRole::userId, ids))
         rUserGroupService.remove(KtQueryWrapper(RUserGroup()).`in`(RUserGroup::userId, ids))

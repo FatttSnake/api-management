@@ -3,18 +3,18 @@ package top.fatweb.apimanagement.vo.system
 import io.swagger.v3.oas.annotations.media.Schema
 import tools.jackson.databind.annotation.JsonSerialize
 import tools.jackson.databind.ser.std.ToStringSerializer
-import top.fatweb.apimanagement.entity.system.Api
+import top.fatweb.apimanagement.entity.system.ApiInterface
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
 /**
- * API value object
+ * API interface value object
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-@Schema(description = "API 返回参数")
-data class ApiVo(
+@Schema(description = "API 接口返回参数")
+data class ApiInterfaceVo(
     /**
      * ID
      *
@@ -25,12 +25,21 @@ data class ApiVo(
     val id: Long?,
 
     /**
+     * Owning plugin ID
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @field:Schema(description = "所属插件 ID", example = "avatar")
+    val pluginId: String?,
+
+    /**
      * API scoping code
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "API 编码", example = "api:v1:avatar:getRandom")
+    @field:Schema(description = "API 编码", example = "api:avatar:v1:getRandom")
     val code: String?,
 
     /**
@@ -39,7 +48,7 @@ data class ApiVo(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "API 名称", example = "获取随机头像")
+    @field:Schema(description = "API 名称", example = "getRandom")
     val name: String?,
 
     /**
@@ -57,7 +66,7 @@ data class ApiVo(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "请求路径", example = "/api/v1/avatar")
+    @field:Schema(description = "请求路径", example = "/api/avatar/v1")
     val path: String?,
 
     /**
@@ -85,7 +94,7 @@ data class ApiVo(
      * @since 1.0.0
      * @see BigDecimal
      */
-    @field:Schema(description = "每次调用单价", example = "0.0100")
+    @field:Schema(description = "每次调用单价 (null=继承插件默认)", example = "0.0100")
     val price: BigDecimal?,
 
     /**
@@ -93,10 +102,10 @@ data class ApiVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Api.BillingMode
+     * @see ApiInterface.BillingMode
      */
     @field:Schema(description = "计费模式", allowableValues = ["FREE", "SUCCESS_ONLY", "ALWAYS"])
-    val billingMode: Api.BillingMode?,
+    val billingMode: ApiInterface.BillingMode?,
 
     /**
      * Need API key status
@@ -108,12 +117,12 @@ data class ApiVo(
     val needKey: Boolean?,
 
     /**
-     * Per-API rate limit per minute
+     * Rate limit per minute
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "每分钟限流次数(0=不限)", example = "100")
+    @field:Schema(description = "每分钟限流次数 (null=继承插件默认)", example = "100")
     val rateLimit: Int?,
 
     /**

@@ -149,6 +149,6 @@ class ApiTransaction : Serializable {
     var version: Int? = null
 
     override fun toString(): String {
-        return "ApiTransaction(id=$id, userId=$userId, apiKeyId=$apiKeyId, apiUsageId=$apiUsageId, type=$type, amount=$amount, balanceAfter=$balanceAfter)"
+        return "ApiTransaction(id=$id, userId=$userId, apiKeyId=$apiKeyId, apiUsageId=$apiUsageId, orderNo=$orderNo, type=$type, amount=$amount, balanceAfter=$balanceAfter, remark=$remark, createTime=$createTime, updateTime=$updateTime, deleted=$deleted, version=$version)"
     }
 }

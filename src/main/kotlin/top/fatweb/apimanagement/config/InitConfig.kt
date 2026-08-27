@@ -7,13 +7,13 @@ import org.slf4j.LoggerFactory
 import org.springframework.security.core.token.Sha512DigestUtils
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Component
-import top.fatweb.avatargenerator.GitHubAvatar
 import top.fatweb.apimanagement.entity.permission.User
 import top.fatweb.apimanagement.entity.permission.UserInfo
 import top.fatweb.apimanagement.properties.ServerProperties
 import top.fatweb.apimanagement.service.permission.IUserInfoService
 import top.fatweb.apimanagement.service.permission.IUserService
 import top.fatweb.apimanagement.util.generateRandomPassword
+import top.fatweb.avatargenerator.GitHubAvatar
 
 /**
  * Application initialization configuration

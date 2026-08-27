@@ -15,6 +15,6 @@ import top.fatweb.apimanagement.annotation.ApiController
 @Configuration
 class WebMvcConfigurerConfig : WebMvcConfigurer {
     override fun configurePathMatch(configurer: PathMatchConfigurer) {
-        configurer.addPathPrefix("/api/{API_VERSION}") { it.isAnnotationPresent(ApiController::class.java) }
+        configurer.addPathPrefix("/api/{PLUGIN}/v{API_VERSION}") { it.isAnnotationPresent(ApiController::class.java) }
     }
 }

@@ -6,8 +6,8 @@ import org.springframework.stereotype.Service
 import top.fatweb.apimanagement.entity.system.ApiUsage
 import top.fatweb.apimanagement.mapper.system.ApiUsageMapper
 import top.fatweb.apimanagement.param.system.apiReport.ApiReportGetParam
+import top.fatweb.apimanagement.service.system.IApiPluginService
 import top.fatweb.apimanagement.service.system.IApiReportService
-import top.fatweb.apimanagement.service.system.IApiService
 import top.fatweb.apimanagement.service.system.IStorageBlobService
 import top.fatweb.apimanagement.vo.system.ApiReportVo
 import top.fatweb.apimanagement.vo.system.ApiTopVo
@@ -18,7 +18,7 @@ import java.math.BigDecimal
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IApiService
+ * @see IApiPluginService
  * @see IStorageBlobService
  * @see IApiReportService
  */
@@ -26,7 +26,7 @@ import java.math.BigDecimal
 @DS("master")
 class ApiReportServiceImpl(
     private val apiUsageMapper: ApiUsageMapper,
-    private val apiService: IApiService,
+    private val apiPluginService: IApiPluginService,
     private val storageBlobService: IStorageBlobService
 ) : IApiReportService {
     override fun usage(apiReportGetParam: ApiReportGetParam?): List<ApiReportVo> {
@@ -65,7 +65,7 @@ class ApiReportServiceImpl(
             val apiCode = row["api_code"] as? String ?: ""
             ApiTopVo(
                 apiCode = apiCode,
-                apiName = apiService.getByCode(apiCode)?.name,
+                apiName = apiPluginService.getByCode(apiCode)?.name,
                 count = (row["count"] as? Number)?.toLong() ?: 0L,
                 cost = (row["cost"] as? Number)?.let { BigDecimal(it.toString()) } ?: BigDecimal.ZERO
             )
@@ -93,7 +93,7 @@ class ApiReportServiceImpl(
             apiKeyId = (row["api_key_id"] as? Number)?.toLong(),
             date = row["date"] as? String,
             apiCode = apiCode,
-            apiName = apiService.getByCode(apiCode)?.name,
+            apiName = apiPluginService.getByCode(apiCode)?.name,
             count = (row["count"] as? Number)?.toLong() ?: 0L,
             cost = (row["cost"] as? Number)?.let { BigDecimal(it.toString()) } ?: BigDecimal.ZERO
         )

@@ -8,7 +8,6 @@ import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import top.fatweb.apimanagement.converter.system.toVo
 import top.fatweb.apimanagement.converter.system.toVoPage
 import top.fatweb.apimanagement.entity.system.ApiTransaction
 import top.fatweb.apimanagement.entity.system.ApiUsage
@@ -52,31 +51,31 @@ class ApiTransactionServiceImpl : ServiceImpl<ApiTransactionMapper, ApiTransacti
             apiTransactionGetParam?.endTime?.let { le(ApiTransaction::createTime, it) }
         }
 
-        return this.page(page, wrapper).toVoPage()
+        return page(page, wrapper).toVoPage()
     }
 
     override fun getByOrderNo(orderNo: String): ApiTransaction? =
-        this.getOne(KtQueryWrapper(ApiTransaction()).eq(ApiTransaction::orderNo, orderNo))
+        getOne(KtQueryWrapper(ApiTransaction()).eq(ApiTransaction::orderNo, orderNo))
 
     @Transactional
     override fun saveDeduct(apiUsage: ApiUsage, balanceAfter: BigDecimal): Boolean {
         val usageId = apiUsage.id ?: return false
-        if (this.count(KtQueryWrapper(ApiTransaction()).eq(ApiTransaction::apiUsageId, usageId)) > 0) {
+        if (count(KtQueryWrapper(ApiTransaction()).eq(ApiTransaction::apiUsageId, usageId)) > 0) {
             return true
         }
 
         val transaction = ApiTransaction().apply {
-            userId = apiUsage.userId
-            apiKeyId = apiUsage.apiKeyId
-            apiUsageId = usageId
-            type = ApiTransaction.Type.DEDUCT
-            amount = apiUsage.cost?.negate()
+            this.userId = apiUsage.userId
+            this.apiKeyId = apiUsage.apiKeyId
+            this.apiUsageId = usageId
+            this.type = ApiTransaction.Type.DEDUCT
+            this.amount = apiUsage.cost?.negate()
             this.balanceAfter = balanceAfter
-            remark = "API usage ${apiUsage.apiCode}"
+            this.remark = "API usage ${apiUsage.apiCode}"
         }
 
         return try {
-            this.save(transaction)
+            save(transaction)
         } catch (_: DuplicateKeyException) {
             true
         }

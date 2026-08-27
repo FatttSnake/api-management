@@ -88,7 +88,7 @@ object SettingsOperator {
     fun <V> setValue(field: KMutableProperty1<BaseSettings, V?>, value: V?) {
         systemSettings.base.let {
             if (field == BaseSettings::turnstileSecretKey) {
-                this.getValue(BaseSettings::turnstileSecretKey)?.let { turnstileSecretKey ->
+                getValue(BaseSettings::turnstileSecretKey)?.let { turnstileSecretKey ->
                     if ((turnstileSecretKey.isEmpty() && value == null) || md5(turnstileSecretKey) == value) {
                         return
                     }
@@ -113,7 +113,7 @@ object SettingsOperator {
      */
     @JvmName("getBaseValue")
     fun <V> getValue(field: KMutableProperty1<BaseSettings, V?>): V? =
-        this.getValue(field, null)
+        getValue(field, null)
 
     /**
      * Get base settings value with default value
@@ -144,7 +144,7 @@ object SettingsOperator {
     fun <V> setValue(field: KMutableProperty1<MailSettings, V?>, value: V?) {
         systemSettings.mail.let {
             if (field == MailSettings::password) {
-                this.getValue(MailSettings::password)?.let { password ->
+                getValue(MailSettings::password)?.let { password ->
                     if ((password.isEmpty() && value == null) || md5(password) == value) {
                         return
                     }
@@ -168,7 +168,7 @@ object SettingsOperator {
      */
     @JvmName("getMailValue")
     fun <V> getValue(field: KMutableProperty1<MailSettings, V?>): V? =
-        this.getValue(field, null)
+        getValue(field, null)
 
     /**
      * Get value from mail settings with default value
@@ -216,7 +216,7 @@ object SettingsOperator {
      */
     @JvmName("getTwoFactorValue")
     fun <V> getValue(field: KMutableProperty1<TwoFactorSettings, V?>): V? =
-        this.getValue(field, null)
+        getValue(field, null)
 
     /**
      * Get value from two-factor settings with default value
@@ -264,7 +264,7 @@ object SettingsOperator {
      */
     @JvmName("getApiValue")
     fun <V> getValue(field: KMutableProperty1<ApiSettings, V?>): V? =
-        this.getValue(field, null)
+        getValue(field, null)
 
     /**
      * Get value from API platform settings with default value

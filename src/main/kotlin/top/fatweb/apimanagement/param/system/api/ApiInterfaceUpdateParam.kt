@@ -1,39 +1,38 @@
 package top.fatweb.apimanagement.param.system.api
 
 import io.swagger.v3.oas.annotations.media.Schema
-import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotNull
 import top.fatweb.apimanagement.annotation.ParamProcessor
-import top.fatweb.apimanagement.entity.system.Api
+import top.fatweb.apimanagement.entity.system.ApiInterface
 import java.math.BigDecimal
 
 /**
- * Update API parameters
+ * Update API interface parameters
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
 @ParamProcessor
-@Schema(description = "API 更新请求参数")
-data class ApiUpdateParam(
+@Schema(description = "API 接口更新请求参数")
+data class ApiInterfaceUpdateParam(
     /**
-     * API ID
+     * API interface ID
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "API ID", required = true)
+    @field:Schema(description = "API 接口 ID", required = true)
     @field:NotNull(message = "ID can not be null")
     var id: Long?,
 
     /**
-     * Price per call
+     * Price per call (null = inherit plugin default)
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      * @see BigDecimal
      */
-    @field:Schema(description = "每次调用单价", example = "0.0100")
+    @field:Schema(description = "每次调用单价 (null=继承插件默认)", example = "0.0100")
     var price: BigDecimal?,
 
     /**
@@ -41,10 +40,14 @@ data class ApiUpdateParam(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Api.BillingMode
+     * @see ApiInterface.BillingMode
      */
-    @field:Schema(description = "计费模式", allowableValues = ["FREE", "SUCCESS_ONLY", "ALWAYS"], example = "SUCCESS_ONLY")
-    var billingMode: Api.BillingMode?,
+    @field:Schema(
+        description = "计费模式",
+        allowableValues = ["FREE", "SUCCESS_ONLY", "ALWAYS"],
+        example = "SUCCESS_ONLY"
+    )
+    var billingMode: ApiInterface.BillingMode?,
 
     /**
      * Need API key status
@@ -56,13 +59,12 @@ data class ApiUpdateParam(
     var needKey: Boolean?,
 
     /**
-     * Per-API rate limit per minute
+     * Rate limit per minute (null = inherit plugin default)
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "每分钟限流次数(0=不限)", example = "100")
-    @field:Min(value = 0, message = "Rate limit must be greater than or equal to 0")
+    @field:Schema(description = "每分钟限流次数 (null=继承插件默认)", example = "100")
     var rateLimit: Int?,
 
     /**

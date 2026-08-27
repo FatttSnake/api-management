@@ -47,12 +47,12 @@ class S3FileStorageProvider(
 
     private fun String.splitFileName() =
         Pair(
-            this.substring(0, 2),
-            this.substring(2)
+            substring(0, 2),
+            substring(2)
         )
 
     private fun String.resolveS3Key(): String {
-        val (dir, fileName) = this.splitFileName()
+        val (dir, fileName) = splitFileName()
         val prefix =
             if (serverProperties.storage.s3!!.prefix.isEmpty()) "" else serverProperties.storage.s3!!.prefix.removeSuffix(
                 "/"
@@ -63,7 +63,7 @@ class S3FileStorageProvider(
 
     override fun save(content: ByteArray): String {
         val key = content.sha256HexString()
-        if (this.exists(key)) {
+        if (exists(key)) {
             return key
         }
 
@@ -78,7 +78,7 @@ class S3FileStorageProvider(
     }
 
     override fun save(content: String): String =
-        this.save(content.toByteArray())
+        save(content.toByteArray())
 
     override fun load(key: String): ByteArray? =
         try {
