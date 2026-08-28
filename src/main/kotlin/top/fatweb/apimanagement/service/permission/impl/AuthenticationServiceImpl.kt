@@ -461,7 +461,7 @@ class AuthenticationServiceImpl(
         val context = Context(
             Locale.getDefault(),
             mapOf(
-                "systemName" to SettingsOperator.getValue(BaseSettings::systemName, "ApiManagement"),
+                "systemName" to SettingsOperator.getValue(BaseSettings::systemName, "API Management"),
                 "homeUrl" to SettingsOperator.getValue(BaseSettings::homeUrl, "http://localhost"),
                 "username" to username,
                 "verifyUrl" to verifyUrl
@@ -484,7 +484,7 @@ class AuthenticationServiceImpl(
         val context = Context(
             Locale.getDefault(),
             mapOf(
-                "systemName" to SettingsOperator.getValue(BaseSettings::systemName, "ApiManagement"),
+                "systemName" to SettingsOperator.getValue(BaseSettings::systemName, "API Management"),
                 "homeUrl" to SettingsOperator.getValue(BaseSettings::homeUrl, "http://localhost"),
                 "username" to username,
                 "ipAddress" to ip,
@@ -502,7 +502,7 @@ class AuthenticationServiceImpl(
         val context = Context(
             Locale.getDefault(),
             mapOf(
-                "systemName" to SettingsOperator.getValue(BaseSettings::systemName, "ApiManagement"),
+                "systemName" to SettingsOperator.getValue(BaseSettings::systemName, "API Management"),
                 "homeUrl" to SettingsOperator.getValue(BaseSettings::homeUrl, "http://localhost"),
                 "username" to username,
                 "ipAddress" to ip

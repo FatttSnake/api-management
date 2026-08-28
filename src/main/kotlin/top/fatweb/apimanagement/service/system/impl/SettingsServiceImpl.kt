@@ -23,7 +23,7 @@ import top.fatweb.apimanagement.vo.system.TwoFactorSettingsVo
 @Service
 class SettingsServiceImpl : ISettingsService {
     override fun getBase() = BaseSettingsVo(
-        systemName = SettingsOperator.getValue(BaseSettings::systemName, "ApiManagement"),
+        systemName = SettingsOperator.getValue(BaseSettings::systemName, "API Management"),
         tokenExpiryBufferMs = SettingsOperator.getValue(BaseSettings::tokenExpiryBufferMs, 1800000),
         tokenExpiryCheckIntervalMs = SettingsOperator.getValue(BaseSettings::tokenExpiryCheckIntervalMs, 600000),
         turnstileSiteKey = SettingsOperator.getValue(BaseSettings::turnstileSiteKey),
