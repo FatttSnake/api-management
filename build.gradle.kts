@@ -96,17 +96,6 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
-tasks.withType<ProcessResources> {
-    val versionProvider = provider { project.version.toString() }
-    val timestamp = LocalDateTime.now(ZoneOffset.UTC).toString()
-    filesMatching("application.yaml") {
-        expand(mapOf(
-            "projectVersion" to versionProvider.get(),
-            "buildTimestamp" to timestamp
-        ))
-    }
-}
-
 val env = envOrProperty("env").getOrElse("dev")
 
 if (env == "dev" || env == "release") {
