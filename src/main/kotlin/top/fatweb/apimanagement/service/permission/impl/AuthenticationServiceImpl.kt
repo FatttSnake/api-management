@@ -31,7 +31,6 @@ import top.fatweb.apimanagement.exception.*
 import top.fatweb.apimanagement.http.TurnstileApi
 import top.fatweb.apimanagement.param.permission.*
 import top.fatweb.apimanagement.properties.ServerProperties
-import top.fatweb.apimanagement.service.api.v1.IAvatarService
 import top.fatweb.apimanagement.service.permission.IAuthenticationService
 import top.fatweb.apimanagement.service.permission.IUserInfoService
 import top.fatweb.apimanagement.service.permission.IUserService
@@ -65,7 +64,6 @@ import java.util.*
  * @see IUserService
  * @see IUserInfoService
  * @see ISensitiveWordService
- * @see IAvatarService
  * @see IAuthenticationService
  */
 @Service
@@ -80,8 +78,7 @@ class AuthenticationServiceImpl(
     private val turnstileApi: TurnstileApi,
     private val userService: IUserService,
     private val userInfoService: IUserInfoService,
-    private val sensitiveWordService: ISensitiveWordService,
-    private val avatarService: IAvatarService
+    private val sensitiveWordService: ISensitiveWordService
 ) : IAuthenticationService {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
@@ -111,7 +108,7 @@ class AuthenticationServiceImpl(
             userInfoService.save(UserInfo().apply {
                 userId = user.id
                 nickname = registerParam.username
-                avatar = avatarService.randomBase64(null).base64
+                avatar = userService.generateAvatar(null)
                 email = registerParam.email
             })
         }

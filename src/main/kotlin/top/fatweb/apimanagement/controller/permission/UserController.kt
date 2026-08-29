@@ -27,6 +27,11 @@ import top.fatweb.apimanagement.vo.permission.UserWithRoleInfoVo
 class UserController(
     private val userService: IUserService
 ) {
+    @Operation(summary = "生成头像")
+    @GetMapping("/avatar/generate")
+    fun generateAvatar(@Valid avatarGenerateParam: AvatarGenerateParam?): ResponseResult<String> =
+        ResponseResult.success(data = userService.generateAvatar(avatarGenerateParam))
+
     /**
      * Get current user information
      *

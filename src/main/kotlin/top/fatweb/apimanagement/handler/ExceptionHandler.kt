@@ -22,7 +22,6 @@ import org.springframework.web.servlet.resource.NoResourceFoundException
 import top.fatweb.apimanagement.entity.common.ResponseCode
 import top.fatweb.apimanagement.entity.common.ResponseResult
 import top.fatweb.apimanagement.exception.*
-import top.fatweb.avatargenerator.AvatarException
 
 /**
  * Exception handler
@@ -259,12 +258,6 @@ class ExceptionHandler {
             is NoEmailConfigException -> {
                 logger.debug(e.localizedMessage, e)
                 ResponseResult.fail(ResponseCode.SYSTEM_NO_EMAIL_CONFIG, e.localizedMessage, null)
-            }
-
-            /* API */
-            is AvatarException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_AVATAR_ERROR, e.localizedMessage, null)
             }
 
             /* API Platform */

@@ -31,9 +31,16 @@ import top.fatweb.apimanagement.vo.PageVo
 import top.fatweb.apimanagement.vo.permission.UserWithInfoVo
 import top.fatweb.apimanagement.vo.permission.UserWithPowerInfoVo
 import top.fatweb.apimanagement.vo.permission.UserWithRoleInfoVo
+import top.fatweb.avatargenerator.GitHubAvatar
+import top.fatweb.avatargenerator.IdenticonAvatar
+import top.fatweb.avatargenerator.SquareAvatar
+import top.fatweb.avatargenerator.TriangleAvatar
+import top.fatweb.avatargenerator.layer.background.ColorPaintBackgroundLayer
+import java.awt.Color
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.*
+import kotlin.io.encoding.Base64
 
 /**
  * User service implement
@@ -69,6 +76,13 @@ class UserServiceImpl(
     private val rUserRoleService: IRUserRoleService,
     private val rUserGroupService: IRUserGroupService
 ) : ServiceImpl<UserMapper, User>(), IUserService {
+    override fun generateAvatar(avatarGenerateParam: AvatarGenerateParam?): String = when ((1..4).random()) {
+        1 -> AvatarGenerator.triangleBase64(avatarGenerateParam)
+        2 -> AvatarGenerator.squareBase64(avatarGenerateParam)
+        3 -> AvatarGenerator.identiconBase64(avatarGenerateParam)
+        else -> AvatarGenerator.githubBase64(avatarGenerateParam)
+    }
+
     override fun getUserWithPowerByAccount(account: String): User? {
         val user = baseMapper.selectOneWithPowerInfoByAccount(account) ?: return null
 
@@ -356,4 +370,93 @@ class UserServiceImpl(
     override fun getIdsByRoleIds(roleIds: List<Long>) = baseMapper.selectIdsWithRoleIds(roleIds)
 
     override fun getIdsByGroupIds(groupIds: List<Long>) = baseMapper.selectIdsWithGroupIds(groupIds)
+
+    object AvatarGenerator {
+        fun triangle(avatarGenerateParam: AvatarGenerateParam?): ByteArray {
+            val avatar = (
+                    if (avatarGenerateParam == null || avatarGenerateParam.colors.isNullOrEmpty())
+                        TriangleAvatar.newAvatarBuilder()
+                    else TriangleAvatar.newAvatarBuilder(
+                        *avatarGenerateParam.colors!!.map(::decodeColor).toTypedArray()
+                    )
+                    ).apply {
+                    avatarGenerateParam?.size?.let(::size)
+                    avatarGenerateParam?.margin?.let(::margin)
+                    avatarGenerateParam?.padding?.let(::padding)
+                    avatarGenerateParam?.background?.let { layers(ColorPaintBackgroundLayer(decodeColor(it))) }
+                }.build()
+
+            return avatar.createAsPngBytes(avatarGenerateParam?.seed ?: getRandomLong())
+        }
+
+        fun triangleBase64(avatarGenerateParam: AvatarGenerateParam?) =
+            Base64.encode(triangle(avatarGenerateParam))
+
+        fun square(avatarGenerateParam: AvatarGenerateParam?): ByteArray {
+            val avatar = (
+                    if (avatarGenerateParam == null || avatarGenerateParam.colors.isNullOrEmpty())
+                        SquareAvatar.newAvatarBuilder()
+                    else SquareAvatar.newAvatarBuilder(
+                        *avatarGenerateParam.colors!!.map(::decodeColor).toTypedArray()
+                    )
+                    ).apply {
+                    avatarGenerateParam?.size?.let(::size)
+                    avatarGenerateParam?.margin?.let(::margin)
+                    avatarGenerateParam?.padding?.let(::padding)
+                    avatarGenerateParam?.background?.let { layers(ColorPaintBackgroundLayer(decodeColor(it))) }
+                }.build()
+
+            return avatar.createAsPngBytes(avatarGenerateParam?.seed ?: getRandomLong())
+        }
+
+        fun squareBase64(avatarGenerateParam: AvatarGenerateParam?) =
+            Base64.encode(square(avatarGenerateParam))
+
+        fun identicon(avatarGenerateParam: AvatarGenerateParam?): ByteArray {
+            val avatar = IdenticonAvatar.newAvatarBuilder().apply {
+                avatarGenerateParam?.size?.let(::size)
+                avatarGenerateParam?.margin?.let(::margin)
+                avatarGenerateParam?.padding?.let(::padding)
+                if (avatarGenerateParam != null && !avatarGenerateParam.colors.isNullOrEmpty()) {
+                    color(decodeColor(avatarGenerateParam.colors!!.random()))
+                }
+                avatarGenerateParam?.background?.let { layers(ColorPaintBackgroundLayer(decodeColor(it))) }
+            }.build()
+
+            return avatar.createAsPngBytes(avatarGenerateParam?.seed ?: getRandomLong())
+        }
+
+        fun identiconBase64(avatarGenerateParam: AvatarGenerateParam?) =
+            Base64.encode(identicon(avatarGenerateParam))
+
+        fun github(avatarGenerateParam: AvatarGenerateParam?, elementSize: Int = 400, precision: Int = 5): ByteArray {
+            val avatar = (avatarGenerateParam?.let { GitHubAvatar.newAvatarBuilder(elementSize, precision) }
+                ?: let { GitHubAvatar.newAvatarBuilder(400, 5) }).apply {
+                avatarGenerateParam?.size?.let(::size)
+                avatarGenerateParam?.margin?.let(::margin)
+                avatarGenerateParam?.padding?.let(::padding)
+                if (avatarGenerateParam != null && !avatarGenerateParam.colors.isNullOrEmpty()) {
+                    color(decodeColor(avatarGenerateParam.colors!!.random()))
+                }
+                avatarGenerateParam?.background?.let { layers(ColorPaintBackgroundLayer(decodeColor(it))) }
+            }.build()
+
+            return avatar.createAsPngBytes(avatarGenerateParam?.seed ?: getRandomLong())
+        }
+
+        fun githubBase64(avatarGenerateParam: AvatarGenerateParam?) =
+            Base64.encode(github(avatarGenerateParam))
+
+        private fun decodeColor(nm: String): Color {
+            return if (Regex("^#[0-9a-fA-F]{6}$").matches(nm)) {
+                Color.decode(nm)
+            } else if (Regex("^#[0-9a-fA-F]{8}$").matches(nm)) {
+                val intVal = Integer.decode(nm.substring(1..6).prependIndent("#"))
+                val alpha = Integer.decode(nm.substring(7).prependIndent("#"))
+                Color(intVal shr 16 and 0xFF, intVal shr 8 and 0XFF, intVal and 0xFF, alpha and 0xFF)
+            } else {
+                Color.WHITE
+            }
+        }
+    }
 }
