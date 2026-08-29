@@ -28,7 +28,7 @@ import top.fatweb.apimanagement.settings.ApiSettings
 import top.fatweb.apimanagement.settings.SettingsOperator
 import top.fatweb.apimanagement.util.*
 import top.fatweb.apimanagement.vo.PageVo
-import top.fatweb.apimanagement.vo.system.ApiInterfaceVo
+import top.fatweb.apimanagement.vo.system.ApiGroupVo
 import top.fatweb.apimanagement.vo.system.ApiKeyVo
 import top.fatweb.apimanagement.vo.system.ApiKeyWithSecretVo
 
@@ -152,15 +152,25 @@ class ApiKeyServiceImpl(
     override fun getByAccessKey(accessKey: String): ApiKey? =
         getOne(KtQueryWrapper(ApiKey()).eq(ApiKey::accessKey, accessKey))
 
-    override fun availableApis(): List<ApiInterfaceVo> {
+    override fun availableApis(): List<ApiGroupVo> {
         val allApis = apiPluginService.listEnabledInterfaces().filter { it.enabled == 1 }
-        if (isSuperAdmin(getLoginUserIdOrThrow())) {
-            return allApis.map(ApiInterface::toVo)
+        val visible = if (isSuperAdmin(getLoginUserIdOrThrow())) {
+            allApis
+        } else {
+            val ownerCodes = getLoginUser()?.user?.operations?.mapNotNull { it.code }?.toSet() ?: emptySet()
+            allApis.filter {
+                it.code in ownerCodes || apiPluginService.resolveAccessMode(it) == ApiInterface.AccessMode.DEFAULT
+            }
         }
-        val ownerCodes = getLoginUser()?.user?.operations?.mapNotNull { it.code }?.toSet() ?: emptySet()
-        return allApis.filter {
-            it.code in ownerCodes || apiPluginService.resolveAccessMode(it) == ApiInterface.AccessMode.DEFAULT
-        }.map(ApiInterface::toVo)
+        return visible
+            .groupBy { it.pluginId ?: "" }
+            .map { (pluginId, apis) ->
+                ApiGroupVo(
+                    pluginId = pluginId.ifBlank { null },
+                    pluginName = apiPluginService.getByPluginId(pluginId)?.name,
+                    interfaces = apis.map(ApiInterface::toVo)
+                )
+            }
     }
 
     private fun isSuperAdmin(userId: Long): Boolean = userId == 0L
