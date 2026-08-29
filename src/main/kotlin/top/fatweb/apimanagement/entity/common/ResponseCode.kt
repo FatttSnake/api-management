@@ -84,10 +84,7 @@ enum class ResponseCode(val code: Int) {
     API_PLATFORM_INSUFFICIENT_BALANCE(BusinessCode.API_PLATFORM, 59),
     API_PLATFORM_ACCOUNT_NOT_FOUND(BusinessCode.API_PLATFORM, 60),
     API_PLATFORM_USAGE_ID_NOT_GENERATED(BusinessCode.API_PLATFORM, 61),
-    API_PLATFORM_ACCESS_DENIED(BusinessCode.API_PLATFORM, 62),
-
-    API_AVATAR_SUCCESS(BusinessCode.API_AVATAR, 0),
-    API_AVATAR_ERROR(BusinessCode.API_AVATAR, 50);
+    API_PLATFORM_ACCESS_DENIED(BusinessCode.API_PLATFORM, 62);
 
     constructor(businessCode: BusinessCode, code: Int) : this(businessCode.code * 100 + code)
 }
