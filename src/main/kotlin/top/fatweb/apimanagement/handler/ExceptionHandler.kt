@@ -303,6 +303,11 @@ class ExceptionHandler {
                 ResponseResult.fail(ResponseCode.API_PLATFORM_KEY_REQUIRED, e.localizedMessage, null)
             }
 
+            is ApiPermissionDeniedException -> {
+                logger.debug(e.localizedMessage, e)
+                ResponseResult.fail(ResponseCode.API_PLATFORM_ACCESS_DENIED, e.localizedMessage, null)
+            }
+
             is ApiDisabledException -> {
                 logger.debug(e.localizedMessage, e)
                 ResponseResult.fail(ResponseCode.API_PLATFORM_DISABLED, e.localizedMessage, null)

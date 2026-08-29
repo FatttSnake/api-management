@@ -158,7 +158,9 @@ class ApiKeyServiceImpl(
             return allApis.map(ApiInterface::toVo)
         }
         val ownerCodes = getLoginUser()?.user?.operations?.mapNotNull { it.code }?.toSet() ?: emptySet()
-        return allApis.filter { it.code in ownerCodes }.map(ApiInterface::toVo)
+        return allApis.filter {
+            it.code in ownerCodes || apiPluginService.resolveAccessMode(it) == ApiInterface.AccessMode.DEFAULT
+        }.map(ApiInterface::toVo)
     }
 
     private fun isSuperAdmin(userId: Long): Boolean = userId == 0L
@@ -171,19 +173,30 @@ class ApiKeyServiceImpl(
 
     private fun resolvePermissions(ownerId: Long, requestCodes: List<String>?, grantAny: Boolean): Set<String> {
         val allCodes = apiPluginService.listEnabledInterfaces().mapNotNull { it.code }.toSet()
-        val ownerCodes = if (grantAny || isSuperAdmin(ownerId)) {
-            allCodes
-        } else {
-            getLoginUser()?.user?.operations?.mapNotNull { it.code }?.toSet() ?: emptySet()
-        }
         val requestSet = requestCodes?.filter { it.isNotBlank() }?.toSet() ?: emptySet()
 
+        // Only explicitly checked APIs enter the key's permissions, for both managed and
+        // self-service keys — an unchecked key cannot access any /api/** interface.
         if (requestSet.isEmpty()) {
-            return ownerCodes.intersect(allCodes)
+            return emptySet()
         }
 
+        if (grantAny || isSuperAdmin(ownerId)) {
+            requestSet.forEach {
+                if (it !in allCodes) {
+                    throw ApiKeyPermissionDeniedException()
+                }
+            }
+            return requestSet
+        }
+
+        val granted = getLoginUser()?.user?.operations?.mapNotNull { it.code }?.toSet() ?: emptySet()
+        val defaultOpen = apiPluginService.listEnabledInterfaces()
+            .filter { apiPluginService.resolveAccessMode(it) == ApiInterface.AccessMode.DEFAULT }
+            .mapNotNull { it.code }.toSet()
+        val selectable = granted.union(defaultOpen)
         requestSet.forEach {
-            if (it !in ownerCodes || it !in allCodes) {
+            if (it !in selectable || it !in allCodes) {
                 throw ApiKeyPermissionDeniedException()
             }
         }

@@ -82,6 +82,16 @@ class ApiPlugin : Serializable {
     var defaultRateLimit: Int? = null
 
     /**
+     * Default access mode inherited by interfaces whose access_mode is null
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiInterface.AccessMode
+     */
+    @TableField("default_access_mode")
+    var defaultAccessMode: ApiInterface.AccessMode? = null
+
+    /**
      * Create time
      *
      * @author FatttSnake, fatttsnake@gmail.com
@@ -122,6 +132,6 @@ class ApiPlugin : Serializable {
     var version: Int? = null
 
     override fun toString(): String {
-        return "ApiPlugin(id=$id, pluginId=$pluginId, name=$name, description=$description, enabled=$enabled, defaultPrice=$defaultPrice, defaultRateLimit=$defaultRateLimit, createTime=$createTime, updateTime=$updateTime, deleted=$deleted, version=$version)"
+        return "ApiPlugin(id=$id, pluginId=$pluginId, name=$name, description=$description, enabled=$enabled, defaultPrice=$defaultPrice, defaultRateLimit=$defaultRateLimit, defaultAccessMode=$defaultAccessMode, createTime=$createTime, updateTime=$updateTime, deleted=$deleted, version=$version)"
     }
 }

@@ -29,6 +29,7 @@ fun ApiInterface.toVo() = ApiInterfaceVo(
     needKey = this.needKey?.let { it == 1 },
     rateLimit = this.rateLimit,
     enabled = this.enabled?.let { it == 1 },
+    accessMode = this.accessMode,
     createTime = this.createTime,
     updateTime = this.updateTime
 )
@@ -67,4 +68,5 @@ fun ApiInterfaceUpdateParam.toEntity() = ApiInterface().apply {
     needKey = this@toEntity.needKey?.let { if (it) 1 else 0 }
     rateLimit = this@toEntity.rateLimit
     enabled = this@toEntity.enabled?.let { if (it) 1 else 0 }
+    accessMode = this@toEntity.accessMode
 }

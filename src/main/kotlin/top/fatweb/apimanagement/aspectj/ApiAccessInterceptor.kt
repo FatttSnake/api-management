@@ -95,11 +95,12 @@ class ApiAccessInterceptor(
                 principal = principal
             )
 
-            is LoginUser -> {
-                request.setAttribute(ATTR_USER_ID, principal.user.id)
-                request.setAttribute(ATTR_COST, BigDecimal.ZERO)
-                request.setAttribute(ATTR_BILLING_MODE, ApiInterface.BillingMode.FREE)
-            }
+            is LoginUser -> admitAccount(
+                request = request,
+                plugin = plugin,
+                api = apiInterface,
+                principal = principal
+            )
 
             else -> {
                 if (apiInterface.needKey == 1) {
@@ -211,6 +212,55 @@ class ApiAccessInterceptor(
         }
     }
 
+    private fun admitAccount(
+        request: HttpServletRequest,
+        plugin: ApiPlugin,
+        api: ApiInterface,
+        principal: LoginUser
+    ) {
+        val userId = principal.user.id ?: throw ApiAccountNotFoundException()
+        request.setAttribute(ATTR_USER_ID, userId)
+
+        // Access mode: RESTRICTED requires the caller to hold the api:* operation code
+        if (apiPluginService.resolveAccessMode(api) == ApiInterface.AccessMode.RESTRICTED) {
+            val codes = principal.user.operations?.mapNotNull { it.code }?.toSet() ?: emptySet()
+            if (api.code !in codes) {
+                throw ApiPermissionDeniedException()
+            }
+        }
+
+        // Account/JWT callers share the per-API global rate limit with API keys
+        checkApiGlobalRateLimit(plugin = plugin, api = api)
+
+        // Built-in super admin (user id 0) is exempt from billing but still recorded in usage
+        if (userId == 0L) {
+            request.setAttribute(ATTR_COST, BigDecimal.ZERO)
+            request.setAttribute(ATTR_BILLING_MODE, ApiInterface.BillingMode.FREE)
+            return
+        }
+
+        val cost = api.price ?: plugin.defaultPrice ?: BigDecimal.ZERO
+        val billingMode = api.billingMode ?: ApiInterface.BillingMode.SUCCESS_ONLY
+        request.setAttribute(ATTR_COST, cost)
+        request.setAttribute(ATTR_BILLING_MODE, billingMode)
+
+        when (billingMode) {
+            ApiInterface.BillingMode.FREE -> Unit
+            ApiInterface.BillingMode.ALWAYS -> {
+                if (!apiAccountService.deduct(userId = userId, cost = cost)) {
+                    throw InsufficientBalanceException()
+                }
+                request.setAttribute(ATTR_ALREADY_DEDUCTED, true)
+            }
+
+            ApiInterface.BillingMode.SUCCESS_ONLY -> {
+                if (!apiAccountService.checkBalance(userId = userId, cost = cost)) {
+                    throw InsufficientBalanceException()
+                }
+            }
+        }
+    }
+
     private fun checkRateLimit(
         principal: ApiKeyPrincipal,
         plugin: ApiPlugin,
@@ -232,6 +282,12 @@ class ApiAccessInterceptor(
             }
         }
 
+        checkApiGlobalRateLimit(plugin = plugin, api = api)
+    }
+
+    private fun checkApiGlobalRateLimit(plugin: ApiPlugin, api: ApiInterface) {
+        val epochMinute = Instant.now().epochSecond / 60
+        val apiId = api.id ?: return
         val apiLimit = api.rateLimit ?: plugin.defaultRateLimit ?: 0
         if (apiLimit > 0) {
             val count = redisProvider.increment(
