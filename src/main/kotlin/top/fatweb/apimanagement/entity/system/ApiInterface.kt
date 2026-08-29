@@ -28,6 +28,21 @@ class ApiInterface : Serializable {
     }
 
     /**
+     * Access mode enum
+     *
+     * DEFAULT means normal (account/password) users may call the API without an
+     * admin grant; RESTRICTED means they must hold the api:* operation code. This
+     * only governs the account/JWT path — an AccessKey always needs the code in its
+     * permissions regardless of mode. Null on an interface means inherit the plugin.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    enum class AccessMode(@field:EnumValue @field:JsonValue val code: String) {
+        DEFAULT("DEFAULT"), RESTRICTED("RESTRICTED")
+    }
+
+    /**
      * ID
      *
      * @author FatttSnake, fatttsnake@gmail.com
@@ -147,6 +162,16 @@ class ApiInterface : Serializable {
     var enabled: Int? = null
 
     /**
+     * Access mode (null = inherit owning plugin's default)
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see AccessMode
+     */
+    @TableField("access_mode")
+    var accessMode: AccessMode? = null
+
+    /**
      * Create time
      *
      * @author FatttSnake, fatttsnake@gmail.com
@@ -187,6 +212,6 @@ class ApiInterface : Serializable {
     var version: Int? = null
 
     override fun toString(): String {
-        return "ApiInterface(id=$id, pluginId=$pluginId, code=$code, name=$name, description=$description, path=$path, method=$method, apiVersion=$apiVersion, price=$price, billingMode=$billingMode, needKey=$needKey, rateLimit=$rateLimit, enabled=$enabled, createTime=$createTime, updateTime=$updateTime, deleted=$deleted, version=$version)"
+        return "ApiInterface(id=$id, pluginId=$pluginId, code=$code, name=$name, description=$description, path=$path, method=$method, apiVersion=$apiVersion, price=$price, billingMode=$billingMode, needKey=$needKey, rateLimit=$rateLimit, enabled=$enabled, accessMode=$accessMode, createTime=$createTime, updateTime=$updateTime, deleted=$deleted, version=$version)"
     }
 }

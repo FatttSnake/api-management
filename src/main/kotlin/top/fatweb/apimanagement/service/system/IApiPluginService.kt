@@ -102,6 +102,19 @@ interface IApiPluginService : IService<ApiPlugin> {
     fun listEnabledInterfaces(): List<ApiInterface>
 
     /**
+     * Resolve the effective access mode for an interface (interface override or
+     * inherited from the owning plugin, defaulting to RESTRICTED)
+     *
+     * @param api API interface
+     * @return Effective access mode
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiInterface
+     * @see ApiInterface.AccessMode
+     */
+    fun resolveAccessMode(api: ApiInterface): ApiInterface.AccessMode
+
+    /**
      * Register API controllers to the plugin registry
      *
      * @author FatttSnake, fatttsnake@gmail.com

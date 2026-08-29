@@ -3,6 +3,7 @@ package top.fatweb.apimanagement.vo.system
 import io.swagger.v3.oas.annotations.media.Schema
 import tools.jackson.databind.annotation.JsonSerialize
 import tools.jackson.databind.ser.std.ToStringSerializer
+import top.fatweb.apimanagement.entity.system.ApiInterface
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
@@ -77,6 +78,16 @@ data class ApiPluginVo(
      */
     @field:Schema(description = "默认每分钟限流次数 (null=不限)", example = "100")
     val defaultRateLimit: Int?,
+
+    /**
+     * Default access mode inherited by interfaces whose access_mode is null
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiInterface.AccessMode
+     */
+    @field:Schema(description = "默认访问模式 (接口继承此值)", allowableValues = ["DEFAULT", "RESTRICTED"])
+    val defaultAccessMode: ApiInterface.AccessMode?,
 
     /**
      * Create time

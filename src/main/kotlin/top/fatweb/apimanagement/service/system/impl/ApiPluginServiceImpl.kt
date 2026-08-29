@@ -196,6 +196,10 @@ class ApiPluginServiceImpl(
     override fun listEnabledInterfaces(): List<ApiInterface> =
         apiInterfaceMapper.selectList(KtQueryWrapper(ApiInterface()).eq(ApiInterface::enabled, 1))
 
+    override fun resolveAccessMode(api: ApiInterface): ApiInterface.AccessMode =
+        api.accessMode ?: getByPluginId(api.pluginId ?: "")?.defaultAccessMode
+        ?: ApiInterface.AccessMode.RESTRICTED
+
     override fun registerApis() {
         val byPlugin = applicationContext.getBeansWithAnnotation<ApiController>()
             .values
