@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.spring.service.IService
 import top.fatweb.apimanagement.entity.system.ApiKey
 import top.fatweb.apimanagement.param.system.apiKey.*
 import top.fatweb.apimanagement.vo.PageVo
-import top.fatweb.apimanagement.vo.system.ApiInterfaceVo
+import top.fatweb.apimanagement.vo.system.ApiGroupVo
 import top.fatweb.apimanagement.vo.system.ApiKeyVo
 import top.fatweb.apimanagement.vo.system.ApiKeyWithSecretVo
 
@@ -123,12 +123,13 @@ interface IApiKeyService : IService<ApiKey> {
     fun getByAccessKey(accessKey: String): ApiKey?
 
     /**
-     * Get API interfaces that the current user is allowed to grant to a key
+     * Get API interfaces that the current user is allowed to grant to a key,
+     * grouped by owning plugin
      *
-     * @return List of ApiInterfaceVo object
+     * @return List of ApiGroupVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiInterfaceVo
+     * @see ApiGroupVo
      */
-    fun availableApis(): List<ApiInterfaceVo>
+    fun availableApis(): List<ApiGroupVo>
 }

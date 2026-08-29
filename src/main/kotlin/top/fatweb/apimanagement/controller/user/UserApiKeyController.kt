@@ -10,7 +10,7 @@ import top.fatweb.apimanagement.entity.common.ResponseResult
 import top.fatweb.apimanagement.param.system.apiKey.*
 import top.fatweb.apimanagement.service.system.IApiKeyService
 import top.fatweb.apimanagement.vo.PageVo
-import top.fatweb.apimanagement.vo.system.ApiInterfaceVo
+import top.fatweb.apimanagement.vo.system.ApiGroupVo
 import top.fatweb.apimanagement.vo.system.ApiKeyVo
 import top.fatweb.apimanagement.vo.system.ApiKeyWithSecretVo
 
@@ -166,16 +166,16 @@ class UserApiKeyController(
     }
 
     /**
-     * Get API interfaces I am allowed to grant to a key
+     * Get API interfaces I am allowed to grant to a key, grouped by plugin
      *
-     * @return Response object includes API interface list
+     * @return Response object includes API interface groups
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      * @see ResponseResult
-     * @see ApiInterfaceVo
+     * @see ApiGroupVo
      */
-    @Operation(summary = "获取我可授权的 API 列表")
+    @Operation(summary = "获取我可授权的 API 列表（按插件分组）")
     @GetMapping("/available-apis")
-    fun availableApis(): ResponseResult<List<ApiInterfaceVo>> =
+    fun availableApis(): ResponseResult<List<ApiGroupVo>> =
         ResponseResult.databaseSuccess(data = apiKeyService.availableApis())
 }
