@@ -1,4 +1,4 @@
-package top.fatweb.apimanagement.param.api.v1.avatar
+package top.fatweb.apimanagement.param.permission.user
 
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Max
@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Pattern
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-open class AvatarBaseParam {
+open class AvatarGenerateParam {
     /**
      * Seed to generate avatar
      *

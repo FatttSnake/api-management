@@ -18,6 +18,14 @@ import top.fatweb.apimanagement.vo.permission.UserWithRoleInfoVo
  */
 interface IUserService : IService<User> {
     /**
+     * Generate random avatar as base64
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    fun generateAvatar(avatarGenerateParam: AvatarGenerateParam?): String
+
+    /**
      * Get user with power by username or email
      *
      * @param account Username or email
