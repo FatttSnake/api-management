@@ -135,6 +135,16 @@ data class ApiInterfaceVo(
     val enabled: Boolean?,
 
     /**
+     * Access mode (null = inherit owning plugin's default)
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiInterface.AccessMode
+     */
+    @field:Schema(description = "访问模式 (null=继承插件)", allowableValues = ["DEFAULT", "RESTRICTED"])
+    val accessMode: ApiInterface.AccessMode?,
+
+    /**
      * Create time
      *
      * @author FatttSnake, fatttsnake@gmail.com

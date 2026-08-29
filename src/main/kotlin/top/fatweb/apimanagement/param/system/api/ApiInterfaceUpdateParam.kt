@@ -74,5 +74,15 @@ data class ApiInterfaceUpdateParam(
      * @since 1.0.0
      */
     @field:Schema(description = "启用", example = "true")
-    var enabled: Boolean?
+    var enabled: Boolean?,
+
+    /**
+     * Access mode (null = inherit owning plugin's default)
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiInterface.AccessMode
+     */
+    @field:Schema(description = "访问模式 (null=继承插件)", allowableValues = ["DEFAULT", "RESTRICTED"])
+    var accessMode: ApiInterface.AccessMode?
 )

@@ -23,6 +23,7 @@ fun ApiPlugin.toVo() = ApiPluginVo(
     enabled = this.enabled?.let { it == 1 },
     defaultPrice = this.defaultPrice,
     defaultRateLimit = this.defaultRateLimit,
+    defaultAccessMode = this.defaultAccessMode,
     createTime = this.createTime,
     updateTime = this.updateTime
 )
@@ -61,4 +62,5 @@ fun ApiPluginUpdateParam.toEntity() = ApiPlugin().apply {
     enabled = this@toEntity.enabled?.let { if (it) 1 else 0 }
     defaultPrice = this@toEntity.defaultPrice
     defaultRateLimit = this@toEntity.defaultRateLimit
+    defaultAccessMode = this@toEntity.defaultAccessMode
 }
