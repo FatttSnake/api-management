@@ -9,10 +9,11 @@ import top.fatweb.apimanagement.annotation.ProcessParam
 import top.fatweb.apimanagement.entity.common.ResponseCode
 import top.fatweb.apimanagement.entity.common.ResponseResult
 import top.fatweb.apimanagement.param.system.apiKey.*
-import top.fatweb.apimanagement.service.system.IApiKeyService
+import top.fatweb.apimanagement.service.api.IApiKeyService
 import top.fatweb.apimanagement.vo.PageVo
-import top.fatweb.apimanagement.vo.system.ApiKeyVo
-import top.fatweb.apimanagement.vo.system.ApiKeyWithSecretVo
+import top.fatweb.apimanagement.vo.api.ApiGroupVo
+import top.fatweb.apimanagement.vo.api.ApiKeyVo
+import top.fatweb.apimanagement.vo.api.ApiKeyWithSecretVo
 
 /**
  * API key management controller
@@ -37,7 +38,7 @@ class ApiKeyController(
      */
     @Operation(summary = "获取单个 API Key")
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('system:api:key:list')")
+    @PreAuthorize("hasAnyAuthority('system:api-keys:one:query')")
     fun getOne(@PathVariable id: Long): ResponseResult<ApiKeyVo> =
         ResponseResult.databaseSuccess(data = apiKeyService.getOne(true, id))
 
@@ -55,7 +56,7 @@ class ApiKeyController(
      */
     @Operation(summary = "获取 API Key")
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('system:api:key:list')")
+    @PreAuthorize("hasAnyAuthority('system:api-keys:all:query')")
     fun get(@ProcessParam @Valid apiKeyGetParam: ApiKeyGetParam?): ResponseResult<PageVo<ApiKeyVo>> =
         ResponseResult.databaseSuccess(data = apiKeyService.getPage(true, apiKeyGetParam))
 
@@ -72,7 +73,7 @@ class ApiKeyController(
      */
     @Operation(summary = "创建 API Key")
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('system:api:key:add')")
+    @PreAuthorize("hasAnyAuthority('system:api-keys:one:add')")
     fun add(@ProcessParam @Valid @RequestBody apiKeyAddParam: ApiKeyAddParam): ResponseResult<ApiKeyWithSecretVo> =
         ResponseResult.databaseSuccess(
             ResponseCode.API_PLATFORM_KEY_CREATE_SUCCESS, data = apiKeyService.add(true, apiKeyAddParam)
@@ -90,7 +91,7 @@ class ApiKeyController(
      */
     @Operation(summary = "修改 API Key")
     @PutMapping
-    @PreAuthorize("hasAnyAuthority('system:api:key:modify')")
+    @PreAuthorize("hasAnyAuthority('system:api-keys:one:modify')")
     fun update(@ProcessParam @Valid @RequestBody apiKeyUpdateParam: ApiKeyUpdateParam): ResponseResult<Unit> {
         apiKeyService.update(true, apiKeyUpdateParam)
 
@@ -109,7 +110,7 @@ class ApiKeyController(
      */
     @Operation(summary = "修改 API Key 状态")
     @PatchMapping
-    @PreAuthorize("hasAnyAuthority('system:api:key:status')")
+    @PreAuthorize("hasAnyAuthority('system:api-keys:one:status')")
     fun status(@Valid @RequestBody apiKeyUpdateStatusParam: ApiKeyUpdateStatusParam): ResponseResult<Unit> {
         apiKeyService.status(true, apiKeyUpdateStatusParam)
 
@@ -128,7 +129,7 @@ class ApiKeyController(
      */
     @Operation(summary = "重新生成 SecretKey")
     @PostMapping("/{id}/regenerate")
-    @PreAuthorize("hasAnyAuthority('system:api:key:secret')")
+    @PreAuthorize("hasAnyAuthority('system:api-keys:one:regenerate')")
     fun regenerate(@PathVariable id: Long): ResponseResult<ApiKeyWithSecretVo> =
         ResponseResult.databaseSuccess(
             ResponseCode.API_PLATFORM_KEY_REGENERATE_SUCCESS, data = apiKeyService.regenerate(true, id)
@@ -145,7 +146,7 @@ class ApiKeyController(
      */
     @Operation(summary = "删除 API Key")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('system:api:key:delete')")
+    @PreAuthorize("hasAnyAuthority('system:api-keys:one:remove')")
     fun delete(@PathVariable id: Long): ResponseResult<Unit> {
         apiKeyService.deleteOne(true, id)
 
@@ -164,10 +165,25 @@ class ApiKeyController(
      */
     @Operation(summary = "批量删除 API Key")
     @DeleteMapping
-    @PreAuthorize("hasAnyAuthority('system:api:key:delete')")
+    @PreAuthorize("hasAnyAuthority('system:api-keys:all:remove')")
     fun deleteList(@Valid @RequestBody apiKeyDeleteParam: ApiKeyDeleteParam): ResponseResult<Unit> {
         apiKeyService.delete(true, apiKeyDeleteParam)
 
         return ResponseResult.databaseSuccess(ResponseCode.DATABASE_DELETE_SUCCESS)
     }
+
+    /**
+     * Get API interfaces I am allowed to grant to a key, grouped by plugin
+     *
+     * @return Response object includes API interface groups
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ResponseResult
+     * @see ApiGroupVo
+     */
+    @Operation(summary = "获取可授权的 API 列表（按插件分组）")
+    @GetMapping(path = ["/available-apis", "/available-apis/{userId}"])
+    @PreAuthorize("hasAnyAuthority('system:api-keys:one:add','system:api-keys:one:modify','system:api-keys:one:query')")
+    fun availableApis(@PathVariable userId: Long?): ResponseResult<List<ApiGroupVo>> =
+        ResponseResult.databaseSuccess(data = apiKeyService.availableApis(true, userId))
 }

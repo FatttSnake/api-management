@@ -8,9 +8,9 @@ import top.fatweb.apimanagement.annotation.BaseController
 import top.fatweb.apimanagement.annotation.ProcessParam
 import top.fatweb.apimanagement.entity.common.ResponseResult
 import top.fatweb.apimanagement.param.system.apiUsage.ApiUsageGetParam
-import top.fatweb.apimanagement.service.system.IApiUsageService
+import top.fatweb.apimanagement.service.api.IApiUsageService
 import top.fatweb.apimanagement.vo.PageVo
-import top.fatweb.apimanagement.vo.system.ApiUsageVo
+import top.fatweb.apimanagement.vo.api.ApiUsageVo
 
 /**
  * API usage management controller
@@ -37,7 +37,7 @@ class ApiUsageController(
      */
     @Operation(summary = "获取 API 用量")
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('system:api:usage:query')")
+    @PreAuthorize("hasAnyAuthority('system:operations:usage:query')")
     fun get(@ProcessParam @Valid apiUsageGetParam: ApiUsageGetParam?): ResponseResult<PageVo<ApiUsageVo>> =
         ResponseResult.databaseSuccess(data = apiUsageService.getPage(true, apiUsageGetParam))
 }

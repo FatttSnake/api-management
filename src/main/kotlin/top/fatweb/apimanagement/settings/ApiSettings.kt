@@ -51,12 +51,12 @@ data class ApiSettings(
     var secretKeyLength: Int? = null,
 
     /**
-     * Whether balance check is enabled before billing
+     * Whether balance check is enable before billing
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    var balanceCheckEnabled: Boolean? = null,
+    var balanceCheckEnable: Boolean? = null,
 
     /**
      * TTL of api key cache in seconds

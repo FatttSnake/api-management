@@ -3,7 +3,7 @@ package top.fatweb.apimanagement.param.system.api
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.NotNull
 import top.fatweb.apimanagement.annotation.ParamProcessor
-import top.fatweb.apimanagement.entity.system.ApiInterface
+import top.fatweb.apimanagement.entity.api.ApiInterface
 import java.math.BigDecimal
 
 /**
@@ -26,31 +26,13 @@ data class ApiPluginUpdateParam(
     var id: Long?,
 
     /**
-     * Plugin display name
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    @field:Schema(description = "插件名称", example = "随机头像")
-    var name: String?,
-
-    /**
-     * Description
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    @field:Schema(description = "插件描述")
-    var description: String?,
-
-    /**
-     * Enabled status
+     * Enable status
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
     @field:Schema(description = "启用", example = "true")
-    var enabled: Boolean?,
+    var enable: Boolean?,
 
     /**
      * Default price per call (null = free)

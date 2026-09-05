@@ -4,8 +4,8 @@ import jakarta.servlet.http.HttpServletRequest
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.core.context.SecurityContextHolder
 import top.fatweb.apimanagement.component.storage.RedisProvider
+import top.fatweb.apimanagement.entity.api.ApiKeyPrincipal
 import top.fatweb.apimanagement.entity.permission.LoginUser
-import top.fatweb.apimanagement.entity.system.ApiKeyPrincipal
 import top.fatweb.apimanagement.properties.ServerProperties
 
 /**

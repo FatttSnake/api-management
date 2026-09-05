@@ -1,6 +1,4 @@
 import java.security.MessageDigest
-import java.time.LocalDateTime
-import java.time.ZoneOffset
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -29,6 +27,8 @@ repositories {
 }
 
 dependencies {
+    implementation(project(":plugin-sdk"))
+
     implementation(libs.kotlin.reflect)
     implementation(libs.kotlinx.coroutines.core)
 
@@ -71,6 +71,8 @@ dependencies {
     implementation(libs.aws.sdk.s3)
 
     implementation(libs.retrofit)
+
+    implementation(libs.swagger.annotations.jakarta)
 
     testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation(libs.kotlin.test.junit5)

@@ -20,7 +20,7 @@ data class ApiInterfaceGetParam(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "查询 API 编码", example = "api:avatar:v1:getRandom")
+    @field:Schema(description = "查询 API 编码", example = "api:echo:v1:ping")
     var searchCode: String?,
 
     /**
@@ -38,11 +38,11 @@ data class ApiInterfaceGetParam(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "所属插件 ID", example = "avatar")
+    @field:Schema(description = "所属插件 ID", example = "echo")
     var pluginId: String?,
 
     /**
-     * Enabled status
+     * Enable status
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -53,5 +53,5 @@ data class ApiInterfaceGetParam(
         defaultValue = "true",
         example = "true"
     )
-    var enabled: Boolean?
+    var enable: Boolean?
 ) : PageSortParam()

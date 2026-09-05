@@ -20,11 +20,11 @@ data class ApiPluginGetParam(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "查询插件名称", example = "随机头像")
+    @field:Schema(description = "查询插件名称", example = "Echo 插件")
     var searchName: String?,
 
     /**
-     * Enabled status
+     * Enable status
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -35,5 +35,5 @@ data class ApiPluginGetParam(
         defaultValue = "true",
         example = "true"
     )
-    var enabled: Boolean?
+    var enable: Boolean?
 ) : PageSortParam()

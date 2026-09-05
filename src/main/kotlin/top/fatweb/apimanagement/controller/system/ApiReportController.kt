@@ -13,10 +13,10 @@ import top.fatweb.apimanagement.annotation.ProcessParam
 import top.fatweb.apimanagement.entity.common.ResponseResult
 import top.fatweb.apimanagement.exception.NoRecordFoundException
 import top.fatweb.apimanagement.param.system.apiReport.ApiReportGetParam
-import top.fatweb.apimanagement.service.system.IApiReportService
+import top.fatweb.apimanagement.service.api.IApiReportService
 import top.fatweb.apimanagement.service.system.IStorageBlobService
-import top.fatweb.apimanagement.vo.system.ApiReportVo
-import top.fatweb.apimanagement.vo.system.ApiTopVo
+import top.fatweb.apimanagement.vo.api.ApiReportVo
+import top.fatweb.apimanagement.vo.api.ApiTopVo
 
 /**
  * API report controller
@@ -44,7 +44,7 @@ class ApiReportController(
      */
     @Operation(summary = "获取 API 用量报表")
     @GetMapping("/usage")
-    @PreAuthorize("hasAnyAuthority('system:api:stats:usage')")
+    @PreAuthorize("hasAnyAuthority('system:operations:report:usage')")
     fun usage(@ProcessParam @Valid apiReportGetParam: ApiReportGetParam?): ResponseResult<List<ApiReportVo>> =
         ResponseResult.databaseSuccess(data = apiReportService.usage(apiReportGetParam))
 
@@ -61,7 +61,7 @@ class ApiReportController(
      */
     @Operation(summary = "获取 API 费用报表")
     @GetMapping("/cost")
-    @PreAuthorize("hasAnyAuthority('system:api:stats:cost')")
+    @PreAuthorize("hasAnyAuthority('system:operations:report:cost')")
     fun cost(@ProcessParam @Valid apiReportGetParam: ApiReportGetParam?): ResponseResult<List<ApiReportVo>> =
         ResponseResult.databaseSuccess(data = apiReportService.cost(apiReportGetParam))
 
@@ -78,7 +78,7 @@ class ApiReportController(
      */
     @Operation(summary = "获取 API Top 列表")
     @GetMapping("/top")
-    @PreAuthorize("hasAnyAuthority('system:api:stats:top')")
+    @PreAuthorize("hasAnyAuthority('system:operations:report:top')")
     fun top(@ProcessParam @Valid apiReportGetParam: ApiReportGetParam?): ResponseResult<List<ApiTopVo>> =
         ResponseResult.databaseSuccess(data = apiReportService.top(apiReportGetParam))
 
@@ -94,7 +94,7 @@ class ApiReportController(
      */
     @Operation(summary = "导出 API 用量报表")
     @GetMapping("/export")
-    @PreAuthorize("hasAnyAuthority('system:api:stats:usage')")
+    @PreAuthorize("hasAnyAuthority('system:operations:report:export')")
     fun export(@ProcessParam @Valid apiReportGetParam: ApiReportGetParam?): ResponseResult<String> =
         ResponseResult.databaseSuccess(data = apiReportService.export(apiReportGetParam))
 
@@ -108,7 +108,7 @@ class ApiReportController(
      */
     @Operation(summary = "下载导出报表")
     @GetMapping("/export/{fileHash}")
-    @PreAuthorize("hasAnyAuthority('system:api:stats:usage')")
+    @PreAuthorize("hasAnyAuthority('system:operations:report:export')")
     fun download(@PathVariable fileHash: String): ResponseEntity<ByteArray> {
         val bytes = storageBlobService.loadFile(fileHash) ?: throw NoRecordFoundException()
         return ResponseEntity.ok()

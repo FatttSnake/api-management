@@ -5,8 +5,8 @@ import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.GetMapping
 import top.fatweb.apimanagement.annotation.BaseController
 import top.fatweb.apimanagement.entity.common.ResponseResult
-import top.fatweb.apimanagement.service.system.IApiMonitorService
-import top.fatweb.apimanagement.vo.system.ApiMonitorDashboardVo
+import top.fatweb.apimanagement.service.api.IApiMonitorService
+import top.fatweb.apimanagement.vo.api.ApiMonitorDashboardVo
 
 /**
  * API monitor controller
@@ -30,7 +30,7 @@ class ApiMonitorController(
      */
     @Operation(summary = "获取 API 监控看板")
     @GetMapping("/dashboard")
-    @PreAuthorize("hasAnyAuthority('system:api:monitor:dashboard')")
+    @PreAuthorize("hasAnyAuthority('system:operations:monitor:dashboard')")
     fun dashboard(): ResponseResult<ApiMonitorDashboardVo> =
         ResponseResult.databaseSuccess(data = apiMonitorService.dashboard())
 }
