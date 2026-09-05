@@ -3,7 +3,7 @@ package top.fatweb.apimanagement.param.system.api
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.NotNull
 import top.fatweb.apimanagement.annotation.ParamProcessor
-import top.fatweb.apimanagement.entity.system.ApiInterface
+import top.fatweb.apimanagement.entity.api.ApiInterface
 import java.math.BigDecimal
 
 /**
@@ -68,13 +68,13 @@ data class ApiInterfaceUpdateParam(
     var rateLimit: Int?,
 
     /**
-     * Enabled status
+     * Enable status
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
     @field:Schema(description = "启用", example = "true")
-    var enabled: Boolean?,
+    var enable: Boolean?,
 
     /**
      * Access mode (null = inherit owning plugin's default)

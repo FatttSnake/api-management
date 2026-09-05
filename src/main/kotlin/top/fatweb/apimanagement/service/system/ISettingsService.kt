@@ -1,7 +1,7 @@
 package top.fatweb.apimanagement.service.system
 
 import top.fatweb.apimanagement.param.system.*
-import top.fatweb.apimanagement.vo.system.ApiSettingsVo
+import top.fatweb.apimanagement.vo.api.ApiSettingsVo
 import top.fatweb.apimanagement.vo.system.BaseSettingsVo
 import top.fatweb.apimanagement.vo.system.MailSettingsVo
 import top.fatweb.apimanagement.vo.system.TwoFactorSettingsVo

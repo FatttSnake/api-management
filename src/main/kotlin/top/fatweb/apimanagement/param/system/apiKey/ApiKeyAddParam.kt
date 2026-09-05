@@ -35,14 +35,14 @@ data class ApiKeyAddParam(
     var name: String?,
 
     /**
-     * Scoped API codes (subset of the owner account)
+     * Scoped API codes (subset of the owner's authorized APIs)
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
     @field:Schema(
-        description = "权限 API 编码列表（属主权限子集，空则快照属主全部）",
-        example = "[\"api:v1:avatar:getRandom\"]"
+        description = "权限 API 编码列表（属主可授权范围子集，空则不授任何 API）",
+        example = "[\"api:echo:v1:ping\"]"
     )
     var permissionCodes: List<String>?,
 

@@ -35,6 +35,14 @@ data class StorageProperties(
     @field:Valid val local: LocalStorageProperties = LocalStorageProperties(),
 
     /**
+     * Directory where plugin jars are materialized for class loading
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @field:NotBlank val pluginDir: String = "data/plugins",
+
+    /**
      * S3 storage properties
      *
      * @author FatttSnake, fatttsnake@gmail.com

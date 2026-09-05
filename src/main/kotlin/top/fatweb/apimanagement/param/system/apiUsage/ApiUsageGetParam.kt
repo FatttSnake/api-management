@@ -39,7 +39,7 @@ data class ApiUsageGetParam(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "API 编码", example = "api:v1:avatar:getRandom")
+    @field:Schema(description = "API 编码", example = "api:echo:v1:ping")
     var apiCode: String?,
 
     /**

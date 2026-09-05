@@ -60,6 +60,65 @@
           and (tsui.email = #{account} or t_s_user.username = #{account});
     </select>
 
+    <select id="selectOneWithPowerInfoById" resultMap="userWithPowerInfoMap">
+        select t_s_user.id                     as user_id,
+               t_s_user.username               as user_username,
+               t_s_user.password               as user_password,
+               t_s_user.two_factor             as user_two_factor,
+               t_s_user.verify                 as user_verify,
+               t_s_user.forget                 as user_forget,
+               t_s_user.locking                as user_locking,
+               t_s_user.expiration             as user_expiration,
+               t_s_user.credentials_expiration as user_credentials_expiration,
+               t_s_user.enable                 as user_enable,
+               t_s_user.current_login_time     as user_current_login_time,
+               t_s_user.current_login_ip       as user_current_login_ip,
+               t_s_user.last_login_time        as user_last_login_time,
+               t_s_user.last_login_ip          as user_last_login_ip,
+               t_s_user.create_time            as user_create_time,
+               t_s_user.update_time            as user_update_time,
+               t_s_user.deleted                as user_deleted,
+               t_s_user.version                as user_version,
+               tsui.id                         as user_info_id,
+               tsui.user_id                    as user_info_user_id,
+               tsui.nickname                   as user_info_nickname,
+               tsui.avatar                     as user_info_avatar,
+               tsui.email                      as user_info_email,
+               tsui.create_time                as user_info_create_time,
+               tsui.update_time                as user_info_update_time,
+               tsui.deleted                    as user_info_deleted,
+               tsui.version                    as user_info_version,
+               tsmo.id                         as module_id,
+               tsmo.name                       as module_name,
+               tsm.id                          as menu_id,
+               tsm.name                        as menu_name,
+               tsm.url                         as menu_url,
+               tsm.parent_id                   as menu_parent_id,
+               tss.id                          as scope_id,
+               tss.name                        as scope_name,
+               tss.menu_id                     as scope_menu_id,
+               tso.id                          as operation_id,
+               tso.name                        as operation_name,
+               tso.code                        as operation_code,
+               tso.scope_id                     as operation_scope_id
+        from t_s_user
+                 left join (select * from t_s_user_info where deleted = 0) as tsui on t_s_user.id = tsui.user_id
+                 left join (select * from t_r_user_group where deleted = 0) as trug on t_s_user.id = trug.user_id
+                 left join (select * from t_s_group where deleted = 0 and enable = 1) as tsg on tsg.id = trug.group_id
+                 left join (select * from t_r_role_group where deleted = 0) as trrg on tsg.id = trrg.group_id
+                 left join (select * from t_r_user_role where deleted = 0) as trur on t_s_user.id = trur.user_id
+                 left join (select * from t_s_role where deleted = 0 and enable = 1) as tsr
+                           on tsr.id = trrg.role_id or tsr.id = trur.role_id
+                 left join (select * from t_r_power_role where deleted = 0) as trpr on tsr.id = trpr.role_id
+                 left join t_s_power as tsp on tsp.id = trpr.power_id
+                 left join t_s_module as tsmo on tsp.id = tsmo.id
+                 left join t_s_menu as tsm on tsp.id = tsm.id
+                 left join t_s_scope as tss on tsp.id = tss.id
+                 left join t_s_operation as tso on tsp.id = tso.id
+        where t_s_user.deleted = 0
+          and t_s_user.id = #{id};
+    </select>
+
     <select id="selectOneWithBasicInfoByUsername" resultMap="userWithInfoMap">
         select t_s_user.id       as user_id,
                t_s_user.username as user_username,
@@ -70,6 +129,18 @@
                  left join (select * from t_s_user_info where deleted = 0) as tsui on t_s_user.id = tsui.user_id
         where t_s_user.deleted = 0
           and t_s_user.username = #{username};
+    </select>
+
+    <select id="selectOneWithBasicInfoById" resultMap="userWithInfoMap">
+        select t_s_user.id       as user_id,
+               t_s_user.username as user_username,
+               tsui.id           as user_info_id,
+               tsui.nickname     as user_info_nickname,
+               tsui.avatar       as user_info_avatar
+        from t_s_user
+                 left join (select * from t_s_user_info where deleted = 0) as tsui on t_s_user.id = tsui.user_id
+        where t_s_user.deleted = 0
+          and t_s_user.id = #{id};
     </select>
 
     <select id="selectPage" resultType="long">

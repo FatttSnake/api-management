@@ -13,11 +13,11 @@ import top.fatweb.apimanagement.entity.common.ResponseCode
 import top.fatweb.apimanagement.entity.common.ResponseResult
 import top.fatweb.apimanagement.param.system.apiAccount.ApiTopUpParam
 import top.fatweb.apimanagement.param.system.apiAccount.ApiTransactionGetParam
-import top.fatweb.apimanagement.service.system.IApiAccountService
-import top.fatweb.apimanagement.service.system.IApiTransactionService
+import top.fatweb.apimanagement.service.api.IApiAccountService
+import top.fatweb.apimanagement.service.api.IApiTransactionService
 import top.fatweb.apimanagement.vo.PageVo
-import top.fatweb.apimanagement.vo.system.ApiAccountVo
-import top.fatweb.apimanagement.vo.system.ApiTransactionVo
+import top.fatweb.apimanagement.vo.api.ApiAccountVo
+import top.fatweb.apimanagement.vo.api.ApiTransactionVo
 
 /**
  * API account management controller
@@ -43,7 +43,7 @@ class ApiAccountController(
      */
     @Operation(summary = "获取 API 账户")
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('system:api:account:query')")
+    @PreAuthorize("hasAnyAuthority('system:operations:account:query')")
     fun get(@RequestParam(required = false) userId: Long?): ResponseResult<ApiAccountVo> =
         ResponseResult.databaseSuccess(
             data = apiAccountService.getAccount(true, userId)
@@ -63,7 +63,7 @@ class ApiAccountController(
      */
     @Operation(summary = "获取 API 流水")
     @GetMapping("/transactions")
-    @PreAuthorize("hasAnyAuthority('system:api:account:query')")
+    @PreAuthorize("hasAnyAuthority('system:operations:account:transactions')")
     fun getTransactions(
         @ProcessParam @Valid apiTransactionGetParam: ApiTransactionGetParam?
     ): ResponseResult<PageVo<ApiTransactionVo>> =
@@ -84,7 +84,7 @@ class ApiAccountController(
      */
     @Operation(summary = "API 账户充值")
     @PostMapping("/topup")
-    @PreAuthorize("hasAnyAuthority('system:api:account:topup')")
+    @PreAuthorize("hasAnyAuthority('system:operations:account:topup')")
     fun topUp(@ProcessParam @Valid @RequestBody apiTopUpParam: ApiTopUpParam): ResponseResult<ApiTransactionVo> =
         ResponseResult.databaseSuccess(
             ResponseCode.API_PLATFORM_KEY_TOPUP_SUCCESS,

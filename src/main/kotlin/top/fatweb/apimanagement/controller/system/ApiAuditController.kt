@@ -8,9 +8,9 @@ import top.fatweb.apimanagement.annotation.BaseController
 import top.fatweb.apimanagement.annotation.ProcessParam
 import top.fatweb.apimanagement.entity.common.ResponseResult
 import top.fatweb.apimanagement.param.system.apiAudit.ApiAuditGetParam
-import top.fatweb.apimanagement.service.system.IApiAuditService
+import top.fatweb.apimanagement.service.api.IApiAuditService
 import top.fatweb.apimanagement.vo.PageVo
-import top.fatweb.apimanagement.vo.system.ApiAuditVo
+import top.fatweb.apimanagement.vo.api.ApiAuditVo
 
 /**
  * API audit controller
@@ -37,7 +37,7 @@ class ApiAuditController(
      */
     @Operation(summary = "获取 API 审计")
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('system:api:audit:query')")
+    @PreAuthorize("hasAnyAuthority('system:operations:audit:query')")
     fun get(@ProcessParam @Valid apiAuditGetParam: ApiAuditGetParam?): ResponseResult<PageVo<ApiAuditVo>> =
         ResponseResult.databaseSuccess(data = apiAuditService.getPage(apiAuditGetParam))
 }

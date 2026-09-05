@@ -24,13 +24,13 @@ data class ApiKeyGetParam(
     var searchName: String?,
 
     /**
-     * Enabled status
+     * Enable status
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
     @field:Schema(description = "状态", allowableValues = ["true", "false"], example = "true")
-    var status: Boolean?,
+    var enable: Boolean?,
 
     /**
      * Owner user ID (admin only)

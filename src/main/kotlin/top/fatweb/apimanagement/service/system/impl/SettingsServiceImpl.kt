@@ -7,7 +7,7 @@ import top.fatweb.apimanagement.service.system.ISettingsService
 import top.fatweb.apimanagement.settings.*
 import top.fatweb.apimanagement.util.MailUtil
 import top.fatweb.apimanagement.util.md5
-import top.fatweb.apimanagement.vo.system.ApiSettingsVo
+import top.fatweb.apimanagement.vo.api.ApiSettingsVo
 import top.fatweb.apimanagement.vo.system.BaseSettingsVo
 import top.fatweb.apimanagement.vo.system.MailSettingsVo
 import top.fatweb.apimanagement.vo.system.TwoFactorSettingsVo
@@ -96,7 +96,7 @@ class SettingsServiceImpl : ISettingsService {
         defaultQuotaPeriodSeconds = SettingsOperator.getValue(ApiSettings::defaultQuotaPeriodSeconds, 86400),
         accessKeyLength = SettingsOperator.getValue(ApiSettings::accessKeyLength, 20),
         secretKeyLength = SettingsOperator.getValue(ApiSettings::secretKeyLength, 40),
-        balanceCheckEnabled = SettingsOperator.getValue(ApiSettings::balanceCheckEnabled, true),
+        balanceCheckEnabled = SettingsOperator.getValue(ApiSettings::balanceCheckEnable, true),
         cacheTtlSeconds = SettingsOperator.getValue(ApiSettings::cacheTtlSeconds, 300)
     )
 
@@ -107,7 +107,7 @@ class SettingsServiceImpl : ISettingsService {
             SettingsOperator.setValue(ApiSettings::defaultQuotaPeriodSeconds, defaultQuotaPeriodSeconds)
             SettingsOperator.setValue(ApiSettings::accessKeyLength, accessKeyLength)
             SettingsOperator.setValue(ApiSettings::secretKeyLength, secretKeyLength)
-            SettingsOperator.setValue(ApiSettings::balanceCheckEnabled, balanceCheckEnabled)
+            SettingsOperator.setValue(ApiSettings::balanceCheckEnable, balanceCheckEnabled)
             SettingsOperator.setValue(ApiSettings::cacheTtlSeconds, cacheTtlSeconds)
         }
     }

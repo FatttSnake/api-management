@@ -28,6 +28,17 @@ interface UserMapper : BaseMapper<User> {
     fun selectOneWithPowerInfoByAccount(@Param("account") account: String): User?
 
     /**
+     * Select one user with power and information by ID
+     *
+     * @param id User ID
+     * @return User object with power and information
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see User
+     */
+    fun selectOneWithPowerInfoById(@Param("id") id: Long): User?
+
+    /**
      * Select one user with basic information by username
      *
      * @param username Username
@@ -37,6 +48,17 @@ interface UserMapper : BaseMapper<User> {
      * @see User
      */
     fun selectOneWithBasicInfoByUsername(@Param("username") username: String): User?
+
+    /**
+     * Select one user with basic information by ID
+     *
+     * @param id User ID
+     * @return User object with basic information
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see User
+     */
+    fun selectOneWithBasicInfoById(@Param("id") id: Long): User?
 
     /**
      * Select user ID in page
