@@ -24,12 +24,12 @@ data class ApiKeyUpdateStatusParam(
     var id: Long?,
 
     /**
-     * Enabled status
+     * Enable status
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
     @field:Schema(description = "启用", required = true, example = "true")
     @field:NotNull(message = "Status can not be null")
-    var status: Boolean?
+    var enable: Boolean?
 )

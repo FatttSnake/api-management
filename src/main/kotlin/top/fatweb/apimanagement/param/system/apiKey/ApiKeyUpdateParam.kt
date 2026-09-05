@@ -44,6 +44,16 @@ data class ApiKeyUpdateParam(
     var permissionCodes: List<String>?,
 
     /**
+     * Enable status
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @field:Schema(description = "启用", required = true, example = "true")
+    @field:NotNull(message = "Status can not be null")
+    var enable: Boolean?,
+
+    /**
      * Expire time
      *
      * @author FatttSnake, fatttsnake@gmail.com

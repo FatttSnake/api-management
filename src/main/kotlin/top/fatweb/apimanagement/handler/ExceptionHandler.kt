@@ -4,6 +4,7 @@ import com.auth0.jwt.exceptions.JWTDecodeException
 import com.auth0.jwt.exceptions.SignatureVerificationException
 import com.auth0.jwt.exceptions.TokenExpiredException
 import io.swagger.v3.oas.annotations.Hidden
+import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.dao.DuplicateKeyException
@@ -22,6 +23,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException
 import top.fatweb.apimanagement.entity.common.ResponseCode
 import top.fatweb.apimanagement.entity.common.ResponseResult
 import top.fatweb.apimanagement.exception.*
+import top.fatweb.apimanagement.sdk.plugin.ApiResponse
 
 /**
  * Exception handler
@@ -38,15 +40,19 @@ class ExceptionHandler {
      * Handle all exception
      *
      * @param e Exception
-     * @return Response object
+     * @param request Request object
+     * @return Response object; for API requests (path starting with /api/) the
+     * response uses the user-facing [ApiResponse] envelope, otherwise the internal
+     * [ResponseResult] envelope
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      * @see Exception
      * @see ResponseResult
+     * @see ApiResponse
      */
     @ExceptionHandler(value = [Exception::class])
-    fun exceptionHandler(e: Exception): ResponseResult<*> {
-        return when (e) {
+    fun exceptionHandler(e: Exception, request: HttpServletRequest): Any {
+        val result = when (e) {
             /* Request */
             is HttpRequestMethodNotSupportedException, is NoResourceFoundException -> {
                 logger.debug(e.localizedMessage, e)
@@ -237,11 +243,11 @@ class ExceptionHandler {
             is UncategorizedSQLException -> {
                 if (e.localizedMessage.contains("SQLITE_CONSTRAINT_UNIQUE")) {
                     logger.debug(e.localizedMessage, e)
-                    return ResponseResult.fail(ResponseCode.DATABASE_DUPLICATE_KEY, "Duplicate key", null)
+                    ResponseResult.fail(ResponseCode.DATABASE_DUPLICATE_KEY, "Duplicate key", null)
+                } else {
+                    logger.error(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.DATABASE_EXECUTE_ERROR, e.localizedMessage, null)
                 }
-
-                logger.error(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.DATABASE_EXECUTE_ERROR, e.localizedMessage, null)
             }
 
             is RecordAlreadyExistsException -> {
@@ -326,10 +332,38 @@ class ExceptionHandler {
                 ResponseResult.databaseFail(ResponseCode.API_PLATFORM_USAGE_ID_NOT_GENERATED, e.localizedMessage, null)
             }
 
+            is PluginInstallException -> {
+                logger.debug(e.localizedMessage, e)
+                ResponseResult.fail(ResponseCode.API_PLATFORM_PLUGIN_INSTALL_FAILED, e.localizedMessage, null)
+            }
+
+            is PluginNotTrustedException -> {
+                logger.debug(e.localizedMessage, e)
+                ResponseResult.fail(ResponseCode.API_PLATFORM_PLUGIN_NOT_TRUSTED, e.localizedMessage, null)
+            }
+
+            is PluginSignatureInvalidException -> {
+                logger.debug(e.localizedMessage, e)
+                ResponseResult.fail(ResponseCode.API_PLATFORM_PLUGIN_SIGNATURE_INVALID, e.localizedMessage, null)
+            }
+
+            is PluginVersionConflictException -> {
+                logger.debug(e.localizedMessage, e)
+                ResponseResult.fail(ResponseCode.API_PLATFORM_PLUGIN_VERSION_CONFLICT, e.localizedMessage, null)
+            }
+
             else -> {
                 logger.error(e.localizedMessage, e)
                 ResponseResult.fail(ResponseCode.SYSTEM_ERROR, e.toString(), null)
             }
         }
+        return if (request.requestURI.startsWith("/api/")) result.toApiResponse() else result
     }
+
+    private fun ResponseResult<*>.toApiResponse() = ApiResponse(
+        code = this.code,
+        success = this.success,
+        msg = this.msg,
+        data = this.data
+    )
 }

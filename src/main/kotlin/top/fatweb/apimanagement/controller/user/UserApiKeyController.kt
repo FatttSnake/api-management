@@ -8,11 +8,11 @@ import top.fatweb.apimanagement.annotation.ProcessParam
 import top.fatweb.apimanagement.entity.common.ResponseCode
 import top.fatweb.apimanagement.entity.common.ResponseResult
 import top.fatweb.apimanagement.param.system.apiKey.*
-import top.fatweb.apimanagement.service.system.IApiKeyService
+import top.fatweb.apimanagement.service.api.IApiKeyService
 import top.fatweb.apimanagement.vo.PageVo
-import top.fatweb.apimanagement.vo.system.ApiGroupVo
-import top.fatweb.apimanagement.vo.system.ApiKeyVo
-import top.fatweb.apimanagement.vo.system.ApiKeyWithSecretVo
+import top.fatweb.apimanagement.vo.api.ApiGroupVo
+import top.fatweb.apimanagement.vo.api.ApiKeyVo
+import top.fatweb.apimanagement.vo.api.ApiKeyWithSecretVo
 
 /**
  * User-facing API key self-service controller
@@ -177,5 +177,5 @@ class UserApiKeyController(
     @Operation(summary = "获取我可授权的 API 列表（按插件分组）")
     @GetMapping("/available-apis")
     fun availableApis(): ResponseResult<List<ApiGroupVo>> =
-        ResponseResult.databaseSuccess(data = apiKeyService.availableApis())
+        ResponseResult.databaseSuccess(data = apiKeyService.availableApis(false))
 }

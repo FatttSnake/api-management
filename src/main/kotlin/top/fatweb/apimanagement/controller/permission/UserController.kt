@@ -62,6 +62,21 @@ class UserController(
         ResponseResult.databaseSuccess(data = userService.getBasicInfo(username))
 
     /**
+     * Get basic user information by ID
+     *
+     * @param id User ID
+     * @return Response object includes user basic information
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ResponseResult
+     * @see UserWithInfoVo
+     */
+    @Operation(summary = "获取指定用户基本信息")
+    @GetMapping("/infoById/{id}")
+    fun getBasicInfoById(@PathVariable id: Long): ResponseResult<UserWithInfoVo> =
+        ResponseResult.databaseSuccess(data = userService.getBasicInfoById(id))
+
+    /**
      * Update current user information
      *
      * @param userInfoUpdateParam Update user information parameters

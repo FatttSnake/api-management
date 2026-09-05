@@ -2,7 +2,7 @@ package top.fatweb.apimanagement.param.system.apiAccount
 
 import io.swagger.v3.oas.annotations.media.Schema
 import top.fatweb.apimanagement.annotation.ParamProcessor
-import top.fatweb.apimanagement.entity.system.ApiTransaction
+import top.fatweb.apimanagement.entity.api.ApiTransaction
 import top.fatweb.apimanagement.param.PageSortParam
 import java.time.LocalDateTime
 

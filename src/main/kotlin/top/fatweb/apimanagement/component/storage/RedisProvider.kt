@@ -117,6 +117,23 @@ class RedisProvider(
     fun delObject(collection: Collection<String>): Long = redisTemplate.delete(collection)
 
     /**
+     * Set if absent atomically with time to live
+     *
+     * Acts as a distributed gate: within a window of [timeout] only the first caller
+     * gets true, all subsequent ones false until the key expires.
+     *
+     * @param key Cache key
+     * @param timeout Timeout
+     * @param timeUnit Unit of timeout
+     * @return true=key was absent and has been set; false=key already exists
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see TimeUnit
+     */
+    fun setIfAbsent(key: String, timeout: Long, timeUnit: TimeUnit = TimeUnit.SECONDS): Boolean =
+        redisTemplate.opsForValue().setIfAbsent(key, 1, timeout, timeUnit) ?: false
+
+    /**
      * Increment cached value atomically
      *
      * @param key Cache key

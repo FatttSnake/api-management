@@ -58,6 +58,17 @@ interface IUserService : IService<User> {
     fun getBasicInfo(username: String): UserWithInfoVo
 
     /**
+     * Get user information by ID
+     *
+     * @param userId User ID
+     * @return UserWithInfoVo object
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see UserWithInfoVo
+     */
+    fun getBasicInfoById(userId: Long): UserWithInfoVo
+
+    /**
      * Update user information
      *
      * @param userInfoUpdateParam Update user information parameters

@@ -8,11 +8,11 @@ import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
 import top.fatweb.apimanagement.component.storage.RedisProvider
-import top.fatweb.apimanagement.entity.system.ApiKey
-import top.fatweb.apimanagement.entity.system.ApiKeyPrincipal
+import top.fatweb.apimanagement.entity.api.ApiKey
+import top.fatweb.apimanagement.entity.api.ApiKeyPrincipal
 import top.fatweb.apimanagement.exception.*
 import top.fatweb.apimanagement.properties.ServerProperties
-import top.fatweb.apimanagement.service.system.IApiKeyService
+import top.fatweb.apimanagement.service.api.IApiKeyService
 import top.fatweb.apimanagement.settings.ApiSettings
 import top.fatweb.apimanagement.settings.SettingsOperator
 import top.fatweb.apimanagement.util.getRequestIp
@@ -81,7 +81,7 @@ class ApiKeyAuthenticationTokenFilter(
             this.keyId = apiKey.id
             this.userId = apiKey.userId
             this.accessKey = apiKey.accessKey
-            this.status = apiKey.status
+            this.enable = apiKey.enable
             this.permissions =
                 apiKey.permissions?.split(",")?.map(String::trim)?.filter(String::isNotEmpty) ?: emptyList()
             this.rateLimit = apiKey.rateLimit
@@ -110,7 +110,7 @@ class ApiKeyAuthenticationTokenFilter(
     }
 
     private fun checkStatus(apiKey: ApiKey) {
-        if (apiKey.status != 1) {
+        if (apiKey.enable != 1) {
             throw ApiKeyDisabledException()
         }
         apiKey.expireTime?.let {

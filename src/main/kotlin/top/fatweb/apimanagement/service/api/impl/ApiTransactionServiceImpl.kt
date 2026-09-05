@@ -1,0 +1,83 @@
+package top.fatweb.apimanagement.service.api.impl
+
+import com.baomidou.dynamic.datasource.annotation.DS
+import com.baomidou.mybatisplus.core.metadata.OrderItem
+import com.baomidou.mybatisplus.extension.kotlin.KtQueryWrapper
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page
+import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl
+import org.springframework.dao.DuplicateKeyException
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import top.fatweb.apimanagement.converter.api.toVoPage
+import top.fatweb.apimanagement.entity.api.ApiTransaction
+import top.fatweb.apimanagement.entity.api.ApiUsage
+import top.fatweb.apimanagement.mapper.api.ApiTransactionMapper
+import top.fatweb.apimanagement.param.system.apiAccount.ApiTransactionGetParam
+import top.fatweb.apimanagement.service.api.IApiTransactionService
+import top.fatweb.apimanagement.util.getLoginUserIdOrThrow
+import top.fatweb.apimanagement.util.setPageSort
+import top.fatweb.apimanagement.vo.PageVo
+import top.fatweb.apimanagement.vo.api.ApiTransactionVo
+import java.math.BigDecimal
+
+/**
+ * API transaction service implement
+ *
+ * @author FatttSnake, fatttsnake@gmail.com
+ * @since 1.0.0
+ * @see ServiceImpl
+ * @see ApiTransactionMapper
+ * @see ApiTransaction
+ * @see IApiTransactionService
+ */
+@Service
+@DS("master")
+class ApiTransactionServiceImpl : ServiceImpl<ApiTransactionMapper, ApiTransaction>(), IApiTransactionService {
+    override fun getPage(
+        managed: Boolean,
+        apiTransactionGetParam: ApiTransactionGetParam?
+    ): PageVo<ApiTransactionVo> {
+        val page = Page<ApiTransaction>(
+            apiTransactionGetParam?.currentPage ?: 1, apiTransactionGetParam?.pageSize ?: 20
+        )
+        setPageSort(apiTransactionGetParam, page, OrderItem.desc("create_time"))
+
+        val targetUserId = if (managed) apiTransactionGetParam?.userId ?: getLoginUserIdOrThrow()
+        else getLoginUserIdOrThrow()
+        val wrapper = KtQueryWrapper(ApiTransaction()).apply {
+            eq(ApiTransaction::userId, targetUserId)
+            apiTransactionGetParam?.type?.let { eq(ApiTransaction::type, it) }
+            apiTransactionGetParam?.startTime?.let { ge(ApiTransaction::createTime, it) }
+            apiTransactionGetParam?.endTime?.let { le(ApiTransaction::createTime, it) }
+        }
+
+        return page(page, wrapper).toVoPage()
+    }
+
+    override fun getByOrderNo(orderNo: String): ApiTransaction? =
+        getOne(KtQueryWrapper(ApiTransaction()).eq(ApiTransaction::orderNo, orderNo))
+
+    @Transactional
+    override fun saveDeduct(apiUsage: ApiUsage, balanceAfter: BigDecimal): Boolean {
+        val usageId = apiUsage.id ?: return false
+        if (count(KtQueryWrapper(ApiTransaction()).eq(ApiTransaction::apiUsageId, usageId)) > 0) {
+            return true
+        }
+
+        val transaction = ApiTransaction().apply {
+            this.userId = apiUsage.userId
+            this.apiKeyId = apiUsage.apiKeyId
+            this.apiUsageId = usageId
+            this.type = ApiTransaction.Type.DEDUCT
+            this.amount = apiUsage.cost?.negate()
+            this.balanceAfter = balanceAfter
+            this.remark = "API usage ${apiUsage.apiCode}"
+        }
+
+        return try {
+            save(transaction)
+        } catch (_: DuplicateKeyException) {
+            true
+        }
+    }
+}

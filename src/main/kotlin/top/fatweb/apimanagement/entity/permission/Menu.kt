@@ -58,7 +58,16 @@ class Menu : Serializable {
     @TableField("module_id")
     var moduleId: Long? = null
 
+    /**
+     * API platform plugin ID (plugin-created menus only; system menus are null)
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @TableField("plugin_id")
+    var pluginId: String? = null
+
     override fun toString(): String {
-        return "Menu(id=$id, name=$name, url=$url, parentId=$parentId, moduleId=$moduleId)"
+        return "Menu(id=$id, name=$name, url=$url, parentId=$parentId, moduleId=$moduleId, pluginId=$pluginId)"
     }
 }

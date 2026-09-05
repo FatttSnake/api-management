@@ -7,20 +7,20 @@ import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Component
 import org.springframework.web.method.HandlerMethod
 import org.springframework.web.servlet.HandlerInterceptor
-import top.fatweb.apimanagement.annotation.ApiController
 import top.fatweb.apimanagement.component.storage.RedisProvider
+import top.fatweb.apimanagement.entity.api.ApiInterface
+import top.fatweb.apimanagement.entity.api.ApiKeyPrincipal
+import top.fatweb.apimanagement.entity.api.ApiPlugin
+import top.fatweb.apimanagement.entity.api.ApiUsage
 import top.fatweb.apimanagement.entity.permission.LoginUser
-import top.fatweb.apimanagement.entity.system.ApiInterface
-import top.fatweb.apimanagement.entity.system.ApiKeyPrincipal
-import top.fatweb.apimanagement.entity.system.ApiPlugin
-import top.fatweb.apimanagement.entity.system.ApiUsage
 import top.fatweb.apimanagement.exception.*
 import top.fatweb.apimanagement.properties.ServerProperties
-import top.fatweb.apimanagement.service.system.IApiAccountService
-import top.fatweb.apimanagement.service.system.IApiPluginService
-import top.fatweb.apimanagement.service.system.IApiTransactionService
-import top.fatweb.apimanagement.service.system.IApiUsageService
-import top.fatweb.apimanagement.service.system.impl.ApiPluginServiceImpl
+import top.fatweb.apimanagement.sdk.annotation.ApiController
+import top.fatweb.apimanagement.service.api.IApiAccountService
+import top.fatweb.apimanagement.service.api.IApiPluginService
+import top.fatweb.apimanagement.service.api.IApiTransactionService
+import top.fatweb.apimanagement.service.api.IApiUsageService
+import top.fatweb.apimanagement.service.api.impl.ApiPluginServiceImpl
 import top.fatweb.apimanagement.settings.ApiSettings
 import top.fatweb.apimanagement.settings.SettingsOperator
 import top.fatweb.apimanagement.util.TraceIdUtil
@@ -34,7 +34,7 @@ import java.util.concurrent.Executor
  *
  * Admits API-key requests (permission subset, rate limit, quota, billing) and records usage.
  * The resolved price / rate limit inherit the plugin defaults when the interface is not
- * configured; the plugin-level enabled flag acts as the master switch.
+ * configured; the plugin-level enable flag acts as the master switch.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
@@ -80,7 +80,7 @@ class ApiAccessInterceptor(
         val apiInterface = apiPluginService.getByCode(apiCode) ?: throw ApiDisabledException()
         val plugin = apiPluginService.getByPluginId(apiInterface.pluginId ?: throw ApiDisabledException())
             ?: throw ApiDisabledException()
-        if (apiInterface.enabled != 1 || plugin.enabled != 1) {
+        if (apiInterface.enable != 1 || plugin.enable != 1) {
             throw ApiDisabledException()
         }
 

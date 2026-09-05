@@ -2,7 +2,7 @@ package top.fatweb.apimanagement.component.api
 
 import org.springframework.web.servlet.mvc.condition.RequestCondition
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping
-import top.fatweb.apimanagement.annotation.ApiController
+import top.fatweb.apimanagement.sdk.annotation.ApiController
 import java.lang.reflect.Method
 
 /**
