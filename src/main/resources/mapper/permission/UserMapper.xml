@@ -41,7 +41,7 @@
                tso.id                          as operation_id,
                tso.name                        as operation_name,
                tso.code                        as operation_code,
-               tso.scope_id                     as operation_scope_id
+               tso.scope_id                    as operation_scope_id
         from t_s_user
                  left join (select * from t_s_user_info where deleted = 0) as tsui on t_s_user.id = tsui.user_id
                  left join (select * from t_r_user_group where deleted = 0) as trug on t_s_user.id = trug.user_id
@@ -100,7 +100,7 @@
                tso.id                          as operation_id,
                tso.name                        as operation_name,
                tso.code                        as operation_code,
-               tso.scope_id                     as operation_scope_id
+               tso.scope_id                    as operation_scope_id
         from t_s_user
                  left join (select * from t_s_user_info where deleted = 0) as tsui on t_s_user.id = tsui.user_id
                  left join (select * from t_r_user_group where deleted = 0) as trug on t_s_user.id = trug.user_id
@@ -141,6 +141,23 @@
                  left join (select * from t_s_user_info where deleted = 0) as tsui on t_s_user.id = tsui.user_id
         where t_s_user.deleted = 0
           and t_s_user.id = #{id};
+    </select>
+
+    <select id="selectOneWithBasicInfoByIds" resultMap="userWithInfoMap">
+        select t_s_user.id as user_id,
+        t_s_user.username as user_username,
+        tsui.id as user_info_id,
+        tsui.nickname as user_info_nickname,
+        tsui.avatar as user_info_avatar
+        from t_s_user
+        left join (select * from t_s_user_info where deleted = 0) as tsui on t_s_user.id = tsui.user_id
+        <where>
+            and t_s_user.deleted = 0
+            <foreach collection="ids" item="item" index="index" open="and t_s_user.id in (" separator="," close=")"
+                     nullable="true">
+                #{item}
+            </foreach>
+        </where>
     </select>
 
     <select id="selectPage" resultType="long">
@@ -398,7 +415,8 @@
                      resultMap="top.fatweb.apimanagement.mapper.permission.UserInfoMapper.userInfoMap"/>
     </resultMap>
 
-    <resultMap id="userWithPowerInfoMap" type="top.fatweb.apimanagement.entity.permission.User" extends="userWithInfoMap">
+    <resultMap id="userWithPowerInfoMap" type="top.fatweb.apimanagement.entity.permission.User"
+               extends="userWithInfoMap">
         <result property="password" column="user_password"/>
         <collection property="modules" resultMap="top.fatweb.apimanagement.mapper.permission.ModuleMapper.moduleMap"/>
         <collection property="menus" resultMap="top.fatweb.apimanagement.mapper.permission.MenuMapper.menuMap"/>
@@ -407,7 +425,8 @@
                     resultMap="top.fatweb.apimanagement.mapper.permission.OperationMapper.operationMap"/>
     </resultMap>
 
-    <resultMap id="userWithRoleInfoMap" type="top.fatweb.apimanagement.entity.permission.User" extends="userWithInfoMap">
+    <resultMap id="userWithRoleInfoMap" type="top.fatweb.apimanagement.entity.permission.User"
+               extends="userWithInfoMap">
         <collection property="roles" resultMap="top.fatweb.apimanagement.mapper.permission.RoleMapper.roleMap"/>
         <collection property="groups" resultMap="top.fatweb.apimanagement.mapper.permission.GroupMapper.groupMap"/>
     </resultMap>

@@ -61,6 +61,17 @@ interface UserMapper : BaseMapper<User> {
     fun selectOneWithBasicInfoById(@Param("id") id: Long): User?
 
     /**
+     * Select one user with basic information by IDs
+     *
+     * @param ids User ID List
+     * @return User object with basic information in list
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see User
+     */
+    fun selectOneWithBasicInfoByIds(@Param("ids") ids: List<Long>): List<User>
+
+    /**
      * Select user ID in page
      *
      * @param page Pagination

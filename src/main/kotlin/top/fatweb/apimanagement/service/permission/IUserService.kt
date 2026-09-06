@@ -69,6 +69,17 @@ interface IUserService : IService<User> {
     fun getBasicInfoById(userId: Long): UserWithInfoVo
 
     /**
+     * Get user information by IDs
+     *
+     * @param userIds User ID List
+     * @return Map<Long, UserWithInfoVo> object
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see UserWithInfoVo
+     */
+    fun getBasicInfoByIds(userIds: List<Long>): Map<Long, UserWithInfoVo>
+
+    /**
      * Update user information
      *
      * @param userInfoUpdateParam Update user information parameters

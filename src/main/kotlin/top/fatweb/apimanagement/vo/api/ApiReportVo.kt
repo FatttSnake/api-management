@@ -66,5 +66,6 @@ data class ApiReportVo(
      * @see BigDecimal
      */
     @field:Schema(description = "费用")
+    @field:JsonSerialize(using = ToStringSerializer::class)
     val cost: BigDecimal?
 )

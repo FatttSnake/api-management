@@ -149,6 +149,7 @@ data class ApiUsageVo(
      * @see BigDecimal
      */
     @field:Schema(description = "计费金额")
+    @field:JsonSerialize(using = ToStringSerializer::class)
     val cost: BigDecimal?,
 
     /**

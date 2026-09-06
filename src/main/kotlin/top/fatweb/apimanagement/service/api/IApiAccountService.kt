@@ -2,7 +2,9 @@ package top.fatweb.apimanagement.service.api
 
 import com.baomidou.mybatisplus.spring.service.IService
 import top.fatweb.apimanagement.entity.api.ApiAccount
+import top.fatweb.apimanagement.param.system.api.ApiAccountGetParam
 import top.fatweb.apimanagement.param.system.apiAccount.ApiTopUpParam
+import top.fatweb.apimanagement.vo.PageVo
 import top.fatweb.apimanagement.vo.api.ApiAccountVo
 import top.fatweb.apimanagement.vo.api.ApiTransactionVo
 import java.math.BigDecimal
@@ -17,6 +19,19 @@ import java.math.BigDecimal
  */
 interface IApiAccountService : IService<ApiAccount> {
     /**
+     * Get accounts in page
+     *
+     * @param apiAccountGetParam Get API account parameters
+     * @return Page<ApiAccountVo> object
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiAccountGetParam
+     * @see PageVo
+     * @see ApiAccountVo
+     */
+    fun get(apiAccountGetParam: ApiAccountGetParam?): PageVo<ApiAccountVo>
+
+    /**
      * Get account value object
      *
      * @param managed Whether the caller is authorized to manage other users' accounts
@@ -26,7 +41,7 @@ interface IApiAccountService : IService<ApiAccount> {
      * @since 1.0.0
      * @see ApiAccountVo
      */
-    fun getAccount(managed: Boolean, userId: Long?): ApiAccountVo
+    fun getOne(managed: Boolean, userId: Long?): ApiAccountVo
 
     /**
      * Get balance of user

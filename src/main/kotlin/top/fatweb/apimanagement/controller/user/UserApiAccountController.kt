@@ -40,7 +40,7 @@ class UserApiAccountController(
     @Operation(summary = "获取我的 API 账户")
     @GetMapping
     fun get(): ResponseResult<ApiAccountVo> =
-        ResponseResult.databaseSuccess(data = apiAccountService.getAccount(false, null))
+        ResponseResult.databaseSuccess(data = apiAccountService.getOne(false, null))
 
     /**
      * Get my API transaction paging information
