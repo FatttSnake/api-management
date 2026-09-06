@@ -3,6 +3,7 @@ package top.fatweb.apimanagement.vo.api
 import io.swagger.v3.oas.annotations.media.Schema
 import tools.jackson.databind.annotation.JsonSerialize
 import tools.jackson.databind.ser.std.ToStringSerializer
+import top.fatweb.apimanagement.vo.permission.UserWithInfoVo
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
@@ -40,6 +41,7 @@ data class ApiAccountVo(
      * @see BigDecimal
      */
     @field:Schema(description = "余额", example = "100.0000")
+    @field:JsonSerialize(using = ToStringSerializer::class)
     val balance: BigDecimal?,
 
     /**
@@ -69,5 +71,15 @@ data class ApiAccountVo(
      * @see LocalDateTime
      */
     @field:Schema(description = "修改时间", example = "2026-01-01T00:00:00.000Z")
-    val updateTime: LocalDateTime?
+    val updateTime: LocalDateTime?,
+
+    /**
+     * User value object
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see UserWithInfoVo
+     */
+    @field:Schema(description = "用户")
+    val userVo: UserWithInfoVo?
 )
