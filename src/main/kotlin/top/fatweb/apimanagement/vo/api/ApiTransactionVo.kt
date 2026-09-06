@@ -78,6 +78,7 @@ data class ApiTransactionVo(
      * @see BigDecimal
      */
     @field:Schema(description = "金额（正=充值 负=扣费）", example = "-0.0100")
+    @field:JsonSerialize(using = ToStringSerializer::class)
     val amount: BigDecimal?,
 
     /**
@@ -88,6 +89,7 @@ data class ApiTransactionVo(
      * @see BigDecimal
      */
     @field:Schema(description = "交易后余额", example = "99.9900")
+    @field:JsonSerialize(using = ToStringSerializer::class)
     val balanceAfter: BigDecimal?,
 
     /**

@@ -4,13 +4,14 @@ import io.swagger.v3.oas.annotations.Operation
 import jakarta.validation.Valid
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestParam
 import top.fatweb.apimanagement.annotation.BaseController
 import top.fatweb.apimanagement.annotation.ProcessParam
 import top.fatweb.apimanagement.entity.common.ResponseCode
 import top.fatweb.apimanagement.entity.common.ResponseResult
+import top.fatweb.apimanagement.param.system.api.ApiAccountGetParam
 import top.fatweb.apimanagement.param.system.apiAccount.ApiTopUpParam
 import top.fatweb.apimanagement.param.system.apiAccount.ApiTransactionGetParam
 import top.fatweb.apimanagement.service.api.IApiAccountService
@@ -33,7 +34,23 @@ class ApiAccountController(
     private val apiTransactionService: IApiTransactionService
 ) {
     /**
-     * Get API account of current user
+     * Get API accounts paging information
+     *
+     * @return Response object includes accounts paging information
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ResponseResult
+     * @see PageVo
+     * @see ApiAccountVo
+     */
+    @Operation(summary = "获取 API 账户列表")
+    @GetMapping
+    @PreAuthorize("hasAnyAuthority('system:operations:account:query')")
+    fun get(@ProcessParam @Valid apiAccountGetParam: ApiAccountGetParam): ResponseResult<PageVo<ApiAccountVo>> =
+        ResponseResult.databaseSuccess(data = apiAccountService.get(apiAccountGetParam))
+
+    /**
+     * Get API account of user
      *
      * @return Response object includes account information
      * @author FatttSnake, fatttsnake@gmail.com
@@ -42,11 +59,11 @@ class ApiAccountController(
      * @see ApiAccountVo
      */
     @Operation(summary = "获取 API 账户")
-    @GetMapping
+    @GetMapping("/{userId}")
     @PreAuthorize("hasAnyAuthority('system:operations:account:query')")
-    fun get(@RequestParam(required = false) userId: Long?): ResponseResult<ApiAccountVo> =
+    fun get(@PathVariable userId: Long): ResponseResult<ApiAccountVo> =
         ResponseResult.databaseSuccess(
-            data = apiAccountService.getAccount(true, userId)
+            data = apiAccountService.getOne(true, userId)
         )
 
     /**

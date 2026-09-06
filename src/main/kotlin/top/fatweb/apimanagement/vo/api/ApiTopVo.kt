@@ -1,6 +1,8 @@
 package top.fatweb.apimanagement.vo.api
 
 import io.swagger.v3.oas.annotations.media.Schema
+import tools.jackson.databind.annotation.JsonSerialize
+import tools.jackson.databind.ser.std.ToStringSerializer
 import java.math.BigDecimal
 
 /**
@@ -46,5 +48,6 @@ data class ApiTopVo(
      * @see BigDecimal
      */
     @field:Schema(description = "费用")
+    @field:JsonSerialize(using = ToStringSerializer::class)
     val cost: BigDecimal?
 )

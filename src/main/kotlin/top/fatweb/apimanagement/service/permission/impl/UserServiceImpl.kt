@@ -111,6 +111,9 @@ class UserServiceImpl(
             baseMapper.selectOneWithBasicInfoById(userId)
         }.let(User::toVoWithInfo)
 
+    override fun getBasicInfoByIds(userIds: List<Long>): Map<Long, UserWithInfoVo> =
+        baseMapper.selectOneWithBasicInfoByIds(userIds).map(User::toVoWithInfo).associateBy { it.id!! }
+
     override fun updateInfo(userInfoUpdateParam: UserInfoUpdateParam) {
         val userId = getLoginUserIdOrThrow()
         updateOrThrowException {
