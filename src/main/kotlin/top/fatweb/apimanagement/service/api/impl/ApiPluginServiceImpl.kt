@@ -607,6 +607,7 @@ class ApiPluginServiceImpl(
             val basePath = annotation.path.firstOrNull()?.trim('/') ?: ""
             targetClass.declaredMethods.forEach { method ->
                 val mapping = resolveMapping(method) ?: return@forEach
+                val operation = method.getAnnotation(SwaggerOperation::class.java)
                 val methodPath = mapping.path.trim('/')
                 val fullPath = buildString {
                     append("/api/").append(annotation.plugin).append("/v").append(annotation.version)
@@ -631,8 +632,8 @@ class ApiPluginServiceImpl(
                     controller = controller,
                     method = method,
                     code = buildCode(annotation, method),
-                    name = method.name,
-                    description = annotation.description,
+                    name = operation?.summary?.takeIf { it.isNotBlank() } ?: method.name,
+                    description = operation?.description?.takeIf { it.isNotBlank() } ?: "",
                     fullPath = fullPath,
                     httpMethod = mapping.method.name,
                     apiVersion = annotation.version,

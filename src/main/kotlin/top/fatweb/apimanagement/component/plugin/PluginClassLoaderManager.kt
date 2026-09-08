@@ -126,12 +126,12 @@ data class MountedEndpoint(
     val code: String,
 
     /**
-     * Endpoint name (handler method name)
+     * Endpoint display name (from @Operation.summary, fallback: method name)
      */
     val name: String,
 
     /**
-     * Endpoint description (from @ApiController.description)
+     * Endpoint description (from @Operation.description)
      */
     val description: String,
 
