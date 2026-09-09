@@ -32,12 +32,16 @@ The backend is written in **Kotlin + Spring Boot**. The stable API surface neede
 
 ```
 api-management/
-├── build.gradle.kts / settings.gradle.kts        # Gradle build (Java 25 toolchain, plugin-sdk submodule)
+├── build.gradle.kts / settings.gradle.kts        # Gradle build (Java 25 toolchain, plugin-sdk & plugin-gradle-plugin submodules)
 ├── docs/                                         # Project docs and assets (logo.svg, etc.)
 ├── plugin-sdk/                                   # Plugin SDK (standalone submodule for plugin authors)
 │   └── src/main/kotlin/top/fatweb/apimanagement/sdk/
 │       ├── annotation/ApiController.kt           # Declares "one plugin + a set of API routes"
 │       └── plugin/                               # PluginDescriptor / PluginLifecycle / PluginContext / ApiResponse / PluginSigner
+├── plugin-gradle-plugin/                         # Gradle plugin `top.fatweb.api-plugin` for plugin authors
+│   └── src/main/kotlin/top/fatweb/apimanagement/gradle/
+│       ├── ApiPlugin.kt                          # Applies the apiPlugin DSL, adds the SDK dependency & repositories
+│       └── ApiPluginTasks.kt                     # generatePluginDescriptor / genPluginKeys / signPlugin / verifyPlugin
 ├── src/main/kotlin/top/fatweb/apimanagement/
 │   ├── ApiManagementApplication.kt               # Entry point (ensures data dirs, generates config template on first run)
 │   ├── annotation / aspectj                      # Annotations & interceptors (API access, parameter processing, event/sys logs)
@@ -161,6 +165,14 @@ knife4j:
 # Plugin Development
 
 Every "available API" on the platform comes from a plugin. For plugin development, see the [api-management-plugins](https://github.com/FatttSnake/api-management-plugins) project.
+
+A plugin is a standalone Gradle project that applies the **`top.fatweb.api-plugin`** Gradle plugin (published together with the SDK from this repository). It adds the SDK dependency automatically, generates the `api-plugin.json` descriptor from an `apiPlugin { }` DSL, creates the Ed25519 developer key pair, embeds the public key into the jar and signs it — `./gradlew build` produces an already-signed plugin jar.
+
+To make the SDK and the Gradle plugin available to plugin projects, publish them from this repository once:
+
+```shell
+./gradlew :plugin-sdk:publishToMavenLocal :plugin-gradle-plugin:publishToMavenLocal
+```
 
 # Security
 

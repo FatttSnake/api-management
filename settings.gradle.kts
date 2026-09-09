@@ -11,4 +11,4 @@ plugins {
 
 rootProject.name = "api-management"
 
-include(":plugin-sdk")
+include(":plugin-sdk", ":plugin-gradle-plugin")
