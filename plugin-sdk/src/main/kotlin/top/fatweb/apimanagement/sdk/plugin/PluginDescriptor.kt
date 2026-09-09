@@ -22,9 +22,13 @@ data class PluginDescriptor(
     val name: String,
 
     /**
-     * Human-readable version, e.g. "1.2.0"
+     * Human-readable version, e.g. "1.2.0".
+     *
+     * Required in a hand-written descriptor — a plugin must always know which
+     * version it is. When using the Gradle plugin it is filled from the project
+     * `version` if not set in `apiPlugin { }`.
      */
-    val versionName: String = "1.0.0",
+    val versionName: String,
 
     /**
      * Monotonic integer version; must be greater than the currently installed
