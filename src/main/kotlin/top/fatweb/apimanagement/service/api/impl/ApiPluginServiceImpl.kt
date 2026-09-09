@@ -712,7 +712,17 @@ class ApiPluginServiceImpl(
         val json = readJarEntry(jarPath, DESCRIPTOR_ENTRY)
             ?: throw PluginInstallException("Missing $DESCRIPTOR_ENTRY in plugin jar")
         return try {
-            objectMapper.readValue(json, PluginDescriptor::class.java)
+            val node = objectMapper.readTree(json)
+            val versionName = node.path("versionName")
+            if (versionName.isMissingNode || versionName.isNull || versionName.asString().isBlank()) {
+                throw PluginInstallException(
+                    "Field 'versionName' is required in $DESCRIPTOR_ENTRY — set it explicitly " +
+                        "when authoring the descriptor by hand (the Gradle plugin fills it from the project version)"
+                )
+            }
+            objectMapper.treeToValue(node, PluginDescriptor::class.java)
+        } catch (e: PluginInstallException) {
+            throw e
         } catch (e: Exception) {
             throw PluginInstallException("Invalid $DESCRIPTOR_ENTRY: ${e.message}")
         }
