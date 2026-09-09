@@ -32,12 +32,16 @@ API Management 是一个**可自托管的 API 网关与管理平台**。它将�
 
 ```
 api-management/
-├── build.gradle.kts / settings.gradle.kts        # Gradle 构建（Java 25 toolchain，含 plugin-sdk 子模块）
+├── build.gradle.kts / settings.gradle.kts        # Gradle 构建（Java 25 toolchain，含 plugin-sdk 与 plugin-gradle-plugin 子模块）
 ├── docs/                                         # 项目文档与素材（logo.svg 等）
 ├── plugin-sdk/                                   # 插件 SDK（独立子模块，供插件开发者依赖）
 │   └── src/main/kotlin/top/fatweb/apimanagement/sdk/
 │       ├── annotation/ApiController.kt           # 声明「一个插件 + 一组 API 路由」
 │       └── plugin/                               # PluginDescriptor / PluginLifecycle / PluginContext / ApiResponse / PluginSigner
+├── plugin-gradle-plugin/                         # 插件开发者使用的 Gradle 插件 `top.fatweb.api-plugin`
+│   └── src/main/kotlin/top/fatweb/apimanagement/gradle/
+│       ├── ApiPlugin.kt                          # 应用 apiPlugin DSL、自动加入 SDK 依赖与仓库
+│       └── ApiPluginTasks.kt                     # generatePluginDescriptor / genPluginKeys / signPlugin / verifyPlugin
 ├── src/main/kotlin/top/fatweb/apimanagement/
 │   ├── ApiManagementApplication.kt               # 启动入口（校验/创建 data 目录、首次运行生成配置模板）
 │   ├── annotation / aspectj                      # 注解与拦截切面（API 访问拦截、参数处理、操作/事件日志）
@@ -161,6 +165,14 @@ knife4j:
 # 插件开发
 
 平台的全部「可用 API」均来自插件。插件开发相关见项目 [api-management-plugins](https://github.com/FatttSnake/api-management-plugins)。
+
+插件是一个独立的 Gradle 工程，应用本仓库随 SDK 一同发布的 Gradle 插件 **`top.fatweb.api-plugin`**：它会自动加入 SDK 依赖、从 `apiPlugin { }` DSL 生成 `api-plugin.json` 描述符、生成 Ed25519 开发者密钥对、把公钥嵌入 jar 并完成签名——`./gradlew build` 即可产出**已签名**的插件 jar。
+
+把 SDK 与 Gradle 插件发布给插件工程使用（本仓库内执行一次）：
+
+```shell
+./gradlew :plugin-sdk:publishToMavenLocal :plugin-gradle-plugin:publishToMavenLocal
+```
 
 # 安全
 

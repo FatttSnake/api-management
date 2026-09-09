@@ -126,6 +126,22 @@ object PluginSigner {
     }
 
     /**
+     * Sign a plugin jar in place and embed the signature entry. Equivalent to the
+     * CLI `sign` command; used by the Gradle plugin and build tooling so no
+     * subprocess is needed.
+     *
+     * @param jar Plugin jar path (already containing the public key entry)
+     * @param privateKeyPem Private key in PKCS8 PEM
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @JvmStatic
+    fun signAndEmbed(jar: Path, privateKeyPem: String) {
+        addJarEntry(jar, SIGNATURE_ENTRY, sign(jar, privateKeyPem))
+        println("Signed ${jar.fileName}")
+    }
+
+    /**
      * Read the public key embedded in a plugin jar
      *
      * @param jar Plugin jar path
@@ -172,10 +188,7 @@ object PluginSigner {
 
             "sign" -> {
                 val jar = Path.of(args[1])
-                val privateKeyPem = Files.readString(Path.of(args[2]))
-                val signature = sign(jar, privateKeyPem)
-                addJarEntry(jar, SIGNATURE_ENTRY, signature)
-                println("Signed ${jar.fileName}")
+                signAndEmbed(jar, Files.readString(Path.of(args[2])))
             }
 
             "verify" -> {
