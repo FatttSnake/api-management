@@ -28,11 +28,20 @@ class EventLogServiceImpl : ServiceImpl<EventLogMapper, EventLog>(), IEventLogSe
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    override fun saveEvent(annotation: EventLogRecord, userId: Long) {
+    override fun saveEvent(
+        annotation: EventLogRecord,
+        userId: Long,
+        apiKeyId: Long?,
+        targetUserId: Long?,
+        detail: String?
+    ) {
         try {
             save(EventLog().apply {
                 event = annotation.event
                 operateUserId = userId
+                this.apiKeyId = apiKeyId
+                this.targetUserId = targetUserId
+                this.detail = detail
             })
         } catch (e: Exception) {
             logger.error("Cannot record event!!!", e)

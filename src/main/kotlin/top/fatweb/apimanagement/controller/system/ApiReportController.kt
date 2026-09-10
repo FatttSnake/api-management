@@ -113,7 +113,7 @@ class ApiReportController(
         val bytes = storageBlobService.loadFile(fileHash) ?: throw NoRecordFoundException()
         return ResponseEntity.ok()
             .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=api-report.csv")
-            .contentType(MediaType.TEXT_PLAIN)
+            .contentType(MediaType.parseMediaType("text/csv;charset=utf-8"))
             .body(bytes)
     }
 }
