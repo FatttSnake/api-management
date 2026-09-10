@@ -8,6 +8,7 @@ import top.fatweb.apimanagement.entity.api.ApiInterface
 import top.fatweb.apimanagement.entity.api.ApiKey
 import top.fatweb.apimanagement.entity.api.ApiPlugin
 import top.fatweb.apimanagement.entity.api.ApiUsage
+import top.fatweb.apimanagement.exception.ExportTooManyRecordsException
 import top.fatweb.apimanagement.mapper.api.ApiUsageMapper
 import top.fatweb.apimanagement.param.system.apiReport.ApiReportGetParam
 import top.fatweb.apimanagement.service.api.IApiKeyService
@@ -15,10 +16,57 @@ import top.fatweb.apimanagement.service.api.IApiPluginService
 import top.fatweb.apimanagement.service.api.IApiReportService
 import top.fatweb.apimanagement.service.permission.IUserService
 import top.fatweb.apimanagement.service.system.IStorageBlobService
+import top.fatweb.apimanagement.vo.api.ApiInterfaceVo
+import top.fatweb.apimanagement.vo.api.ApiKeyVo
+import top.fatweb.apimanagement.vo.api.ApiPluginVo
 import top.fatweb.apimanagement.vo.api.ApiReportVo
 import top.fatweb.apimanagement.vo.api.ApiTopVo
 import top.fatweb.apimanagement.vo.permission.UserWithInfoVo
 import java.math.BigDecimal
+import java.math.RoundingMode
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+
+/**
+ * Maximum row count of a detail export
+ *
+ * @author FatttSnake, fatttsnake@gmail.com
+ * @since 1.0.0
+ */
+private const val MAX_DETAIL_EXPORT_ROWS = 100_000L
+
+/**
+ * UTF-8 byte order mark, required by Excel to detect the encoding of the exported CSV
+ *
+ * @author FatttSnake, fatttsnake@gmail.com
+ * @since 1.0.0
+ */
+private const val CSV_BOM = "﻿"
+
+/**
+ * Header of the usage summary export, keep in sync with the columns built in [ApiReportServiceImpl.export]
+ *
+ * @author FatttSnake, fatttsnake@gmail.com
+ * @since 1.0.0
+ */
+private const val USAGE_EXPORT_HEADER = "日期,插件,接口,API编码,请求路径,请求方法,所属用户,Key,调用次数,费用"
+
+/**
+ * Header of the usage detail export, keep in sync with the columns built in [ApiReportServiceImpl.exportDetail]
+ *
+ * @author FatttSnake, fatttsnake@gmail.com
+ * @since 1.0.0
+ */
+private const val DETAIL_EXPORT_HEADER =
+    "调用时间,插件,接口,API编码,请求路径,请求方法,响应码,结果,执行耗时(ms),请求IP,Trace ID,所属用户,Key,计费金额,计费模式"
+
+/**
+ * Formatter of the time column of the detail export
+ *
+ * @author FatttSnake, fatttsnake@gmail.com
+ * @since 1.0.0
+ */
+private val CSV_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
 /**
  * Report lookup context used to resolve referenced entities without N+1 queries
@@ -54,14 +102,16 @@ class ApiReportServiceImpl(
     private val storageBlobService: IStorageBlobService
 ) : IApiReportService {
     override fun usage(apiReportGetParam: ApiReportGetParam?): List<ApiReportVo> {
+        val dateExpression = localDateExpression(apiReportGetParam)
         val rows = apiUsageMapper.selectMaps(
             baseQuery(apiReportGetParam)
                 .select(
-                    "api_key_id", "date(create_time) as date", "api_code",
+                    "api_key_id", "$dateExpression as date", "api_code",
                     "count(*) as count", "coalesce(sum(cost), 0) as cost"
                 )
-                .groupBy("api_key_id", "date(create_time)", "api_code")
+                .groupBy("api_key_id", dateExpression, "api_code")
                 .orderByDesc("date")
+                .orderByAsc("api_code", "api_key_id")
         )
         val context = buildContext(
             codes = rows.map { it["api_code"] as? String },
@@ -102,11 +152,65 @@ class ApiReportServiceImpl(
 
     override fun export(apiReportGetParam: ApiReportGetParam?): String {
         val rows = usage(apiReportGetParam)
-        val csv = StringBuilder("﻿date,apiKeyId,apiCode,apiName,count,cost\n")
-        rows.forEach {
+        val csv = StringBuilder(CSV_BOM + USAGE_EXPORT_HEADER + "\n")
+        rows.forEach { row ->
             csv.append(
-                "${csvField(it.date)},${csvQuoted(it.apiKeyId)},${csvField(it.apiCode)}," +
-                    "${csvField(it.apiName)},${csvField(it.count)},${csvField(it.cost)}\n"
+                csvLine(
+                    row.date,
+                    row.pluginVo?.name,
+                    row.interfaceVo?.name,
+                    row.apiCode,
+                    row.interfaceVo?.path,
+                    row.interfaceVo?.method,
+                    csvUser(row.userVo),
+                    csvKey(row.keyVo),
+                    row.count,
+                    csvMoney(row.cost)
+                )
+            )
+        }
+        return storageBlobService.saveFile(csv.toString().toByteArray(Charsets.UTF_8))
+    }
+
+    override fun exportDetail(apiReportGetParam: ApiReportGetParam?): String {
+        val total = apiUsageMapper.selectCount(baseQuery(apiReportGetParam))
+        if (total > MAX_DETAIL_EXPORT_ROWS) {
+            throw ExportTooManyRecordsException(MAX_DETAIL_EXPORT_ROWS)
+        }
+
+        val usages = apiUsageMapper.selectList(
+            baseQuery(apiReportGetParam).orderByDesc("create_time")
+        )
+        val context = buildContext(
+            codes = usages.map { it.apiCode },
+            keyIds = usages.map { it.apiKeyId },
+            userIds = usages.map { it.userId }
+        )
+
+        val csv = StringBuilder(CSV_BOM + DETAIL_EXPORT_HEADER + "\n")
+        usages.forEach { usage ->
+            val apiInterface = usage.apiCode?.let { context.interfaces[it] }
+            val key = usage.apiKeyId?.let { context.keys[it] }
+            val user = usage.userId?.let { context.users[it] }
+                ?: key?.userId?.let { context.users[it] }
+            csv.append(
+                csvLine(
+                    csvLocalTime(usage.createTime, apiReportGetParam),
+                    apiInterface?.pluginId?.let { context.plugins[it] }?.name,
+                    apiInterface?.name,
+                    usage.apiCode,
+                    usage.requestPath,
+                    usage.requestMethod,
+                    usage.responseCode,
+                    if (usage.success == 1) "成功" else "失败",
+                    usage.executeTime,
+                    usage.requestIp,
+                    usage.traceId,
+                    csvUser(user),
+                    csvKey(key?.toVo()),
+                    csvMoney(usage.cost),
+                    csvBillingMode(usage.billingMode)
+                )
             )
         }
         return storageBlobService.saveFile(csv.toString().toByteArray(Charsets.UTF_8))
@@ -119,9 +223,17 @@ class ApiReportServiceImpl(
             apiReportGetParam?.endTime?.let { le("create_time", it) }
         }
 
+    /**
+     * Build the expression of the local date of the request creator, the offset comes from the client so
+     * that the day boundary matches the one shown in the console
+     */
+    private fun localDateExpression(apiReportGetParam: ApiReportGetParam?): String =
+        "date(date_add(create_time, interval ${apiReportGetParam?.tzOffset ?: 0} minute))"
+
     private fun buildContext(
         codes: List<String?>,
-        keyIds: List<Long?>
+        keyIds: List<Long?>,
+        userIds: List<Long?> = emptyList()
     ): ReportContext {
         val codeSet = codes.filterNotNull().toSet()
         val keyIdSet = keyIds.filterNotNull().toSet()
@@ -131,10 +243,11 @@ class ApiReportServiceImpl(
         } else {
             apiKeyService.listByIds(keyIdSet).associateBy { it.id!! }
         }
-        val users = if (keys.isEmpty()) {
+        val relatedUserIds = (keys.values.mapNotNull { it.userId } + userIds.filterNotNull()).distinct()
+        val users = if (relatedUserIds.isEmpty()) {
             emptyMap()
         } else {
-            userService.getBasicInfoByIds(keys.values.mapNotNull { it.userId })
+            userService.getBasicInfoByIds(relatedUserIds)
         }
         val interfaces = codeSet
             .associateWith { apiPluginService.getByCode(it) }
@@ -182,12 +295,49 @@ class ApiReportServiceImpl(
         )
     }
 
+    private fun csvLine(vararg values: Any?): String =
+        values.joinToString(",") { csvField(it) } + "\n"
+
+    /**
+     * Convert the stored UTC time to the time zone of the client
+     */
+    private fun csvLocalTime(time: LocalDateTime?, apiReportGetParam: ApiReportGetParam?): String =
+        time?.plusMinutes((apiReportGetParam?.tzOffset ?: 0).toLong())?.format(CSV_TIME_FORMATTER).orEmpty()
+
+    private fun csvMoney(value: BigDecimal?): String =
+        (value ?: BigDecimal.ZERO).setScale(4, RoundingMode.HALF_UP).toPlainString()
+
+    private fun csvUser(user: UserWithInfoVo?): String {
+        val username = user?.username.orEmpty()
+        val nickname = user?.userInfo?.nickname.orEmpty()
+        return when {
+            nickname.isEmpty() -> username
+            username.isEmpty() -> nickname
+            else -> "$nickname($username)"
+        }
+    }
+
+    private fun csvKey(key: ApiKeyVo?): String {
+        val accessKey = key?.accessKey.orEmpty()
+        val name = key?.name.orEmpty()
+        return when {
+            name.isEmpty() -> accessKey
+            accessKey.isEmpty() -> name
+            else -> "$accessKey($name)"
+        }
+    }
+
+    private fun csvBillingMode(billingMode: ApiInterface.BillingMode?): String = when (billingMode) {
+        ApiInterface.BillingMode.FREE -> "免费"
+        ApiInterface.BillingMode.SUCCESS_ONLY -> "仅成功"
+        ApiInterface.BillingMode.ALWAYS -> "总是"
+        null -> ""
+    }
+
     private fun csvField(value: Any?): String {
         val text = value?.toString().orEmpty()
         val escaped = text.replace("\"", "\"\"")
         val needQuote = text.any { it == ',' || it == '"' || it == '\n' || it == '\r' }
         return if (needQuote) "\"$escaped\"" else escaped
     }
-
-    private fun csvQuoted(value: Any?): String = "\"${value?.toString().orEmpty().replace("\"", "\"\"")}\""
 }
