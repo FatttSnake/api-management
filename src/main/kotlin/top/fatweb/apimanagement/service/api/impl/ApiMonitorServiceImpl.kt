@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper
 import com.baomidou.mybatisplus.core.toolkit.Wrappers
 import org.springframework.stereotype.Service
 import top.fatweb.apimanagement.component.storage.RedisProvider
+import top.fatweb.apimanagement.converter.api.toVo
 import top.fatweb.apimanagement.entity.api.ApiUsage
 import top.fatweb.apimanagement.mapper.api.ApiUsageMapper
 import top.fatweb.apimanagement.properties.ServerProperties
@@ -37,13 +38,28 @@ class ApiMonitorServiceImpl(
     override fun dashboard(): ApiMonitorDashboardVo {
         val prefix = "${serverProperties.security.tokenIssuer}_apimetrics"
         val countKeys = redisProvider.keys("${prefix}_count:*")
+        val interfaces = countKeys
+            .map { it.removePrefix("${prefix}_count:") }
+            .toSet()
+            .associateWith { apiPluginService.getByCode(it) }
+            .filterValues { it != null }
+            .mapValues { it.value!! }
+        val plugins = interfaces.values
+            .mapNotNull { it.pluginId }
+            .toSet()
+            .associateWith { apiPluginService.getByPluginId(it) }
+            .filterValues { it != null }
+            .mapValues { it.value!! }
         val live = countKeys.map { key ->
             val apiCode = key.removePrefix("${prefix}_count:")
+            val apiInterface = interfaces[apiCode]
             ApiMonitorDashboardVo.ApiMonitorItemVo(
                 apiCode = apiCode,
-                count = redisProvider.getObject<String>(key)?.toLongOrNull() ?: 0L,
-                error = redisProvider.getObject<String>("${prefix}_error:$apiCode")?.toLongOrNull() ?: 0L,
-                latencyMs = redisProvider.getObject<String>("${prefix}_latency:$apiCode")?.toLongOrNull() ?: 0L
+                count = redisProvider.getObject<Number>(key)?.toLong() ?: 0L,
+                error = redisProvider.getObject<Number>("${prefix}_error:$apiCode")?.toLong() ?: 0L,
+                latencyMs = redisProvider.getObject<Number>("${prefix}_latency:$apiCode")?.toLong() ?: 0L,
+                pluginVo = apiInterface?.pluginId?.let { plugins[it]?.toVo() },
+                interfaceVo = apiInterface?.toVo()
             )
         }.sortedByDescending { it.count }
 
@@ -74,13 +90,28 @@ class ApiMonitorServiceImpl(
                 .orderByDesc("count")
                 .last("limit $limit")
         )
+        val interfaces = rows
+            .mapNotNull { it["api_code"] as? String }
+            .toSet()
+            .associateWith { apiPluginService.getByCode(it) }
+            .filterValues { it != null }
+            .mapValues { it.value!! }
+        val plugins = interfaces.values
+            .mapNotNull { it.pluginId }
+            .toSet()
+            .associateWith { apiPluginService.getByPluginId(it) }
+            .filterValues { it != null }
+            .mapValues { it.value!! }
+
         return rows.map { row ->
             val apiCode = row["api_code"] as? String ?: ""
+            val apiInterface = interfaces[apiCode]
             ApiTopVo(
-                apiCode = apiCode,
-                apiName = apiPluginService.getByCode(apiCode)?.name,
+                apiCode = if (apiCode.isEmpty()) null else apiCode,
                 count = (row["count"] as? Number)?.toLong() ?: 0L,
-                cost = (row["cost"] as? Number)?.let { BigDecimal(it.toString()) } ?: BigDecimal.ZERO
+                cost = (row["cost"] as? Number)?.let { BigDecimal(it.toString()) } ?: BigDecimal.ZERO,
+                pluginVo = apiInterface?.pluginId?.let { plugins[it]?.toVo() },
+                interfaceVo = apiInterface?.toVo()
             )
         }
     }

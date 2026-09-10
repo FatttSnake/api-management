@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import tools.jackson.databind.annotation.JsonSerialize
 import tools.jackson.databind.ser.std.ToStringSerializer
 import top.fatweb.apimanagement.entity.system.EventLog
+import top.fatweb.apimanagement.vo.permission.UserWithInfoVo
 import java.time.LocalDateTime
 
 /**
@@ -59,5 +60,35 @@ data class ApiAuditVo(
      * @since 1.0.0
      */
     @field:Schema(description = "事件详情")
-    val detail: String?
+    val detail: String?,
+
+    /**
+     * Operator user information (resolved from operateUserId)
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see UserWithInfoVo
+     */
+    @field:Schema(description = "操作人信息")
+    val userVo: UserWithInfoVo?,
+
+    /**
+     * Affected API key information (resolved from apiKeyId)
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiKeyVo
+     */
+    @field:Schema(description = "被操作 Key 信息")
+    val keyVo: ApiKeyVo?,
+
+    /**
+     * Target user information (resolved from targetUserId)
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see UserWithInfoVo
+     */
+    @field:Schema(description = "目标用户信息")
+    val targetUserVo: UserWithInfoVo?
 )

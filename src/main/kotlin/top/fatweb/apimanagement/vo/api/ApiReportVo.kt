@@ -3,6 +3,7 @@ package top.fatweb.apimanagement.vo.api
 import io.swagger.v3.oas.annotations.media.Schema
 import tools.jackson.databind.annotation.JsonSerialize
 import tools.jackson.databind.ser.std.ToStringSerializer
+import top.fatweb.apimanagement.vo.permission.UserWithInfoVo
 import java.math.BigDecimal
 
 /**
@@ -67,5 +68,45 @@ data class ApiReportVo(
      */
     @field:Schema(description = "费用")
     @field:JsonSerialize(using = ToStringSerializer::class)
-    val cost: BigDecimal?
+    val cost: BigDecimal?,
+
+    /**
+     * API key information
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiKeyVo
+     */
+    @field:Schema(description = "API Key 信息")
+    val keyVo: ApiKeyVo?,
+
+    /**
+     * API key owner user information
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see UserWithInfoVo
+     */
+    @field:Schema(description = "Key 所属用户信息")
+    val userVo: UserWithInfoVo?,
+
+    /**
+     * API plugin information
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiPluginVo
+     */
+    @field:Schema(description = "API 插件信息")
+    val pluginVo: ApiPluginVo?,
+
+    /**
+     * API interface information
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiInterfaceVo
+     */
+    @field:Schema(description = "API 接口信息")
+    val interfaceVo: ApiInterfaceVo?
 )

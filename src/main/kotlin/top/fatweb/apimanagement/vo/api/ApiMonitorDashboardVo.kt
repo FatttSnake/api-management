@@ -99,6 +99,26 @@ data class ApiMonitorDashboardVo(
          * @since 1.0.0
          */
         @field:Schema(description = "总耗时(ms)")
-        val latencyMs: Long?
+        val latencyMs: Long?,
+
+        /**
+         * API plugin information
+         *
+         * @author FatttSnake, fatttsnake@gmail.com
+         * @since 1.0.0
+         * @see ApiPluginVo
+         */
+        @field:Schema(description = "API 插件信息")
+        val pluginVo: ApiPluginVo?,
+
+        /**
+         * API interface information
+         *
+         * @author FatttSnake, fatttsnake@gmail.com
+         * @since 1.0.0
+         * @see ApiInterfaceVo
+         */
+        @field:Schema(description = "API 接口信息")
+        val interfaceVo: ApiInterfaceVo?
     )
 }

@@ -62,7 +62,7 @@ class ApiMetricsCron(
     private fun readMetricMap(prefix: String, suffix: String): Map<String, Long> {
         val keyPrefix = "${prefix}_$suffix:"
         return redisProvider.keys("${keyPrefix}*").associate { key ->
-            key.removePrefix(keyPrefix) to (redisProvider.getObject<String>(key)?.toLongOrNull() ?: 0L)
+            key.removePrefix(keyPrefix) to (redisProvider.getObject<Number>(key)?.toLong() ?: 0L)
         }
     }
 
