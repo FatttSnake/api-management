@@ -23,15 +23,6 @@ data class ApiTopVo(
     val apiCode: String?,
 
     /**
-     * API name
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    @field:Schema(description = "API 名称")
-    val apiName: String?,
-
-    /**
      * Request count
      *
      * @author FatttSnake, fatttsnake@gmail.com
@@ -49,5 +40,25 @@ data class ApiTopVo(
      */
     @field:Schema(description = "费用")
     @field:JsonSerialize(using = ToStringSerializer::class)
-    val cost: BigDecimal?
+    val cost: BigDecimal?,
+
+    /**
+     * API plugin information
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiPluginVo
+     */
+    @field:Schema(description = "API 插件信息")
+    val pluginVo: ApiPluginVo?,
+
+    /**
+     * API interface information
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiInterfaceVo
+     */
+    @field:Schema(description = "API 接口信息")
+    val interfaceVo: ApiInterfaceVo?
 )

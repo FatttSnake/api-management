@@ -51,6 +51,24 @@ class EventLog : Serializable {
     var operateUserId: Long? = null
 
     /**
+     * Affected API key ID (record only the ID, resolved at query time)
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @TableField("api_key_id")
+    var apiKeyId: Long? = null
+
+    /**
+     * Target user ID (record only the ID, resolved at query time)
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @TableField("target_user_id")
+    var targetUserId: Long? = null
+
+    /**
      * Operate time
      *
      * @author FatttSnake, fatttsnake@gmail.com
