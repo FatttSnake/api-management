@@ -24,9 +24,8 @@ class SysLog : Serializable {
      * @since 1.0.0
      */
     enum class LogType(@field:EnumValue @field:JsonValue val code: String) {
-        INFO("INFO"), ERROR("ERROR"), LOGIN("LOGIN"), LOGOUT("LOGOUT"), REGISTER("REGISTER"), STATISTICS("STATISTICS"), API(
-            "API"
-        )
+        INFO("INFO"), ERROR("ERROR"), LOGIN("LOGIN"), LOGOUT("LOGOUT"), REGISTER("REGISTER"),
+        STATISTICS("STATISTICS")
     }
 
     /**
