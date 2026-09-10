@@ -57,4 +57,15 @@ interface IApiReportService {
      * @see ApiReportGetParam
      */
     fun export(apiReportGetParam: ApiReportGetParam?): String
+
+    /**
+     * Export API usage detail as CSV file, one row per request, returns file hash
+     *
+     * @param apiReportGetParam Get API report parameters
+     * @return Storage file hash
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiReportGetParam
+     */
+    fun exportDetail(apiReportGetParam: ApiReportGetParam?): String
 }

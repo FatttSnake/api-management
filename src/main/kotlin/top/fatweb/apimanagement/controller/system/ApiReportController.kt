@@ -99,6 +99,22 @@ class ApiReportController(
         ResponseResult.databaseSuccess(data = apiReportService.export(apiReportGetParam))
 
     /**
+     * Export API usage detail as CSV, one row per request, returns file hash
+     *
+     * @param apiReportGetParam Get API report parameters
+     * @return Response object includes file hash
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiReportGetParam
+     * @see ResponseResult
+     */
+    @Operation(summary = "导出 API 用量明细")
+    @GetMapping("/export/detail")
+    @PreAuthorize("hasAnyAuthority('system:operations:report:export')")
+    fun exportDetail(@ProcessParam @Valid apiReportGetParam: ApiReportGetParam?): ResponseResult<String> =
+        ResponseResult.databaseSuccess(data = apiReportService.exportDetail(apiReportGetParam))
+
+    /**
      * Download exported report file by file hash
      *
      * @param fileHash File hash

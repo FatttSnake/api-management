@@ -266,6 +266,11 @@ class ExceptionHandler {
                 ResponseResult.fail(ResponseCode.SYSTEM_NO_EMAIL_CONFIG, e.localizedMessage, null)
             }
 
+            is ExportTooManyRecordsException -> {
+                logger.debug(e.localizedMessage, e)
+                ResponseResult.fail(ResponseCode.SYSTEM_EXPORT_TOO_MANY_RECORDS, e.localizedMessage, null)
+            }
+
             /* API Platform */
             is ApiKeyInvalidException -> {
                 logger.debug(e.localizedMessage, e)
