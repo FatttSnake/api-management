@@ -115,6 +115,7 @@ class SysLogInterceptor(
             customThreadPoolTaskExecutor.execute(SaveLogThread(sysLog, sysLogService))
         }
         sysLogThreadLocal.remove()
+        resultThreadLocal.remove()
     }
 
     private fun formatParams(parameterMap: Map<String, Array<String>>): String {
