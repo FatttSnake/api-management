@@ -15,6 +15,7 @@ import top.fatweb.apimanagement.vo.api.ApiMonitorDashboardVo
 import top.fatweb.apimanagement.vo.api.ApiTopVo
 import java.math.BigDecimal
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZoneOffset
 
 /**
@@ -78,14 +79,16 @@ class ApiMonitorServiceImpl(
             totalToday = totalToday,
             errorToday = errorToday,
             activeKeys = activeKeys,
-            topApis = topApis(10)
+            topApis = topApis(10),
+            todayTopApis = topApis(10, startOfToday)
         )
     }
 
-    private fun topApis(limit: Int): List<ApiTopVo> {
+    private fun topApis(limit: Int, startTime: LocalDateTime? = null): List<ApiTopVo> {
         val rows = apiUsageMapper.selectMaps(
             QueryWrapper<ApiUsage>()
                 .select("api_code", "count(*) as count", "coalesce(sum(cost), 0) as cost")
+                .apply { startTime?.let { ge("create_time", it) } }
                 .groupBy("api_code")
                 .orderByDesc("count")
                 .last("limit $limit")
