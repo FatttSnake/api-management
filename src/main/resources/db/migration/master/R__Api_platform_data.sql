@@ -109,7 +109,7 @@ insert into t_s_operation(id, name, code, scope_id)
            (1240301, '看板', 'system:operations:monitor:dashboard', 1240300),
            (1240401, '用量', 'system:operations:report:usage', 1240400),
            (1240402, '费用', 'system:operations:report:cost', 1240400),
-           (1240403, '充值', 'system:operations:report:top', 1240400),
+           (1240403, '排行', 'system:operations:report:top', 1240400),
            (1240404, '导出', 'system:operations:report:export', 1240400),
            (1240501, '查询', 'system:operations:audit:query', 1240400)
         as new_value

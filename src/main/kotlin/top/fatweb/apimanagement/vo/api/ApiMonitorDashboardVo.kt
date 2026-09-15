@@ -55,7 +55,17 @@ data class ApiMonitorDashboardVo(
      * @see ApiTopVo
      */
     @field:Schema(description = "Top API")
-    val topApis: List<ApiTopVo>?
+    val topApis: List<ApiTopVo>?,
+
+    /**
+     * Top APIs today
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiTopVo
+     */
+    @field:Schema(description = "今日 Top API")
+    val todayTopApis: List<ApiTopVo>?
 ) {
     /**
      * API monitor item value object
