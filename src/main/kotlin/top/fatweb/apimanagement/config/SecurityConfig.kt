@@ -16,6 +16,7 @@ import top.fatweb.apimanagement.filter.ApiKeyAuthenticationTokenFilter
 import top.fatweb.apimanagement.filter.JwtAuthenticationTokenFilter
 import top.fatweb.apimanagement.handler.JwtAccessDeniedHandler
 import top.fatweb.apimanagement.handler.JwtAuthenticationEntryPointHandler
+import top.fatweb.apimanagement.util.TimezoneUtil
 
 /**
  * Spring Security configuration
@@ -49,7 +50,10 @@ class SecurityConfig(
                 allowedOriginPatterns = listOf("*")
                 allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
                 allowedHeaders =
-                    listOf("Authorization", "Content-Type", "X-CSRF-TOKEN", "X-Requested-With", "Cache-Control")
+                    listOf(
+                        "Authorization", "Content-Type", "X-CSRF-TOKEN", "X-Requested-With", "Cache-Control",
+                        TimezoneUtil.TIMEZONE_OFFSET_HEADER
+                    )
                 allowCredentials = true
                 maxAge = 3600L
                 exposedHeaders = listOf("X-CSRF-TOKEN")

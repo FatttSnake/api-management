@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.annotation.EnumValue
 import com.baomidou.mybatisplus.annotation.TableField
 import com.baomidou.mybatisplus.annotation.TableId
 import com.baomidou.mybatisplus.annotation.TableName
-import com.fasterxml.jackson.annotation.JsonFormat
 import com.fasterxml.jackson.annotation.JsonValue
 import java.io.Serializable
 import java.time.LocalDateTime
@@ -74,7 +73,6 @@ class EventLog : Serializable {
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSS")
     @TableField("operate_time")
     var operateTime: LocalDateTime? = null
 

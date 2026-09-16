@@ -16,6 +16,7 @@ import top.fatweb.apimanagement.service.system.IEventLogService
 import top.fatweb.apimanagement.service.system.IStatisticsLogService
 import top.fatweb.apimanagement.service.system.IStatisticsService
 import top.fatweb.apimanagement.util.ByteUtil
+import top.fatweb.apimanagement.util.TimezoneUtil
 import top.fatweb.apimanagement.vo.system.*
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -23,6 +24,15 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.concurrent.TimeUnit
+
+/**
+ * Formatter of the time bounds compared against the UTC time columns of the log database, keep it
+ * fixed width so that the lexicographic comparison of the text columns stays correct
+ *
+ * @author FatttSnake, fatttsnake@gmail.com
+ * @since 1.0.0
+ */
+private val SQL_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS")
 
 /**
  * Statistics service implement
@@ -177,7 +187,7 @@ class StatisticsServiceImpl(
                 .between(
                     onlineInfoGetParam?.scope != OnlineInfoGetParam.Scope.ALL,
                     StatisticsLog::recordTime,
-                    LocalDateTime.now(ZoneOffset.UTC).run {
+                    TimezoneUtil.startOfLocalDayUtc().run {
                         when (onlineInfoGetParam?.scope) {
                             OnlineInfoGetParam.Scope.DAY -> minusDays(1)
                             OnlineInfoGetParam.Scope.MONTH -> minusMonths(1)
@@ -188,8 +198,8 @@ class StatisticsServiceImpl(
                             OnlineInfoGetParam.Scope.FIVE_YEARS -> minusYears(5)
                             else -> minusWeeks(1)
                         }
-                    }.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
-                    LocalDateTime.now(ZoneOffset.UTC).plusDays(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                    }.format(SQL_TIME_FORMATTER),
+                    TimezoneUtil.startOfLocalDayUtc(offsetDays = 1).format(SQL_TIME_FORMATTER)
                 )
         ).map {
             OnlineInfoVo.HistoryVo(
@@ -210,12 +220,18 @@ class StatisticsServiceImpl(
     }
 
     override fun active(activeInfoGetParam: ActiveInfoGetParam?): ActiveInfoVo {
+        val offsetMinutes = TimezoneUtil.offsetMinutes()
+        val dayModifier = if (offsetMinutes < 0) "$offsetMinutes minutes" else "+$offsetMinutes minutes"
+
         fun getHistory(event: String) = eventLogService.listMaps(
-            QueryWrapper<EventLog?>().select("strftime('%Y-%m-%d', operate_time) time, count(distinct operate_user_id) count")
+            QueryWrapper<EventLog?>()
+                .select(
+                    "strftime('%Y-%m-%d', operate_time, '$dayModifier') time, count(distinct operate_user_id) count"
+                )
                 .eq("event", event).groupBy("time").between(
                     activeInfoGetParam?.scope != ActiveInfoGetParam.Scope.ALL,
                     "operate_time",
-                    LocalDateTime.now(ZoneOffset.UTC).run {
+                    TimezoneUtil.startOfLocalDayUtc().run {
                         when (activeInfoGetParam?.scope) {
                             ActiveInfoGetParam.Scope.MONTH -> minusMonths(1)
                             ActiveInfoGetParam.Scope.QUARTER -> minusMonths(3)
@@ -225,8 +241,8 @@ class StatisticsServiceImpl(
                             ActiveInfoGetParam.Scope.FIVE_YEARS -> minusYears(5)
                             else -> minusWeeks(1)
                         }
-                    }.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
-                    LocalDateTime.now(ZoneOffset.UTC).plusDays(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                    }.format(SQL_TIME_FORMATTER),
+                    TimezoneUtil.startOfLocalDayUtc(offsetDays = 1).format(SQL_TIME_FORMATTER)
                 )
         ).map {
             ActiveInfoVo.HistoryVo(

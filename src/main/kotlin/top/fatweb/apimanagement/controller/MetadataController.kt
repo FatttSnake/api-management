@@ -6,6 +6,7 @@ import top.fatweb.apimanagement.service.system.ISettingsService
 import top.fatweb.apimanagement.vo.metadata.ConfigVo
 import top.fatweb.apimanagement.vo.metadata.HealthVo
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 /**
  * Metadata controller
@@ -21,7 +22,7 @@ class MetadataController(
     fun health() =
         HealthVo(
             status = "UP",
-            timestamp = LocalDateTime.now()
+            timestamp = LocalDateTime.now(ZoneOffset.UTC)
         )
 
     @GetMapping("/config")
