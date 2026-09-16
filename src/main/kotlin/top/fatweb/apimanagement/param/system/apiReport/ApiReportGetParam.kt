@@ -1,7 +1,6 @@
 package top.fatweb.apimanagement.param.system.apiReport
 
 import io.swagger.v3.oas.annotations.media.Schema
-import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import org.springframework.format.annotation.DateTimeFormat
 import top.fatweb.apimanagement.annotation.ParamProcessor
@@ -55,16 +54,5 @@ data class ApiReportGetParam(
      */
     @field:Schema(description = "Top 数量", defaultValue = "10", example = "10")
     @field:Min(value = 1, message = "Limit must be greater than or equal to 1")
-    var limit: Int? = 10,
-
-    /**
-     * Time zone offset of the client in minutes, used to group report by day and format exported time
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    @field:Schema(description = "时区偏移（分钟，UTC+8 为 480）", defaultValue = "0", example = "480")
-    @field:Min(value = -720, message = "Time zone offset must be greater than or equal to -720")
-    @field:Max(value = 840, message = "Time zone offset must be less than or equal to 840")
-    var tzOffset: Int? = 0
+    var limit: Int? = 10
 )

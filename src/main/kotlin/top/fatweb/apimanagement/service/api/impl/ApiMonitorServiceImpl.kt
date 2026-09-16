@@ -11,12 +11,11 @@ import top.fatweb.apimanagement.mapper.api.ApiUsageMapper
 import top.fatweb.apimanagement.properties.ServerProperties
 import top.fatweb.apimanagement.service.api.IApiMonitorService
 import top.fatweb.apimanagement.service.api.IApiPluginService
+import top.fatweb.apimanagement.util.TimezoneUtil
 import top.fatweb.apimanagement.vo.api.ApiMonitorDashboardVo
 import top.fatweb.apimanagement.vo.api.ApiTopVo
 import java.math.BigDecimal
-import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.ZoneOffset
 
 /**
  * API monitor service implement
@@ -66,7 +65,7 @@ class ApiMonitorServiceImpl(
 
         val activeKeys = redisProvider.getSet<Any>("${prefix}_keys")?.size?.toLong() ?: 0L
 
-        val startOfToday = LocalDate.now(ZoneOffset.UTC).atStartOfDay(ZoneOffset.UTC).toLocalDateTime()
+        val startOfToday = TimezoneUtil.startOfLocalDayUtc()
         val totalToday = apiUsageMapper.selectCount(
             Wrappers.lambdaQuery<ApiUsage>().ge(ApiUsage::createTime, startOfToday)
         )
@@ -110,7 +109,7 @@ class ApiMonitorServiceImpl(
             val apiCode = row["api_code"] as? String ?: ""
             val apiInterface = interfaces[apiCode]
             ApiTopVo(
-                apiCode = if (apiCode.isEmpty()) null else apiCode,
+                apiCode = apiCode.ifEmpty { null },
                 count = (row["count"] as? Number)?.toLong() ?: 0L,
                 cost = (row["cost"] as? Number)?.let { BigDecimal(it.toString()) } ?: BigDecimal.ZERO,
                 pluginVo = apiInterface?.pluginId?.let { plugins[it]?.toVo() },

@@ -16,9 +16,8 @@ import top.fatweb.apimanagement.service.api.IApiPluginService
 import top.fatweb.apimanagement.service.api.IApiReportService
 import top.fatweb.apimanagement.service.permission.IUserService
 import top.fatweb.apimanagement.service.system.IStorageBlobService
-import top.fatweb.apimanagement.vo.api.ApiInterfaceVo
+import top.fatweb.apimanagement.util.TimezoneUtil
 import top.fatweb.apimanagement.vo.api.ApiKeyVo
-import top.fatweb.apimanagement.vo.api.ApiPluginVo
 import top.fatweb.apimanagement.vo.api.ApiReportVo
 import top.fatweb.apimanagement.vo.api.ApiTopVo
 import top.fatweb.apimanagement.vo.permission.UserWithInfoVo
@@ -102,7 +101,7 @@ class ApiReportServiceImpl(
     private val storageBlobService: IStorageBlobService
 ) : IApiReportService {
     override fun usage(apiReportGetParam: ApiReportGetParam?): List<ApiReportVo> {
-        val dateExpression = localDateExpression(apiReportGetParam)
+        val dateExpression = localDateExpression()
         val rows = apiUsageMapper.selectMaps(
             baseQuery(apiReportGetParam)
                 .select(
@@ -195,7 +194,7 @@ class ApiReportServiceImpl(
                 ?: key?.userId?.let { context.users[it] }
             csv.append(
                 csvLine(
-                    csvLocalTime(usage.createTime, apiReportGetParam),
+                    csvLocalTime(usage.createTime),
                     apiInterface?.pluginId?.let { context.plugins[it] }?.name,
                     apiInterface?.name,
                     usage.apiCode,
@@ -224,11 +223,16 @@ class ApiReportServiceImpl(
         }
 
     /**
-     * Build the expression of the local date of the request creator, the offset comes from the client so
-     * that the day boundary matches the one shown in the console
+     * Build the expression of the local date of the request creator, the offset comes from
+     * [TimezoneUtil] so that the day boundary matches the one shown in the console
+     *
+     * @return SQL expression of the local date
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see TimezoneUtil
      */
-    private fun localDateExpression(apiReportGetParam: ApiReportGetParam?): String =
-        "date(date_add(create_time, interval ${apiReportGetParam?.tzOffset ?: 0} minute))"
+    private fun localDateExpression(): String =
+        "date(date_add(create_time, interval ${TimezoneUtil.offsetMinutes()} minute))"
 
     private fun buildContext(
         codes: List<String?>,
@@ -271,7 +275,7 @@ class ApiReportServiceImpl(
         return ApiReportVo(
             apiKeyId = apiKeyId,
             date = this["date"]?.toString(),
-            apiCode = if (apiCode.isEmpty()) null else apiCode,
+            apiCode = apiCode.ifEmpty { null },
             apiName = apiInterface?.name,
             count = (this["count"] as? Number)?.toLong() ?: 0L,
             cost = (this["cost"] as? Number)?.let { BigDecimal(it.toString()) } ?: BigDecimal.ZERO,
@@ -287,7 +291,7 @@ class ApiReportServiceImpl(
         val apiInterface = context.interfaces[apiCode]
 
         return ApiTopVo(
-            apiCode = if (apiCode.isEmpty()) null else apiCode,
+            apiCode = apiCode.ifEmpty { null },
             count = (this["count"] as? Number)?.toLong() ?: 0L,
             cost = (this["cost"] as? Number)?.let { BigDecimal(it.toString()) } ?: BigDecimal.ZERO,
             pluginVo = apiInterface?.pluginId?.let { context.plugins[it]?.toVo() },
@@ -300,9 +304,15 @@ class ApiReportServiceImpl(
 
     /**
      * Convert the stored UTC time to the time zone of the client
+     *
+     * @param time Stored UTC time
+     * @return Formatted local time
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see TimezoneUtil
      */
-    private fun csvLocalTime(time: LocalDateTime?, apiReportGetParam: ApiReportGetParam?): String =
-        time?.plusMinutes((apiReportGetParam?.tzOffset ?: 0).toLong())?.format(CSV_TIME_FORMATTER).orEmpty()
+    private fun csvLocalTime(time: LocalDateTime?): String =
+        time?.plusMinutes(TimezoneUtil.offsetMinutes().toLong())?.format(CSV_TIME_FORMATTER).orEmpty()
 
     private fun csvMoney(value: BigDecimal?): String =
         (value ?: BigDecimal.ZERO).setScale(4, RoundingMode.HALF_UP).toPlainString()
