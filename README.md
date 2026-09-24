@@ -8,6 +8,17 @@
 <div align="center">
     <b>A self-hosted, plugin-driven API gateway &amp; management platform</b>
 </div>
+<div align="center">
+    <a href="https://ci.fatweb.top/job/API%20Management/">
+        <img alt="Build" src="https://ci.fatweb.top/job/API%20Management/badge/icon">
+    </a>
+    <a href="https://github.com/FatttSnake/api-management/releases/latest">
+        <img alt="Release" src="https://img.shields.io/github/v/release/FatttSnake/api-management">
+    </a>
+    <a href="LICENSE">
+        <img alt="LICENSE" src="https://img.shields.io/github/license/FatttSnake/api-management">
+    </a>
+</div>
 
 # Overview ([简体中文](README_zh.md), EN)
 
@@ -37,7 +48,7 @@ api-management/
 ├── plugin-sdk/                                   # Plugin SDK (standalone submodule for plugin authors)
 │   └── src/main/kotlin/top/fatweb/apimanagement/sdk/
 │       ├── annotation/ApiController.kt           # Declares "one plugin + a set of API routes"
-│       └── plugin/                               # PluginDescriptor / PluginLifecycle / PluginContext / ApiResponse / PluginSigner
+│       └── plugin/                               # PluginDescriptor / PluginLifecycle / PluginContext / PluginStorage / ApiResponse / PluginSigner
 ├── plugin-gradle-plugin/                         # Gradle plugin `top.fatweb.api-plugin` for plugin authors
 │   └── src/main/kotlin/top/fatweb/apimanagement/gradle/
 │       ├── ApiPlugin.kt                          # Applies the apiPlugin DSL, adds the SDK dependency & repositories
@@ -67,7 +78,9 @@ api-management/
     ├── db/sqlite.db                              # SQLite (high-volume data such as logs)
     ├── log/                                      # Application logs
     ├── plugins/                                  # Directory where external plugin jars are materialized
-    ├── objects/                                  # Local file-storage root
+    ├── objects/                                  # Content-addressed objects (sharded by SHA-256)
+    ├── files/                                    # System-wide root of location-addressed files
+    │   └── plugin-data/{pluginId}/               # A plugin's own file area
     └── config/settings.yml                       # Dynamic system settings
 ```
 
@@ -124,7 +137,7 @@ The program reads `application-config.yml` from the **running directory or the `
 | --- | --- | --- |
 | `app.admin` | Administrator created when the database is initialized (optional) | `username`, `password`, `nickname`, `email` |
 | `app.security` | JWT token & security | `token-secret` (required; random value in the generated template), `token-prefix`, `access-token-ttl`, `refresh-token-ttl` |
-| `app.storage` | File storage | `mode` (`local`/`s3`), `local.root`, `s3.*` |
+| `app.storage` | File storage | `mode` (`local`/`s3`), `local.root`, `public-base-url`, `external-url-*`, `s3.*` |
 | `server.port` | Server port | default `8080` |
 | `spring.datasource.dynamic.datasource.master` | MySQL (key business data) | `url`, `username`, `password` |
 | `spring.data.redis` | Redis | `host`, `port`, `password`, `database` |
@@ -184,10 +197,53 @@ To make the SDK and the Gradle plugin available to plugin projects, publish them
 
 `app.storage.mode` supports two file-storage backends:
 
-- `local` — writes to local disk, rooted at `app.storage.local.root` (default `data/objects`).
+- `local` — writes to local disk, rooted at `app.storage.local.root` (default `data`).
 - `s3` — writes to an S3-compatible object store (`endpoint`, `accessKey`, `secretKey`, `region`, `bucket`, etc.; supports `path` / `virtualHosted` path styles).
 
+Two addressing modes sit on top of either backend. The segments below are appended
+where they are used, they are not configuration knobs:
+
+| | Content addressing | Location addressing |
+|---|---|---|
+| Key | SHA-256 of the content, deduplicated globally | A path relative to the location-addressed root |
+| Stored as | zstd-compressed | Verbatim bytes |
+| local | `data/objects/{first2}/{rest}` | `data/files/{key}` |
+| s3 | `{prefix}/objects/{first2}/{rest}` | `{prefix}/files/{key}` |
+
+Location addressing is a **system-wide** capability of which plugins are only the
+first user: a plugin's key is `plugin-data/{pluginId}/{path}`, and another subsystem
+can claim its own prefix later (e.g. `reports/2026/xxx.csv`) without interfering.
+
 In addition, uploaded external plugin jars are materialized to `data/plugins` for class loading.
+
+## Plugin storage and external links
+
+A plugin reads and writes its own file area through `PluginContext.storage`
+(`PluginStorage`). Every path is confined to that plugin's own namespace.
+Location-addressed files are stored verbatim, which is what allows a **login-free
+external link** to be issued for them:
+
+- `local` — the gateway mints an HMAC-signed URL (`/public/storage/{pluginId}/{path}?e=<expiry>&s=<signature>`), keyed on `app.security.tokenSecret`. Stateless, so it works unchanged across instances. The URL carries a public reference rather than the internal key, so changing the layout does not invalidate links already handed out.
+- `s3` — a presigned URL against the object store, which the client fetches directly without touching the gateway.
+
+```yaml
+app:
+  storage:
+    public-base-url: https://api.example.com  # Public base of external links; falls back to the request URL (set it behind a reverse proxy)
+    external-url-default-ttl: 1               # Default validity of an external link
+    external-url-ttl-unit: hours              # Unit of the TTLs
+    external-url-max-ttl: 168                 # Upper bound; longer requests are clamped
+```
+
+Content-addressed objects are compressed at rest and cannot be handed to a browser,
+so they have **no** external link and are reachable only through the read/write
+methods of `PluginStorage`.
+
+> An external link is an unrevocable bearer credential: whoever holds it can read
+> the file until it expires. Rotating `app.security.tokenSecret` invalidates every
+> outstanding link and logs every user out. In `local` mode the link is same-origin
+> with the console, so every type outside a strict image allowlist is served with
+> `Content-Disposition: attachment` and `nosniff`.
 
 # Database
 

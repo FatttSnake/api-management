@@ -8,6 +8,17 @@
 <div align="center">
     <b>一个可自托管的、插件驱动的 API 网关与管理平台</b>
 </div>
+<div align="center">
+    <a href="https://ci.fatweb.top/job/API%20Management/">
+        <img alt="Build" src="https://ci.fatweb.top/job/API%20Management/badge/icon">
+    </a>
+    <a href="https://github.com/FatttSnake/api-management/releases/latest">
+        <img alt="Release" src="https://img.shields.io/github/v/release/FatttSnake/api-management">
+    </a>
+    <a href="LICENSE">
+        <img alt="LICENSE" src="https://img.shields.io/github/license/FatttSnake/api-management">
+    </a>
+</div>
 
 # 概述 ([EN](README.md), 简体中文)
 
@@ -37,7 +48,7 @@ api-management/
 ├── plugin-sdk/                                   # 插件 SDK（独立子模块，供插件开发者依赖）
 │   └── src/main/kotlin/top/fatweb/apimanagement/sdk/
 │       ├── annotation/ApiController.kt           # 声明「一个插件 + 一组 API 路由」
-│       └── plugin/                               # PluginDescriptor / PluginLifecycle / PluginContext / ApiResponse / PluginSigner
+│       └── plugin/                               # PluginDescriptor / PluginLifecycle / PluginContext / PluginStorage / ApiResponse / PluginSigner
 ├── plugin-gradle-plugin/                         # 插件开发者使用的 Gradle 插件 `top.fatweb.api-plugin`
 │   └── src/main/kotlin/top/fatweb/apimanagement/gradle/
 │       ├── ApiPlugin.kt                          # 应用 apiPlugin DSL、自动加入 SDK 依赖与仓库
@@ -67,7 +78,9 @@ api-management/
     ├── db/sqlite.db                              # SQLite（日志等大量读写的数据）
     ├── log/                                      # 应用日志
     ├── plugins/                                  # 外部插件 Jar 物化目录
-    ├── objects/                                  # 本地文件存储根目录
+    ├── objects/                                  # 内容寻址对象（按 SHA-256 分片）
+    ├── files/                                    # 位置寻址文件的系统级根目录
+    │   └── plugin-data/{插件ID}/                 # 插件自己的文件区
     └── config/settings.yml                       # 动态系统设置
 ```
 
@@ -124,7 +137,7 @@ java -jar api-management.jar
 | --- | --- | --- |
 | `app.admin` | 初始化数据库时创建的管理员（可选） | `username`、`password`、`nickname`、`email` |
 | `app.security` | JWT 令牌与安全相关 | `token-secret`（必填，模板已生成随机值）、`token-prefix`、`access-token-ttl`、`refresh-token-ttl` |
-| `app.storage` | 文件存储 | `mode`（`local`/`s3`）、`local.root`、`s3.*` |
+| `app.storage` | 文件存储 | `mode`（`local`/`s3`）、`local.root`、`public-base-url`、`external-url-*`、`s3.*` |
 | `server.port` | 服务端口 | 默认 `8080` |
 | `spring.datasource.dynamic.datasource.master` | MySQL（关键业务数据） | `url`、`username`、`password` |
 | `spring.data.redis` | Redis | `host`、`port`、`password`、`database` |
@@ -184,10 +197,41 @@ knife4j:
 
 `app.storage.mode` 支持两种文件存储方式：
 
-- `local`：写入本地磁盘，根目录由 `app.storage.local.root` 指定（默认 `data/objects`）。
+- `local`：写入本地磁盘，根目录由 `app.storage.local.root` 指定（默认 `data`）。
 - `s3`：写入 S3 兼容对象存储（需配置 `endpoint`、`accessKey`、`secretKey`、`region`、`bucket` 等，支持 `path` / `virtualHosted` 两种路径风格）。
 
+后端之上有两种寻址方式，它们是**按需拼接**的子目录，不是配置项：
+
+| | 内容寻址 | 位置寻址 |
+|---|---|---|
+| key | 内容 SHA-256，相同内容全局去重 | 相对位置寻址根目录的路径 |
+| 存储形态 | zstd 压缩 | 原始字节 |
+| local | `data/objects/{前2位}/{其余62位}` | `data/files/{key}` |
+| s3 | `{prefix}/objects/{前2位}/{其余62位}` | `{prefix}/files/{key}` |
+
+位置寻址是**系统级**能力，插件只是它的第一个使用方：插件的 key 为 `plugin-data/{插件ID}/{路径}`，其他子系统以后可以用别的前缀（如 `reports/2026/xxx.csv`），互不干扰。
+
 另外，上传的外部插件 Jar 会物化到 `data/plugins` 目录用于类加载。
+
+## 插件存储与外链
+
+插件通过 `PluginContext.storage` 读写自己的文件区（`PluginStorage`），路径自动限定在该插件自己的命名空间内。位置寻址的文件会原样存储，因此可以签发**免登外链**：
+
+- `local`：网关签发 HMAC 签名 URL（`/public/storage/{插件ID}/{路径}?e=<过期时间戳>&s=<签名>`），密钥复用 `app.security.tokenSecret`，无状态、多实例可用。URL 用的是对外引用而非内部 key，所以内部布局调整不会让已发出的链接失效。
+- `s3`：生成对象存储的预签名 URL，客户端直连 S3，不经网关。
+
+```yaml
+app:
+  storage:
+    public-base-url: https://api.example.com  # 外链的公开基址；未配置时取当前请求地址（反向代理后必须显式配置）
+    external-url-default-ttl: 1               # 外链默认有效期
+    external-url-ttl-unit: hours              # 有效期单位
+    external-url-max-ttl: 168                 # 有效期上限，超出的申请会被钳制
+```
+
+内容寻址对象是压缩存储的，无法直接交给浏览器，因此**不提供外链**，只能通过 `PluginStorage` 的读写接口访问。
+
+> 外链是不可吊销的 bearer 凭证：持有者到过期前一直可读。轮换 `app.security.tokenSecret` 会同时使所有外链失效并让所有用户下线。`local` 模式的外链与后台同源，故除图片白名单外的类型一律以 `Content-Disposition: attachment` 下发并附 `nosniff`。
 
 # 数据库
 
