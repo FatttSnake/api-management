@@ -9,11 +9,13 @@ import javax.sql.DataSource
  * The narrow, gateway-sanctioned data interaction channel for a plugin. A plugin
  * must never access the gateway's own datasource / MyBatis mappers; it reads
  * gateway data only through this interface and writes its own data via
- * [datasource] (an isolated, admin-configured datasource dedicated to this plugin).
+ * [datasource] (an isolated, admin-configured datasource dedicated to this plugin)
+ * and [storage] (a file area isolated to this plugin).
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  * @see PluginLifecycle
+ * @see PluginStorage
  */
 interface PluginContext {
     /**
@@ -26,6 +28,13 @@ interface PluginContext {
      * configured one for this plugin
      */
     val datasource: DataSource?
+
+    /**
+     * The plugin's own isolated file storage
+     *
+     * @see PluginStorage
+     */
+    val storage: PluginStorage
 
     /**
      * ID of the user currently invoking the API, or null when unauthenticated

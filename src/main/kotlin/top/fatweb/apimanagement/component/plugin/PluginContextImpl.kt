@@ -3,6 +3,7 @@ package top.fatweb.apimanagement.component.plugin
 import top.fatweb.apimanagement.entity.api.ApiInterface
 import top.fatweb.apimanagement.sdk.plugin.PluginContext
 import top.fatweb.apimanagement.sdk.plugin.PluginInterfaceInfo
+import top.fatweb.apimanagement.sdk.plugin.PluginStorage
 import top.fatweb.apimanagement.service.api.IApiAccountService
 import top.fatweb.apimanagement.service.api.IApiPluginSettingService
 import top.fatweb.apimanagement.util.getApiKeyPrincipal
@@ -16,15 +17,17 @@ import javax.sql.DataSource
  * Bridges a plugin to the gateway through the narrow, sanctioned data interaction
  * channel. The plugin never sees the gateway's own datasource / MyBatis mappers;
  * it reads gateway data only through these methods and writes its own data via
- * [datasource].
+ * [datasource] and [storage].
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  * @see PluginContext
+ * @see PluginStorage
  */
 class PluginContextImpl(
     override val pluginId: String,
     override val datasource: DataSource?,
+    override val storage: PluginStorage,
     private val apiAccountService: IApiAccountService,
     private val apiPluginSettingService: IApiPluginSettingService,
     private val interfaceLookup: (String) -> ApiInterface?

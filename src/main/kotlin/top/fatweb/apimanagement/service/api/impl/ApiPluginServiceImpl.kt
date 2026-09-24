@@ -31,6 +31,9 @@ import top.fatweb.apimanagement.component.plugin.MountedEndpoint
 import top.fatweb.apimanagement.component.plugin.PluginClassLoaderManager
 import top.fatweb.apimanagement.component.plugin.PluginContextImpl
 import top.fatweb.apimanagement.component.plugin.PluginRuntime
+import top.fatweb.apimanagement.component.plugin.PluginStorageFactory
+import top.fatweb.apimanagement.component.storage.FileStorageProvider
+import top.fatweb.apimanagement.component.storage.StorageKeyUtil
 import top.fatweb.apimanagement.converter.api.toEntity
 import top.fatweb.apimanagement.converter.api.toVo
 import top.fatweb.apimanagement.converter.api.toVoPage
@@ -57,6 +60,7 @@ import top.fatweb.apimanagement.sdk.plugin.PluginContext
 import top.fatweb.apimanagement.sdk.plugin.PluginDescriptor
 import top.fatweb.apimanagement.sdk.plugin.PluginLifecycle
 import top.fatweb.apimanagement.sdk.plugin.PluginSigner
+import top.fatweb.apimanagement.sdk.plugin.PluginStorage
 import top.fatweb.apimanagement.service.api.*
 import top.fatweb.apimanagement.service.system.IStorageBlobService
 import top.fatweb.apimanagement.util.saveOrThrowException
@@ -110,10 +114,12 @@ class ApiPluginServiceImpl(
     private val operationMapper: OperationMapper,
     private val powerMapper: PowerMapper,
     private val storageBlobService: IStorageBlobService,
+    private val fileStorageProvider: FileStorageProvider,
     private val apiInterfaceMapper: ApiInterfaceMapper,
     private val apiPluginSettingService: IApiPluginSettingService,
     private val apiPluginTrustKeyService: IApiPluginTrustKeyService,
     private val apiPluginDatasourceService: IApiPluginDatasourceService,
+    private val pluginStorageFactory: PluginStorageFactory,
     @Lazy private val apiAccountService: IApiAccountService
 ) : ServiceImpl<ApiPluginMapper, ApiPlugin>(), IApiPluginService,
     ApplicationRunner {
@@ -267,6 +273,23 @@ class ApiPluginServiceImpl(
             throw PluginInstallException("Built-in plugins cannot be uninstalled")
         }
 
+        removePlugin(pluginId, purgeStorage = true)
+    }
+
+    /**
+     * Tear a plugin down
+     *
+     * @param pluginId Plugin ID
+     * @param purgeStorage Whether the files the plugin stored should be deleted along
+     *        with it. An installation that replaces an older version of the same
+     *        plugin must pass false, otherwise upgrading a plugin would destroy its
+     *        data
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    private fun removePlugin(pluginId: String, purgeStorage: Boolean) {
+        val plugin = getOne(KtQueryWrapper(ApiPlugin()).eq(ApiPlugin::pluginId, pluginId)) ?: return
+
         val runtime = pluginRuntimes.remove(pluginId)
         val codes = apiInterfaceMapper.selectList(
             KtQueryWrapper(ApiInterface()).eq(ApiInterface::pluginId, pluginId)
@@ -282,6 +305,20 @@ class ApiPluginServiceImpl(
         refreshCache()
 
         runtime?.lifecycle?.let { runCatching { it.onUninstall(runtime.pluginContext) } }
+
+        // Purged after onUninstall so a plugin flushing state while it tears down still
+        // has a namespace to write into. A failure here is logged rather than raised:
+        // the database rows are already gone, so aborting would only leave a
+        // half-uninstalled plugin behind.
+        if (purgeStorage) {
+            runCatching {
+                fileStorageProvider.deleteAtPrefix(StorageKeyUtil.pluginBaseKey(pluginId))
+            }.onSuccess {
+                logger.info("Purged {} file(s) of plugin '{}'", it, pluginId)
+            }.onFailure {
+                logger.warn("Failed to purge the storage of plugin '{}': {}", pluginId, it.message)
+            }
+        }
     }
 
     override fun getInterfacePage(apiInterfaceGetParam: ApiInterfaceGetParam?): PageVo<ApiGroupVo> {
@@ -453,7 +490,7 @@ class ApiPluginServiceImpl(
                         "Version code ${descriptor.versionCode} is not greater than current $currentCode"
                     )
                 }
-                uninstallPlugin(descriptor.pluginId)
+                removePlugin(descriptor.pluginId, purgeStorage = false)
             }
 
             // ---- 4. persist jar into the blob store ----
@@ -464,7 +501,9 @@ class ApiPluginServiceImpl(
 
             // ---- 5. child context + beans ----
             val datasource = apiPluginDatasourceService.buildIfConfigured(descriptor.pluginId)
-            val childContext = createChildContext(jarPath, loader, controllerClasses, descriptor.pluginId, datasource)
+            val pluginStorage = pluginStorageFactory.create(descriptor.pluginId)
+            val childContext =
+                createChildContext(jarPath, loader, controllerClasses, descriptor.pluginId, datasource, pluginStorage)
             mountedContext = childContext
             val controllers = controllerClasses.map { childContext.getBean(it) }
 
@@ -493,6 +532,7 @@ class ApiPluginServiceImpl(
             val pluginContext = PluginContextImpl(
                 pluginId = descriptor.pluginId,
                 datasource = datasource,
+                storage = pluginStorage,
                 apiAccountService = apiAccountService,
                 apiPluginSettingService = apiPluginSettingService,
                 interfaceLookup = { getByCode(it) }
@@ -555,7 +595,8 @@ class ApiPluginServiceImpl(
         loader: URLClassLoader,
         controllerClasses: List<Class<*>>,
         pluginId: String,
-        datasource: DataSource?
+        datasource: DataSource?,
+        pluginStorage: PluginStorage
     ): GenericApplicationContext {
         val ctx = GenericApplicationContext()
         ctx.parent = applicationContext
@@ -585,6 +626,7 @@ class ApiPluginServiceImpl(
             PluginContextImpl(
                 pluginId = pluginId,
                 datasource = datasource,
+                storage = pluginStorage,
                 apiAccountService = apiAccountService,
                 apiPluginSettingService = apiPluginSettingService,
                 interfaceLookup = { getByCode(it) }
