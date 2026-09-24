@@ -4,9 +4,12 @@ import jakarta.validation.Valid
 import jakarta.validation.constraints.AssertTrue
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
+import jakarta.validation.constraints.Pattern
 import org.springframework.validation.annotation.Validated
 import top.fatweb.apimanagement.component.storage.FileStorageMode
 import top.fatweb.apimanagement.component.storage.S3PathStyle
+import java.time.Duration
+import java.util.concurrent.TimeUnit
 
 /**
  * File storage properties
@@ -43,6 +46,46 @@ data class StorageProperties(
     @field:NotBlank val pluginDir: String = "data/plugins",
 
     /**
+     * Public base URL used to build external storage links
+     *
+     * When unset, the URL of the current request is used, which is correct for a
+     * direct deployment but wrong behind a reverse proxy - set it explicitly in
+     * production
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @field:Pattern(
+        regexp = "^https?://\\S+$",
+        message = "Public base URL must be an absolute http(s) URL"
+    ) val publicBaseUrl: String? = null,
+
+    /**
+     * Default life of an external storage link
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    val externalUrlDefaultTtl: Long = 1L,
+
+    /**
+     * Life unit of external storage links
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see TimeUnit
+     */
+    val externalUrlTtlUnit: TimeUnit = TimeUnit.HOURS,
+
+    /**
+     * Maximum life of an external storage link, a longer request is clamped down
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    val externalUrlMaxTtl: Long = 168L,
+
+    /**
      * S3 storage properties
      *
      * @author FatttSnake, fatttsnake@gmail.com
@@ -59,12 +102,13 @@ data class StorageProperties(
      */
     data class LocalStorageProperties(
         /**
-         * File storage root path
+         * File storage root path, the 'objects/' and 'files/' segments are appended
+         * automatically
          *
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
          */
-        @field:NotBlank val root: String = "data/objects",
+        @field:NotBlank val root: String = "data",
     )
 
     data class S3StorageProperties(
@@ -123,7 +167,32 @@ data class StorageProperties(
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
          */
-        @field:NotNull val prefix: String = ""
+        @field:NotNull val prefix: String = "",
+
+        /**
+         * Public S3 endpoint used to build presigned URLs, falls back to [endpoint]
+         *
+         * Set it when the internal endpoint is not reachable from a browser, e.g. a
+         * container service name or a private network address
+         *
+         * @author FatttSnake, fatttsnake@gmail.com
+         * @since 1.0.0
+         */
+        @field:Pattern(
+            regexp = "^https?://\\S+$",
+            message = "Public S3 endpoint must be an absolute http(s) URL"
+        ) val publicEndpoint: String? = null,
+
+        /**
+         * Region used to sign presigned URLs, falls back to [region]
+         *
+         * SigV4 requires a real signing region, so the provider substitutes
+         * 'us-east-1' for the 'auto' that object stores such as MinIO accept
+         *
+         * @author FatttSnake, fatttsnake@gmail.com
+         * @since 1.0.0
+         */
+        val signingRegion: String? = null
     )
 
     /**
@@ -135,4 +204,42 @@ data class StorageProperties(
     @AssertTrue(message = "S3 configuration must be added")
     fun isS3(): Boolean =
         mode == FileStorageMode.Local || s3 !== null
+
+    /**
+     * Check external link ttl properties
+     *
+     * A default above the maximum would be clamped on every single call, which is
+     * never what an operator means
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @AssertTrue(message = "External storage link default life must not exceed the maximum")
+    fun isExternalUrlTtl(): Boolean =
+        externalUrlDefaultTtl <= externalUrlMaxTtl
+
+    /**
+     * Get the default life of an external storage link
+     *
+     * @return Default life
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see Duration
+     */
+    fun externalUrlDefaultDuration(): Duration =
+        ttlToDuration(externalUrlDefaultTtl)
+
+    /**
+     * Get the maximum life of an external storage link
+     *
+     * @return Maximum life
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see Duration
+     */
+    fun externalUrlMaxDuration(): Duration =
+        ttlToDuration(externalUrlMaxTtl)
+
+    private fun ttlToDuration(value: Long): Duration =
+        Duration.ofNanos(externalUrlTtlUnit.toNanos(value))
 }

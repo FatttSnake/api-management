@@ -19,8 +19,12 @@ app:
 #    secret-key-prefix: "Basic " # Secret key prefix
   storage:
     mode: local # File storage mode [local, s3]
+#    public-base-url: https://api.example.com # Public base URL of external storage links (falls back to the request URL)
+#    external-url-default-ttl: 1 # Life of an external storage link
+#    external-url-ttl-unit: hours # Life unit of external storage links [nanoseconds, microseconds, milliseconds, seconds, minutes, hours, days]
+#    external-url-max-ttl: 168 # Maximum life of an external storage link, longer requests are clamped
 #    local:
-#      root: data/objects # File storage root path
+#      root: data # File storage root path, the 'objects/' and 'files/' segments are appended automatically
 #    s3:
 #      endpoint: http://localhost:9000 # S3 endpoint
 #      access-key: xxxxxx # S3 access key
@@ -29,6 +33,8 @@ app:
 #      path-style: path # S3 path style [path, virtualHosted]
 #      bucket: xxx # S3 bucket
 #      prefix: # S3 storage path prefix
+#      publicEndpoint: https://s3.example.com # Public S3 endpoint of presigned URLs (falls back to endpoint)
+#      signingRegion: us-east-1 # Region of presigned URLs (falls back to region, 'auto' becomes us-east-1)
 
 #server:
 #  port: 8080 # Server port (Will be replaced by environment variables in Docker)
