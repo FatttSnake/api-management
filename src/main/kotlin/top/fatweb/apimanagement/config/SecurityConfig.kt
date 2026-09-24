@@ -12,6 +12,7 @@ import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
+import top.fatweb.apimanagement.component.storage.StorageRoutes
 import top.fatweb.apimanagement.filter.ApiKeyAuthenticationTokenFilter
 import top.fatweb.apimanagement.filter.JwtAuthenticationTokenFilter
 import top.fatweb.apimanagement.handler.JwtAccessDeniedHandler
@@ -95,6 +96,7 @@ class SecurityConfig(
                     "/tool/store",
                     "/tool/store/*",
                     "/system/user/info/*",
+                    StorageRoutes.PUBLIC_STORAGE_MATCHER,
                     "/api/**"
                 ).permitAll()
                 .anyRequest().authenticated()

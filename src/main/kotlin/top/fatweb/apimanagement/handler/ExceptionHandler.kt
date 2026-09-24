@@ -271,6 +271,16 @@ class ExceptionHandler {
                 ResponseResult.fail(ResponseCode.SYSTEM_EXPORT_TOO_MANY_RECORDS, e.localizedMessage, null)
             }
 
+            is StorageLinkInvalidException -> {
+                logger.debug(e.localizedMessage, e)
+                ResponseResult.fail(ResponseCode.SYSTEM_STORAGE_LINK_INVALID, e.localizedMessage, null)
+            }
+
+            is IllegalArgumentException -> {
+                logger.debug(e.localizedMessage, e)
+                ResponseResult.fail(ResponseCode.SYSTEM_ARGUMENT_NOT_VALID, e.localizedMessage, null)
+            }
+
             /* API Platform */
             is ApiKeyInvalidException -> {
                 logger.debug(e.localizedMessage, e)

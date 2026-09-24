@@ -26,6 +26,9 @@ class StorageBlobServiceImpl(
     override fun loadFile(fileHash: String): ByteArray? =
         fileStorageProvider.load(fileHash)
 
+    override fun existsFile(fileHash: String): Boolean =
+        fileStorageProvider.exists(fileHash)
+
     override fun getReferenceCount(fileHash: String): Long =
         baseMapper.selectById(fileHash)?.referenceCount ?: 0
 

@@ -24,6 +24,16 @@ interface IStorageBlobService : IService<StorageBlob> {
     fun loadFile(fileHash: String): ByteArray?
 
     /**
+     * Check if the file is stored in file storage
+     *
+     * @param fileHash File SHA-256 key
+     * @return true=exist; false=not exist
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    fun existsFile(fileHash: String): Boolean
+
+    /**
      * Get file reference count
      *
      * @param fileHash File SHA-256 key
