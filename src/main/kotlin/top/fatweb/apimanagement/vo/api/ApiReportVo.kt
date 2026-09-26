@@ -42,15 +42,6 @@ data class ApiReportVo(
     val apiCode: String?,
 
     /**
-     * API name
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    @field:Schema(description = "API 名称")
-    val apiName: String?,
-
-    /**
      * Request count
      *
      * @author FatttSnake, fatttsnake@gmail.com
@@ -64,7 +55,6 @@ data class ApiReportVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see BigDecimal
      */
     @field:Schema(description = "费用")
     @field:JsonSerialize(using = ToStringSerializer::class)

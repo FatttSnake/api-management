@@ -121,6 +121,8 @@ class ApiReportController(
      * @return Report file bytes
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
+     * @see ResponseEntity
+     * @see ByteArray
      */
     @Operation(summary = "下载导出报表")
     @GetMapping("/export/{fileHash}")

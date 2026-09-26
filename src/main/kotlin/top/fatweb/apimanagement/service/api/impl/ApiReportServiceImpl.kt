@@ -85,6 +85,7 @@ private class ReportContext(
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
+ * @see ApiUsageMapper
  * @see IApiPluginService
  * @see IApiKeyService
  * @see IUserService
@@ -229,7 +230,6 @@ class ApiReportServiceImpl(
      * @return SQL expression of the local date
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see TimezoneUtil
      */
     private fun localDateExpression(): String =
         "date(date_add(create_time, interval ${TimezoneUtil.offsetMinutes()} minute))"
@@ -276,7 +276,6 @@ class ApiReportServiceImpl(
             apiKeyId = apiKeyId,
             date = this["date"]?.toString(),
             apiCode = apiCode.ifEmpty { null },
-            apiName = apiInterface?.name,
             count = (this["count"] as? Number)?.toLong() ?: 0L,
             cost = (this["cost"] as? Number)?.let { BigDecimal(it.toString()) } ?: BigDecimal.ZERO,
             keyVo = key?.toVo(),
@@ -309,7 +308,7 @@ class ApiReportServiceImpl(
      * @return Formatted local time
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see TimezoneUtil
+     * @see LocalDateTime
      */
     private fun csvLocalTime(time: LocalDateTime?): String =
         time?.plusMinutes(TimezoneUtil.offsetMinutes().toLong())?.format(CSV_TIME_FORMATTER).orEmpty()

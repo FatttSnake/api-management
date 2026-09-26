@@ -18,13 +18,16 @@ import java.time.Duration
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
+ * @see ServerProperties
+ * @see FileStorageProvider
+ * @see IStorageBlobService
  * @see PluginStorage
  */
 class PluginStorageImpl(
     private val pluginId: String,
-    private val storageBlobService: IStorageBlobService,
+    private val serverProperties: ServerProperties,
     private val fileStorageProvider: FileStorageProvider,
-    private val serverProperties: ServerProperties
+    private val storageBlobService: IStorageBlobService
 ) : PluginStorage {
     private val logger = LoggerFactory.getLogger(this::class.java)
 
@@ -67,6 +70,10 @@ class PluginStorageImpl(
      * The request is clamped before any time arithmetic, so an over-long value cannot
      * overflow. A non-positive request is rejected rather than clamped, because a link
      * that never works is never what a caller means.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see Duration
      */
     private fun resolveTtl(ttl: Duration?): Duration {
         val requested = ttl ?: serverProperties.storage.externalUrlDefaultDuration()

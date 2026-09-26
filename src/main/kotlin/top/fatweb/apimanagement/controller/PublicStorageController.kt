@@ -33,15 +33,16 @@ import java.time.Instant
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ExternalLinkSigner
+ * @see ServerProperties
  * @see FileStorageProvider
+ * @see ExternalLinkSigner
  */
 @ConditionalOnProperty(name = ["app.storage.mode"], havingValue = "local", matchIfMissing = true)
 @HiddenController
 class PublicStorageController(
+    private val serverProperties: ServerProperties,
     private val fileStorageProvider: FileStorageProvider,
-    private val externalLinkSigner: ExternalLinkSigner,
-    private val serverProperties: ServerProperties
+    private val externalLinkSigner: ExternalLinkSigner
 ) {
     private companion object {
         /**
@@ -73,6 +74,8 @@ class PublicStorageController(
      * @return File content
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
+     * @see ResponseEntity
+     * @see ByteArray
      */
     @GetMapping("${StorageRoutes.PUBLIC_STORAGE_PATH}/{pluginId}/{*path}")
     fun download(
@@ -95,7 +98,7 @@ class PublicStorageController(
 
         val now = Instant.now().epochSecond
         val maxExpiry = now + serverProperties.storage.externalUrlMaxDuration().seconds
-        if (expiresAt <= now || expiresAt > maxExpiry) {
+        if (expiresAt !in (now + 1)..maxExpiry) {
             logger.warn("Rejected storage link: expiry {} is out of range for reference '{}'", expiresAt, reference)
 
             throw StorageLinkInvalidException()

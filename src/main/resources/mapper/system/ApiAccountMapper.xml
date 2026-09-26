@@ -7,7 +7,6 @@
             update_time = utc_timestamp()
         where id = #{id}
           and balance >= #{cost}
-          and deleted = 0
     </update>
 
     <update id="topUp" >
@@ -15,6 +14,5 @@
         set balance     = balance + #{amount},
             update_time = utc_timestamp()
         where id = #{id}
-          and deleted = 0
     </update>
 </mapper>

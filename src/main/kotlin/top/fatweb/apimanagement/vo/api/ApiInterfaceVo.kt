@@ -92,7 +92,6 @@ data class ApiInterfaceVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see BigDecimal
      */
     @field:Schema(description = "每次调用单价 (null=继承插件默认)", example = "0.0100")
     @field:JsonSerialize(using = ToStringSerializer::class)

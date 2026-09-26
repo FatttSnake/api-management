@@ -2,6 +2,7 @@ package top.fatweb.apimanagement.properties
 
 import jakarta.validation.Valid
 import jakarta.validation.constraints.AssertTrue
+import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Pattern
@@ -44,6 +45,30 @@ data class StorageProperties(
      * @since 1.0.0
      */
     @field:NotBlank val pluginDir: String = "data/plugins",
+
+    /**
+     * Directory holding the SQLite databases of the plugins that declare one
+     *
+     * Each plugin gets a directory named after its ID and each of its datasources a file
+     * inside it, so nothing an administrator submits ever reaches this path
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @field:NotBlank val pluginDatasourceDir: String = "data/db/plugin",
+
+    /**
+     * Most connections one plugin datasource may hold open
+     *
+     * Every datasource a plugin declares is its own pool, so this is what decides how
+     * many connections a plugin can add to the database it points at. Kept next to
+     * [pluginDatasourceDir] because both are settings about the datasources the gateway
+     * supplies, and neither is about where files are stored.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @field:Min(1) val pluginDatasourcePoolSize: Int = 5,
 
     /**
      * Public base URL used to build external storage links

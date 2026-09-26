@@ -24,6 +24,7 @@ import java.time.LocalDateTime
  * @since 1.0.0
  * @see ServerProperties
  * @see RedisProvider
+ * @see ApiUsageMapper
  * @see IApiPluginService
  * @see IApiMonitorService
  */

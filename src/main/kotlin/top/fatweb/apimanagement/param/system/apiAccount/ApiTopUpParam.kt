@@ -29,7 +29,6 @@ data class ApiTopUpParam(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see BigDecimal
      */
     @field:Schema(description = "充值金额", required = true, example = "100.0000")
     @field:NotNull(message = "Amount can not be null")

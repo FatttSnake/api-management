@@ -16,12 +16,12 @@ create table t_b_api_plugin
     jar_name            varchar(255)   null comment 'Original jar file name',
     signer_key_id       varchar(64)    null comment 'Signer public key fingerprint (t_b_api_plugin_trust_key.key_id)',
     openapi             longtext       null comment 'Embedded OpenAPI fragment JSON',
+    config_schema       text           null comment 'Embedded plugin config schema JSON snapshot (META-INF/plugin-config.json)',
     load_error          varchar(512)   null comment 'Last mount error message',
     create_time         datetime       not null default (utc_timestamp()) comment 'Create time',
     update_time         datetime       not null default (utc_timestamp()) comment 'Update time',
-    deleted             bigint         not null default 0,
     version             int            not null default 0,
-    constraint t_b_api_plugin_unique_plugin_id unique (plugin_id, deleted)
+    constraint t_b_api_plugin_unique_plugin_id unique (plugin_id)
 ) comment 'API Platform - Plugin';
 
 drop table if exists t_b_api_interface;
@@ -43,10 +43,9 @@ create table t_b_api_interface
     access_mode  varchar(20)    null comment 'Access mode [DEFAULT, RESTRICTED]; null=inherit plugin',
     create_time  datetime       not null default (utc_timestamp()) comment 'Create time',
     update_time  datetime       not null default (utc_timestamp()) comment 'Update time',
-    deleted      bigint         not null default 0,
     version      int            not null default 0,
-    constraint t_b_api_interface_unique_code unique (code, deleted),
-    constraint t_b_api_interface_unique_path_method unique (plugin_id, path, method, deleted)
+    constraint t_b_api_interface_unique_code unique (code),
+    constraint t_b_api_interface_unique_path_method unique (plugin_id, path, method)
 ) comment 'API Platform - Interface';
 
 drop table if exists t_b_api_key;
@@ -93,7 +92,6 @@ create table t_b_api_usage
     billing_mode   varchar(20)    not null default 'SUCCESS_ONLY' comment 'Billing mode [FREE, SUCCESS_ONLY, ALWAYS]',
     create_time    datetime       not null default (utc_timestamp()) comment 'Create time',
     update_time    datetime       not null default (utc_timestamp()) comment 'Update time',
-    deleted        bigint         not null default 0,
     version        int            not null default 0
 ) comment 'API Platform - API Usage';
 create index t_b_api_usage_index_api_key_time on t_b_api_usage (api_key_id, create_time);
@@ -109,9 +107,8 @@ create table t_b_api_account
     enable      int            not null default 1 comment 'Account status',
     create_time datetime       not null default (utc_timestamp()) comment 'Create time',
     update_time datetime       not null default (utc_timestamp()) comment 'Update time',
-    deleted     bigint         not null default 0,
     version     int            not null default 0,
-    constraint t_b_api_account_unique_user_id unique (user_id, deleted)
+    constraint t_b_api_account_unique_user_id unique (user_id)
 ) comment 'API Platform - API Account';
 
 drop table if exists t_b_api_transaction;
@@ -128,10 +125,9 @@ create table t_b_api_transaction
     remark        varchar(255)   null comment 'Remark',
     create_time   datetime       not null default (utc_timestamp()) comment 'Create time',
     update_time   datetime       not null default (utc_timestamp()) comment 'Update time',
-    deleted       bigint         not null default 0,
     version       int            not null default 0,
-    constraint t_b_api_transaction_unique_order_no unique (order_no, deleted),
-    constraint t_b_api_transaction_unique_api_usage unique (api_usage_id, deleted)
+    constraint t_b_api_transaction_unique_order_no unique (order_no),
+    constraint t_b_api_transaction_unique_api_usage unique (api_usage_id)
 ) comment 'System - API Transaction';
 create index t_b_api_transaction_index_user_time on t_b_api_transaction (user_id, create_time);
 
@@ -160,24 +156,9 @@ create table t_b_api_plugin_setting
     setting_value text         null comment 'Setting value',
     create_time   datetime     not null default (utc_timestamp()) comment 'Create time',
     update_time   datetime     not null default (utc_timestamp()) comment 'Update time',
-    deleted       bigint       not null default 0,
     version       int          not null default 0,
-    constraint t_b_api_plugin_setting_unique_key unique (plugin_id, setting_key, deleted)
+    constraint t_b_api_plugin_setting_unique_key unique (plugin_id, setting_key)
 ) comment 'API Platform - Plugin Setting';
-
-drop table if exists t_b_api_plugin_datasource;
-create table t_b_api_plugin_datasource
-(
-    plugin_id   varchar(64)  not null primary key comment 'Plugin ID',
-    db_type     varchar(20)  not null default 'MYSQL' comment 'Database type [MYSQL, SQLITE]',
-    url         varchar(500) null comment 'JDBC URL',
-    username    varchar(100) null comment 'Username',
-    password    text         null comment 'Encrypted password',
-    create_time datetime     not null default (utc_timestamp()) comment 'Create time',
-    update_time datetime     not null default (utc_timestamp()) comment 'Update time',
-    deleted     bigint       not null default 0,
-    version     int          not null default 0
-) comment 'API Platform - Plugin Datasource';
 
 alter table t_s_menu
     add column plugin_id varchar(64) null comment 'API Platform plugin ID (plugin-created menu)';

@@ -146,7 +146,6 @@ data class ApiUsageVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see BigDecimal
      */
     @field:Schema(description = "计费金额")
     @field:JsonSerialize(using = ToStringSerializer::class)

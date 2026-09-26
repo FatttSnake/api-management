@@ -14,13 +14,15 @@ import top.fatweb.apimanagement.service.system.IStorageBlobService
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see PluginStorageImpl
+ * @see ServerProperties
+ * @see FileStorageProvider
+ * @see IStorageBlobService
  */
 @Component
 class PluginStorageFactory(
-    private val storageBlobService: IStorageBlobService,
+    private val serverProperties: ServerProperties,
     private val fileStorageProvider: FileStorageProvider,
-    private val serverProperties: ServerProperties
+    private val storageBlobService: IStorageBlobService
 ) {
     /**
      * Create the storage channel of a plugin
@@ -34,8 +36,8 @@ class PluginStorageFactory(
     fun create(pluginId: String): PluginStorage =
         PluginStorageImpl(
             pluginId = pluginId,
-            storageBlobService = storageBlobService,
+            serverProperties = serverProperties,
             fileStorageProvider = fileStorageProvider,
-            serverProperties = serverProperties
+            storageBlobService = storageBlobService
         )
 }

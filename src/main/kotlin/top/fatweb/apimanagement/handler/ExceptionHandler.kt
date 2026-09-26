@@ -367,6 +367,11 @@ class ExceptionHandler {
                 ResponseResult.fail(ResponseCode.API_PLATFORM_PLUGIN_VERSION_CONFLICT, e.localizedMessage, null)
             }
 
+            is PluginDatasourceException -> {
+                logger.debug(e.localizedMessage, e)
+                ResponseResult.fail(ResponseCode.API_PLATFORM_PLUGIN_DATASOURCE_INVALID, e.localizedMessage, null)
+            }
+
             else -> {
                 logger.error(e.localizedMessage, e)
                 ResponseResult.fail(ResponseCode.SYSTEM_ERROR, e.toString(), null)

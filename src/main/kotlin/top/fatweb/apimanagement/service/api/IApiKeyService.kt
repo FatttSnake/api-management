@@ -150,7 +150,6 @@ interface IApiKeyService : IService<ApiKey> {
      * @param keyId API key ID
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiKey
      */
     fun touchLastUsedTime(keyId: Long)
 }

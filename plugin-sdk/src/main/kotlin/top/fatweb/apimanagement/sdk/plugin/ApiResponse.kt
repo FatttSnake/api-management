@@ -18,24 +18,36 @@ import java.io.Serializable
 data class ApiResponse<T>(
     /**
      * Business code; 0 means success
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     @Schema(description = "业务码，0 表示成功", example = "0")
     val code: Int,
 
     /**
      * Whether the call succeeded
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     @Schema(description = "是否调用成功")
     val success: Boolean,
 
     /**
      * Response message
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     @Schema(description = "信息")
     val msg: String,
 
     /**
      * Response data
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     @Schema(description = "数据")
     val data: T?

@@ -84,7 +84,6 @@ class ApiTransaction : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see BigDecimal
      */
     @TableField("amount")
     var amount: BigDecimal? = null
@@ -94,7 +93,6 @@ class ApiTransaction : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see BigDecimal
      */
     @TableField("balance_after")
     var balanceAfter: BigDecimal? = null
@@ -129,16 +127,6 @@ class ApiTransaction : Serializable {
     var updateTime: LocalDateTime? = null
 
     /**
-     * Deleted
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    @TableField("deleted")
-    @TableLogic
-    var deleted: Long? = null
-
-    /**
      * Version
      *
      * @author FatttSnake, fatttsnake@gmail.com
@@ -149,6 +137,6 @@ class ApiTransaction : Serializable {
     var version: Int? = null
 
     override fun toString(): String {
-        return "ApiTransaction(id=$id, userId=$userId, apiKeyId=$apiKeyId, apiUsageId=$apiUsageId, orderNo=$orderNo, type=$type, amount=$amount, balanceAfter=$balanceAfter, remark=$remark, createTime=$createTime, updateTime=$updateTime, deleted=$deleted, version=$version)"
+        return "ApiTransaction(id=$id, userId=$userId, apiKeyId=$apiKeyId, apiUsageId=$apiUsageId, orderNo=$orderNo, type=$type, amount=$amount, balanceAfter=$balanceAfter, remark=$remark, createTime=$createTime, updateTime=$updateTime, version=$version)"
     }
 }

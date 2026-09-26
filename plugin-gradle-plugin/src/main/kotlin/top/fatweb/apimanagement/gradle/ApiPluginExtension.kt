@@ -19,18 +19,27 @@ interface ApiPluginExtension {
     /**
      * Unique plugin ID, `^[a-z][a-z0-9-]*$`; must match `@ApiController.plugin`
      * Defaults to the Gradle project name.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     val pluginId: Property<String>
 
     /**
      * Plugin display name (menus / permission tree / docs).
      * Defaults to [pluginId].
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     val pluginName: Property<String>
 
     /**
      * Human-readable version, e.g. "1.2.0". Falls back to the project `version`
      * when unset or blank.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     val versionName: Property<String>
 
@@ -38,34 +47,52 @@ interface ApiPluginExtension {
      * Monotonically increasing integer version; upgrades must exceed the
      * currently installed one. **Required** — no default, so a release can never
      * silently ship with versionCode = 1; bump it on every upgrade.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     val versionCode: Property<Int>
 
     /**
      * Plugin description.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     val description: Property<String>
 
     /**
      * Plugin author.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     val author: Property<String>
 
     /**
      * Fully-qualified class name of a [top.fatweb.apimanagement.sdk.plugin.PluginLifecycle]
      * implementation, if any.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     val mainClass: Property<String>
 
     /**
      * `top.fatweb:api-management-plugin-sdk` version added to `implementation`.
      * Defaults to the version this plugin was released with.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     val sdkVersion: Property<String>
 
     /**
      * Optional full jar file name, e.g. "geo-1.2.0.jar".
      * Defaults to `<pluginId>-<versionName>.jar`.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     val archiveName: Property<String>
 }

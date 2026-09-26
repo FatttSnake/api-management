@@ -24,7 +24,6 @@ interface ApiAccountMapper : BaseMapper<ApiAccount> {
      * @return Rows affected (0 = insufficient balance)
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see BigDecimal
      */
     fun deduct(@Param("id") id: Long, @Param("cost") cost: BigDecimal): Int
 
@@ -36,7 +35,6 @@ interface ApiAccountMapper : BaseMapper<ApiAccount> {
      * @return Rows affected
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see BigDecimal
      */
     fun topUp(@Param("id") id: Long, @Param("amount") amount: BigDecimal): Int
 }

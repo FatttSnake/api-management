@@ -119,7 +119,6 @@ class ApiInterface : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see BigDecimal
      */
     @TableField("price")
     var price: BigDecimal? = null
@@ -192,16 +191,6 @@ class ApiInterface : Serializable {
     var updateTime: LocalDateTime? = null
 
     /**
-     * Deleted
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    @TableField("deleted")
-    @TableLogic
-    var deleted: Long? = null
-
-    /**
      * Version
      *
      * @author FatttSnake, fatttsnake@gmail.com
@@ -212,6 +201,6 @@ class ApiInterface : Serializable {
     var version: Int? = null
 
     override fun toString(): String {
-        return "ApiInterface(id=$id, pluginId=$pluginId, code=$code, name=$name, description=$description, path=$path, method=$method, apiVersion=$apiVersion, price=$price, billingMode=$billingMode, needKey=$needKey, rateLimit=$rateLimit, enable=$enable, accessMode=$accessMode, createTime=$createTime, updateTime=$updateTime, deleted=$deleted, version=$version)"
+        return "ApiInterface(id=$id, pluginId=$pluginId, code=$code, name=$name, description=$description, path=$path, method=$method, apiVersion=$apiVersion, price=$price, billingMode=$billingMode, needKey=$needKey, rateLimit=$rateLimit, enable=$enable, accessMode=$accessMode, createTime=$createTime, updateTime=$updateTime, version=$version)"
     }
 }

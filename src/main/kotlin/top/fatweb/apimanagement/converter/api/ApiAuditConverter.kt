@@ -17,6 +17,8 @@ import top.fatweb.apimanagement.vo.permission.UserWithInfoVo
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  * @see EventLog
+ * @see UserWithInfoVo
+ * @see ApiKeyVo
  * @see ApiAuditVo
  */
 fun EventLog.toAuditVo(
@@ -45,6 +47,9 @@ fun EventLog.toAuditVo(
  * @since 1.0.0
  * @see IPage
  * @see EventLog
+ * @see UserWithInfoVo
+ * @see ApiKeyVo
+ * @see UserWithInfoVo
  * @see PageVo
  */
 fun IPage<EventLog>.toAuditPage(
