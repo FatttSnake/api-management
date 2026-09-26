@@ -39,6 +39,7 @@ class ApiAccountController(
      * @return Response object includes accounts paging information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
+     * @see ApiAccountGetParam
      * @see ResponseResult
      * @see PageVo
      * @see ApiAccountVo

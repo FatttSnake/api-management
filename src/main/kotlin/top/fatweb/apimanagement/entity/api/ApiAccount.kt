@@ -36,7 +36,6 @@ class ApiAccount : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see BigDecimal
      */
     @TableField("balance")
     var balance: BigDecimal? = null
@@ -71,16 +70,6 @@ class ApiAccount : Serializable {
     var updateTime: LocalDateTime? = null
 
     /**
-     * Deleted
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    @TableField("deleted")
-    @TableLogic
-    var deleted: Long? = null
-
-    /**
      * Version
      *
      * @author FatttSnake, fatttsnake@gmail.com
@@ -91,6 +80,6 @@ class ApiAccount : Serializable {
     var version: Int? = null
 
     override fun toString(): String {
-        return "ApiAccount(id=$id, userId=$userId, balance=$balance, enable=$enable, createTime=$createTime, updateTime=$updateTime, deleted=$deleted, version=$version)"
+        return "ApiAccount(id=$id, userId=$userId, balance=$balance, enable=$enable, createTime=$createTime, updateTime=$updateTime, version=$version)"
     }
 }

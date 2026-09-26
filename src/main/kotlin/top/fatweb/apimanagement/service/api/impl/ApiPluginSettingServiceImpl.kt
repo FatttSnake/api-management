@@ -31,6 +31,11 @@ class ApiPluginSettingServiceImpl : ServiceImpl<ApiPluginSettingMapper, ApiPlugi
                 .eq(ApiPluginSetting::settingKey, key)
         )?.settingValue
 
+    override fun listByPlugin(pluginId: String): Map<String, String> =
+        list(KtQueryWrapper(ApiPluginSetting()).eq(ApiPluginSetting::pluginId, pluginId))
+            .mapNotNull { setting -> setting.settingKey?.let { key -> key to (setting.settingValue ?: "") } }
+            .toMap()
+
     @Transactional
     override fun set(pluginId: String, key: String, value: String) {
         val existing = getOne(
@@ -50,6 +55,15 @@ class ApiPluginSettingServiceImpl : ServiceImpl<ApiPluginSettingMapper, ApiPlugi
             existing.settingValue = value
             updateOrThrowException { updateById(existing) }
         }
+    }
+
+    @Transactional
+    override fun delete(pluginId: String, key: String) {
+        remove(
+            KtQueryWrapper(ApiPluginSetting())
+                .eq(ApiPluginSetting::pluginId, pluginId)
+                .eq(ApiPluginSetting::settingKey, key)
+        )
     }
 
     @Transactional

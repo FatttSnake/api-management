@@ -50,7 +50,6 @@ interface IApiAccountService : IService<ApiAccount> {
      * @return Balance
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see BigDecimal
      */
     fun getBalance(userId: Long): BigDecimal
 
@@ -75,7 +74,6 @@ interface IApiAccountService : IService<ApiAccount> {
      * @return true if deducted; false if insufficient balance
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see BigDecimal
      */
     fun deduct(userId: Long, cost: BigDecimal): Boolean
 
@@ -87,7 +85,6 @@ interface IApiAccountService : IService<ApiAccount> {
      * @return true if sufficient
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see BigDecimal
      */
     fun checkBalance(userId: Long, cost: BigDecimal): Boolean
 }

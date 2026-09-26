@@ -13,6 +13,7 @@ import top.fatweb.apimanagement.vo.api.ApiUsageVo
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  * @see ApiUsage
+ * @see ApiInterface
  * @see ApiUsageVo
  */
 fun ApiUsage.toVo(resolveApi: ((String) -> ApiInterface?)? = null): ApiUsageVo {
@@ -46,6 +47,7 @@ fun ApiUsage.toVo(resolveApi: ((String) -> ApiInterface?)? = null): ApiUsageVo {
  * @since 1.0.0
  * @see IPage
  * @see ApiUsage
+ * @see ApiInterface
  * @see PageVo
  */
 fun IPage<ApiUsage>.toVoPage(resolveApi: ((String) -> ApiInterface?)? = null) = PageVo(

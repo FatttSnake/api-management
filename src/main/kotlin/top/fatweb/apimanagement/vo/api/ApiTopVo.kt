@@ -36,7 +36,6 @@ data class ApiTopVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see BigDecimal
      */
     @field:Schema(description = "费用")
     @field:JsonSerialize(using = ToStringSerializer::class)

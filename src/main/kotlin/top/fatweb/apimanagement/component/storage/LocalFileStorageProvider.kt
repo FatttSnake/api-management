@@ -32,6 +32,8 @@ import kotlin.io.path.isRegularFile
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  * @see ServerProperties
+ * @see ExternalLinkSigner
+ * @see PublicBaseUrlResolver
  * @see FileStorageProvider
  */
 @Component

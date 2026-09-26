@@ -14,6 +14,7 @@ import top.fatweb.apimanagement.service.api.IApiPluginService
 import top.fatweb.apimanagement.vo.PageVo
 import top.fatweb.apimanagement.vo.api.ApiGroupVo
 import top.fatweb.apimanagement.vo.api.ApiInterfaceVo
+import top.fatweb.apimanagement.vo.api.ApiPluginConfigVo
 import top.fatweb.apimanagement.vo.api.ApiPluginVo
 
 /**
@@ -44,6 +45,26 @@ class ApiPluginController(
     @PreAuthorize("hasAnyAuthority('system:plugin:plugin:query')")
     fun getPlugin(@ProcessParam @Valid apiPluginGetParam: ApiPluginGetParam?): ResponseResult<PageVo<ApiPluginVo>> =
         ResponseResult.databaseSuccess(data = apiPluginService.getPluginPage(apiPluginGetParam))
+
+    /**
+     * Get one API plugin by its plugin ID
+     *
+     * The variable sits after the plugin ID rather than directly under the plugin prefix
+     * because `key` and `install` are literal routes there, and a plugin ID is allowed to
+     * be either of those words.
+     *
+     * @param pluginId Plugin ID
+     * @return Response object includes API plugin information
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ResponseResult
+     * @see ApiPluginVo
+     */
+    @Operation(summary = "获取 API 插件")
+    @GetMapping("/plugin/{pluginId}/info")
+    @PreAuthorize("hasAnyAuthority('system:plugin:plugin:query')")
+    fun getPluginInfo(@PathVariable pluginId: String): ResponseResult<ApiPluginVo> =
+        ResponseResult.databaseSuccess(data = apiPluginService.getPlugin(pluginId))
 
     /**
      * Install a plugin from an uploaded jar
@@ -107,6 +128,10 @@ class ApiPluginController(
      * Uninstall a plugin by its plugin ID
      *
      * @param pluginId Plugin ID
+     * @param purgeData Whether everything the plugin owns should be deleted with it - its
+     *        settings, its datasource configuration and the files it stored. Defaults to
+     *        false, because plugin data cannot be recovered while a reinstall can always
+     *        be purged afterwards
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -115,10 +140,131 @@ class ApiPluginController(
     @Operation(summary = "卸载 API 插件")
     @DeleteMapping("/plugin/{pluginId}")
     @PreAuthorize("hasAnyAuthority('system:plugin:plugin:uninstall')")
-    fun uninstall(@PathVariable pluginId: String): ResponseResult<Unit> {
-        apiPluginService.uninstallPlugin(pluginId)
+    fun uninstall(
+        @PathVariable pluginId: String,
+        @RequestParam(name = "purgeData", defaultValue = "false") purgeData: Boolean
+    ): ResponseResult<Unit> {
+        apiPluginService.uninstallPlugin(pluginId, purgeData)
 
         return ResponseResult.databaseSuccess(ResponseCode.DATABASE_DELETE_SUCCESS)
+    }
+
+    /**
+     * Reload a plugin by its plugin ID
+     *
+     * Remounts the installed plugin from its stored jar, so one that has been replaced
+     * under it takes effect without restarting the gateway. The plugin is briefly
+     * unmounted while the swap happens.
+     *
+     * A configuration change does not need this: saving one that alters a datasource
+     * remounts the plugin on its own, because the gateway is the one that builds the
+     * datasource from it.
+     *
+     * @param pluginId Plugin ID
+     * @return Response object includes reloaded plugin information
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ResponseResult
+     * @see ApiPluginVo
+     */
+    @Operation(summary = "重新挂载 API 插件")
+    @PostMapping("/plugin/{pluginId}/reload")
+    @PreAuthorize("hasAnyAuthority('system:plugin:plugin:reload')")
+    fun reload(@PathVariable pluginId: String): ResponseResult<ApiPluginVo> =
+        ResponseResult.databaseSuccess(
+            ResponseCode.DATABASE_UPDATE_SUCCESS,
+            data = apiPluginService.reloadPlugin(pluginId)
+        )
+
+    /**
+     * Get the configuration of a plugin
+     *
+     * @param pluginId Plugin ID
+     * @return Response object includes the declared config schema and its current values
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ResponseResult
+     * @see ApiPluginConfigVo
+     */
+    @Operation(summary = "获取 API 插件配置")
+    @GetMapping("/plugin/{pluginId}/config")
+    @PreAuthorize("hasAnyAuthority('system:plugin:config:query')")
+    fun getConfig(@PathVariable pluginId: String): ResponseResult<ApiPluginConfigVo> =
+        ResponseResult.databaseSuccess(data = apiPluginService.getPluginConfig(pluginId))
+
+    /**
+     * Update the configuration of a plugin
+     *
+     * An ordinary value takes effect on the plugin's next read, so nothing is remounted for
+     * it. A value that describes a datasource is different, because the gateway is what
+     * builds the connection from it: changing one of those remounts the plugin, so the
+     * administrator does not have to know that a remount is what it takes. The response says
+     * nothing about how that went, because the remount happens after this transaction has
+     * committed - a failure is reported in the plugin's `loadError`, where the plugin list
+     * shows it.
+     *
+     * @param apiPluginConfigUpdateParam Update API plugin config parameters
+     * @return Response object
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiPluginConfigUpdateParam
+     * @see ResponseResult
+     */
+    @Operation(summary = "修改 API 插件配置")
+    @PutMapping("/plugin/config")
+    @PreAuthorize("hasAnyAuthority('system:plugin:config:modify')")
+    fun updateConfig(@ProcessParam @Valid @RequestBody apiPluginConfigUpdateParam: ApiPluginConfigUpdateParam): ResponseResult<Unit> {
+        apiPluginService.updatePluginConfig(apiPluginConfigUpdateParam)
+
+        return ResponseResult.databaseSuccess(ResponseCode.DATABASE_UPDATE_SUCCESS)
+    }
+
+    /**
+     * Test the connection of a plugin datasource
+     *
+     * A datasource is a sub-resource of the plugin's configuration rather than a resource
+     * of its own: it is declared by the plugin, described entirely by ordinary config
+     * values, and dies with the plugin. Its values are read and written through the config
+     * endpoints above; what this one adds is the answer a form cannot give - whether the
+     * server described is actually reachable.
+     *
+     * Asked for rather than checked while saving, in both directions: a configuration whose
+     * server is not up yet is still worth storing, and a test can be run against values
+     * that have not been saved yet. A `values` entry that is left out is read from what is
+     * stored, which is also what a masked secret means.
+     *
+     * Only a MySQL datasource can be tested: a SQLite one is a file the gateway owns and
+     * supplies itself, so there is no connection of the administrator's to check.
+     *
+     * This makes the gateway open a connection to an address the caller names, which is a
+     * capability worth naming: it is why the endpoint sits behind `modify` rather than
+     * `query`. It is no more than saving a datasource already did, and the caller is an
+     * administrator who could point a plugin anywhere regardless.
+     *
+     * @param pluginId Plugin ID
+     * @param apiPluginDatasourceTestParam Test API plugin datasource parameters
+     * @return Response object
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiPluginDatasourceTestParam
+     * @see ResponseResult
+     */
+    @Operation(summary = "测试 API 插件数据源连接")
+    @PostMapping("/plugin/{pluginId}/config/datasource/test")
+    @PreAuthorize("hasAnyAuthority('system:plugin:config:modify')")
+    fun testDatasource(
+        @PathVariable pluginId: String,
+        @ProcessParam @Valid @RequestBody apiPluginDatasourceTestParam: ApiPluginDatasourceTestParam
+    ): ResponseResult<Unit> {
+        apiPluginService.testPluginDatasource(
+            pluginId,
+            apiPluginDatasourceTestParam.name.orEmpty(),
+            apiPluginDatasourceTestParam.values.orEmpty()
+                .mapNotNull { value -> value.key?.let { it to (value.value ?: "") } }
+                .toMap()
+        )
+
+        return ResponseResult.databaseSuccess(ResponseCode.DATABASE_SELECT_SUCCESS)
     }
 
     /**

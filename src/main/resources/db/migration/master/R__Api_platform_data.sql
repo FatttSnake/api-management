@@ -8,6 +8,7 @@ insert into t_s_power (id, type_id)
            (2990000, 2),
            (1210100, 3),
            (1210200, 3),
+           (1210300, 3),
            (1220100, 3),
            (1230100, 3),
            (1230200, 3),
@@ -25,6 +26,9 @@ insert into t_s_power (id, type_id)
            (1210203, 4),
            (1210204, 4),
            (1210205, 4),
+           (1210206, 4),
+           (1210301, 4),
+           (1210302, 4),
            (1220101, 4),
            (1220102, 4),
            (1220103, 4),
@@ -46,11 +50,13 @@ insert into t_s_power (id, type_id)
            (1240403, 4),
            (1240404, 4),
            (1240501, 4) as new_value
-on duplicate key update type_id = new_value.type_id;
+on duplicate key
+    update type_id = new_value.type_id;
 
 insert into t_s_module (id, name)
     values (2000000, 'API') as new_value
-on duplicate key update name = new_value.name;
+on duplicate key
+    update name = new_value.name;
 
 insert into t_s_menu (id, name, url, parent_id, module_id)
     values (1980000, 'API 平台', null, null, 1000000),
@@ -59,15 +65,17 @@ insert into t_s_menu (id, name, url, parent_id, module_id)
            (1230000, '密钥管理', '^/system/api-keys', 1980000, 1000000),
            (1240000, '运营管理', '^/system/operations(/.*)?$', 1980000, 1000000),
            (2990000, 'API 插件', null, null, 2000000) as new_value
-on duplicate key update name      =new_value.name,
-                        url       =new_value.url,
-                        parent_id =new_value.parent_id,
-                        module_id =new_value.module_id;
+on duplicate key
+    update name      =new_value.name,
+           url       =new_value.url,
+           parent_id =new_value.parent_id,
+           module_id =new_value.module_id;
 
 insert into t_s_scope(id, name, menu_id)
     values (1130500, 'API', 1130000),
            (1210100, '签名', 1210000),
            (1210200, '插件', 1210000),
+           (1210300, '配置', 1210000),
            (1220100, '接口', 1220000),
            (1230100, '单个', 1230000),
            (1230200, '全部', 1230000),
@@ -76,8 +84,9 @@ insert into t_s_scope(id, name, menu_id)
            (1240300, '监控', 1240000),
            (1240400, '报表', 1240000),
            (1240500, '审计', 1240000) as new_value
-on duplicate key update name    = new_value.name,
-                        menu_id = new_value.menu_id;
+on duplicate key
+    update name    = new_value.name,
+           menu_id = new_value.menu_id;
 
 insert into t_s_operation(id, name, code, scope_id)
     values (1130501, '查询', 'system:settings:api:query', 1130500),
@@ -91,6 +100,9 @@ insert into t_s_operation(id, name, code, scope_id)
            (1210203, '修改', 'system:plugin:plugin:modify', 1210200),
            (1210204, '状态', 'system:plugin:plugin:status', 1210200),
            (1210205, '卸载', 'system:plugin:plugin:uninstall', 1210200),
+           (1210206, '重新挂载', 'system:plugin:plugin:reload', 1210200),
+           (1210301, '查询', 'system:plugin:config:query', 1210300),
+           (1210302, '修改', 'system:plugin:config:modify', 1210300),
            (1220101, '查询', 'system:interface:interface:query', 1220100),
            (1220102, '修改', 'system:interface:interface:modify', 1220100),
            (1220103, '状态', 'system:interface:interface:status', 1220100),
@@ -111,8 +123,8 @@ insert into t_s_operation(id, name, code, scope_id)
            (1240402, '费用', 'system:operations:report:cost', 1240400),
            (1240403, '排行', 'system:operations:report:top', 1240400),
            (1240404, '导出', 'system:operations:report:export', 1240400),
-           (1240501, '查询', 'system:operations:audit:query', 1240400)
-        as new_value
-on duplicate key update name=new_value.name,
-                        code=new_value.code,
-                        scope_id=new_value.scope_id;
+           (1240501, '查询', 'system:operations:audit:query', 1240500) as new_value
+on duplicate key
+    update name=new_value.name,
+           code=new_value.code,
+           scope_id=new_value.scope_id;

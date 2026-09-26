@@ -25,6 +25,8 @@ import top.fatweb.apimanagement.vo.api.ApiUsageVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
+ * @see IApiKeyService
+ * @see IApiPluginService
  * @see ServiceImpl
  * @see ApiUsageMapper
  * @see ApiUsage
@@ -33,8 +35,8 @@ import top.fatweb.apimanagement.vo.api.ApiUsageVo
 @Service
 @DS("master")
 class ApiUsageServiceImpl(
-    private val apiPluginService: IApiPluginService,
-    private val apiKeyService: IApiKeyService
+    private val apiKeyService: IApiKeyService,
+    private val apiPluginService: IApiPluginService
 ) : ServiceImpl<ApiUsageMapper, ApiUsage>(), IApiUsageService {
     override fun getPage(managed: Boolean, apiUsageGetParam: ApiUsageGetParam?): PageVo<ApiUsageVo> {
         val page = Page<ApiUsage>(apiUsageGetParam?.currentPage ?: 1, apiUsageGetParam?.pageSize ?: 20)

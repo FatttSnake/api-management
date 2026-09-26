@@ -35,7 +35,7 @@ API Management 是一个**可自托管的 API 网关与管理平台**。它将�
 - **RBAC 权限体系** —— 用户、分组、角色与细粒度权限点（模块 / 菜单 / 操作 / 范围）；可用 API 在权限树中**按插件分组**展示。
 - **用户自助服务** —— 面向终端用户的「我的 API 账户」「我的密钥」「API 文档」「我的用量」等接口。
 - **可观测与审计** —— API 用量统计、监控、报表与汇总统计（定时聚合），以及操作审计日志、系统日志。
-- **插件 SDK** —— 提供生命周期钩子、**隔离的插件专属数据源**、以及获取当前调用者 / 余额 / 接口配置 / 插件设置的受控上下文。
+- **插件 SDK** —— 提供生命周期钩子、**隔离的插件专属数据源**（每个插件可有多个具名数据源，MySQL 或 SQLite）、以及获取当前调用者 / 余额 / 接口配置 / 插件设置的受控上下文。
 - **灵活的存储与邮件** —— 文件存储支持本地磁盘或 **S3**；内置邮件发送（注册、安全通知等）。
 - **双数据库自动迁移** —— MySQL 存放关键业务数据，SQLite 存放日志等大量读写数据，均由 Flyway 自动初始化。
 
@@ -186,6 +186,22 @@ knife4j:
 ```shell
 ./gradlew :plugin-sdk:publishToMavenLocal :plugin-gradle-plugin:publishToMavenLocal
 ```
+
+## 插件配置与数据源
+
+插件在自己的 jar 里放一份 `META-INF/plugin-config.json` 声明它有哪些配置项（类型、默认值、约束、是否密钥项、需要哪些具名数据源、各是什么方言），网关在**挂载时**读取并快照到插件行上，控制台据此渲染配置界面；插件侧只读 `PluginContext.getSetting(key)`，默认值由网关回落。schema 声明过的 key 归管理员，插件 `saveSetting` 写它会抛异常。
+
+| 接口 | 说明 |
+|---|---|
+| `GET /system/api/plugin/{pluginId}/config` | 配置结构 + 当前值（已设置的 secret 只回掩码 `******`，不回明文）+ 构成数据源的配置项 + 每个数据源的名称、方言、是否必需与当前状态 |
+| `PUT /system/api/plugin/config` | 保存配置；**普通配置项立即生效**（插件每次读取都查库），secret 原样回传掩码表示保持原值、**留空表示清除**。**改到数据源相关配置项会重挂载插件**——连接是网关按这些值构建的 |
+| `POST /system/api/plugin/{pluginId}/config/datasource/test` | 用**尚未保存**的值试连一次（`name` + 要用的配置项；某个项不传、或传 secret 掩码，都表示用已存值）。仅 MySQL：SQLite 是网关自备的文件，没有管理员的连接可试。失败回 40067 与驱动原文 |
+| `POST /system/api/plugin/{pluginId}/reload` | 用已存储的 jar 原地重挂载，用于**换了 jar**；配置与数据不受影响。改数据源**不需要**它 |
+
+- 只有声明了 `datasources` 的插件才会拿到 `context.datasources`，且只包含**已配置**的那些：名字不在 map 里，就是网关还没有东西可连。一个插件可以声明多个，两种方言也可以混用。
+- 方言由插件声明（`dbType`），不由管理员选——写 SQL/DDL 的是插件作者，他才知道自己在哪个方言上验证过。**SQLite 零配置**：声明即由网关按 `app.storage.plugin-datasource-dir/{pluginId}/{name}.db` 供给，不落配置行、无需管理员动作。
+- **MySQL 数据源就是几条普通配置项**，在声明里逐个点名。它们和其它配置项走同一套机制，因此表单、声明的约束、密钥加密全部复用——密码尤其就是一个普通 secret，这也正是「能清空密码」得以成立的原因。JDBC URL 由网关拼装，`params` 以**连接属性**下发给驱动，没人写连接串。**host 有值即视为已配置**；清空 host 就是取消配置，插件随即不再拿到该数据源。`params` 会拒绝越出连接本身的属性（`autoDeserialize`、`allowLoadLocalInfile`、`propertiesTransform` 等）——这是缓解而非沙箱，真正的边界仍是插件签名与信任库。
+- **升级不清除插件配置与数据**；`DELETE /system/api/plugin/{pluginId}?purgeData=true` 才会清除插件设置、SQLite 数据库目录与文件区（默认 `false` 即保留，便于重装续用）。**外部 MySQL 库里的数据不在此列**：那是 DBA 的库，网关不会去删对方库里的表。
 
 # 安全
 

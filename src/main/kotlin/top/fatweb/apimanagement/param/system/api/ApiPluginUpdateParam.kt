@@ -39,7 +39,6 @@ data class ApiPluginUpdateParam(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see BigDecimal
      */
     @field:Schema(description = "默认每次调用单价 (null=免费)", example = "0.0100")
     var defaultPrice: BigDecimal?,

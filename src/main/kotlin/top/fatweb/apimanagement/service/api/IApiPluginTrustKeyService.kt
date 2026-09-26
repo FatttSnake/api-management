@@ -36,6 +36,7 @@ interface IApiPluginTrustKeyService : IService<ApiPluginTrustKey> {
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      * @see ApiPluginTrustKeyGetParam
+     * @see PageVo
      * @see ApiPluginTrustKeyVo
      */
     fun get(apiPluginTrustKeyGetParam: ApiPluginTrustKeyGetParam?): PageVo<ApiPluginTrustKeyVo>
@@ -47,6 +48,7 @@ interface IApiPluginTrustKeyService : IService<ApiPluginTrustKey> {
      * @return Added ApiPluginTrustKeyVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
+     * @see ApiPluginTrustKeyAddParam
      * @see ApiPluginTrustKeyVo
      */
     fun add(apiPluginTrustKeyAddParam: ApiPluginTrustKeyAddParam): ApiPluginTrustKeyVo
@@ -57,6 +59,7 @@ interface IApiPluginTrustKeyService : IService<ApiPluginTrustKey> {
      * @param apiPluginTrustKeyUpdateStatusParam Update plugin trust key status parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
+     * @see ApiPluginTrustKeyUpdateStatusParam
      */
     fun status(apiPluginTrustKeyUpdateStatusParam: ApiPluginTrustKeyUpdateStatusParam)
 

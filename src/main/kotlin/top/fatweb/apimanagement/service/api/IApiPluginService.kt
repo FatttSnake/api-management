@@ -3,9 +3,12 @@ package top.fatweb.apimanagement.service.api
 import com.baomidou.mybatisplus.spring.service.IService
 import top.fatweb.apimanagement.entity.api.ApiInterface
 import top.fatweb.apimanagement.entity.api.ApiPlugin
+import top.fatweb.apimanagement.exception.NoRecordFoundException
+import top.fatweb.apimanagement.exception.PluginInstallException
 import top.fatweb.apimanagement.param.system.api.*
 import top.fatweb.apimanagement.vo.PageVo
 import top.fatweb.apimanagement.vo.api.ApiGroupVo
+import top.fatweb.apimanagement.vo.api.ApiPluginConfigVo
 import top.fatweb.apimanagement.vo.api.ApiPluginVo
 
 /**
@@ -13,7 +16,10 @@ import top.fatweb.apimanagement.vo.api.ApiPluginVo
  *
  * Manages the plugin registry (one row per plugin) and its per-interface
  * configuration (price / rate limit / billing), plus the hot-pluggable lifecycle:
- * [installPlugin] uploads and mounts a signed jar, [uninstallPlugin] unmounts it.
+ * [installPlugin] uploads and mounts a signed jar, [uninstallPlugin] unmounts it and
+ * [reloadPlugin] remounts it. Also owns the administrator-facing configuration of a
+ * plugin ([getPluginConfig] / [updatePluginConfig]), whose declared schema comes from
+ * the plugin's own jar.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
@@ -33,6 +39,18 @@ interface IApiPluginService : IService<ApiPlugin> {
      * @see ApiPluginVo
      */
     fun getPluginPage(apiPluginGetParam: ApiPluginGetParam?): PageVo<ApiPluginVo>
+
+    /**
+     * Get one API plugin by its plugin ID
+     *
+     * @param pluginId Plugin ID
+     * @return ApiPluginVo object
+     * @throws NoRecordFoundException when no such plugin is installed
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiPluginVo
+     */
+    fun getPlugin(pluginId: String): ApiPluginVo
 
     /**
      * Update API plugin
@@ -144,6 +162,7 @@ interface IApiPluginService : IService<ApiPlugin> {
      * @return ApiPluginVo object of the installed plugin
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
+     * @see ByteArray
      * @see ApiPluginVo
      */
     fun installPlugin(jarBytes: ByteArray, jarName: String): ApiPluginVo
@@ -155,8 +174,74 @@ interface IApiPluginService : IService<ApiPlugin> {
      * soft-deletes its database rows and cleans up the permission tree.
      *
      * @param pluginId Plugin ID
+     * @param purgeData Whether everything the plugin owns should be deleted with it -
+     *        its settings, its datasource configuration and the files it stored. False
+     *        keeps them, so reinstalling the same plugin ID picks up where it left off
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun uninstallPlugin(pluginId: String)
+    fun uninstallPlugin(pluginId: String, purgeData: Boolean)
+
+    /**
+     * Re-mount an installed plugin from its stored jar
+     *
+     * Restarts the plugin's class loader, child context and request mappings without
+     * touching its version, its database rows, its permission tree, its configuration
+     * or its stored files - so a jar that has been replaced under it is picked up
+     * without restarting the gateway.
+     *
+     * A configuration change does not need this: saving one that alters a datasource
+     * remounts the plugin on its own, because the gateway is the one that builds the
+     * datasource from it.
+     *
+     * The plugin is briefly unmounted while the swap happens, and an upgrade path is not
+     * reused: that one deletes and rebuilds the registration, which would reset the
+     * interface configuration the administrator has tuned.
+     *
+     * @param pluginId Plugin ID
+     * @return ApiPluginVo object of the reloaded plugin
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiPluginVo
+     */
+    fun reloadPlugin(pluginId: String): ApiPluginVo
+
+    /**
+     * Verify that a plugin's datasource can be connected to
+     *
+     * Asked for rather than done while saving, so a configuration is worth storing before
+     * its server is reachable and is tried out when the administrator wants it tried.
+     *
+     * @param pluginId Plugin ID
+     * @param name Datasource name
+     * @param values Config values to try, keyed by config key; a key left out is read
+     *        from what is stored, which is also what a masked secret means
+     * @throws top.fatweb.apimanagement.exception.PluginDatasourceException when the
+     *         datasource is undeclared, not configurable, not configured, described by
+     *         values that do not belong to it, or unreachable
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    fun testPluginDatasource(pluginId: String, name: String, values: Map<String, String>)
+
+    /**
+     * Get the configuration of a plugin
+     *
+     * @param pluginId Plugin ID
+     * @return ApiPluginConfigVo object, whose schema is null when the plugin declares none
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiPluginConfigVo
+     */
+    fun getPluginConfig(pluginId: String): ApiPluginConfigVo
+
+    /**
+     * Save the configuration of a plugin
+     *
+     * @param apiPluginConfigUpdateParam Update API plugin config parameters
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiPluginConfigUpdateParam
+     */
+    fun updatePluginConfig(apiPluginConfigUpdateParam: ApiPluginConfigUpdateParam)
 }

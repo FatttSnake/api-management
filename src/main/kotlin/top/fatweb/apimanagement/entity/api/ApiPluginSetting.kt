@@ -72,16 +72,6 @@ class ApiPluginSetting : Serializable {
     var updateTime: LocalDateTime? = null
 
     /**
-     * Deleted
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    @TableField("deleted")
-    @TableLogic
-    var deleted: Long? = null
-
-    /**
      * Version
      *
      * @author FatttSnake, fatttsnake@gmail.com

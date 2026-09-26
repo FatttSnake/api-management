@@ -23,6 +23,8 @@ app:
 #    external-url-default-ttl: 1 # Life of an external storage link
 #    external-url-ttl-unit: hours # Life unit of external storage links [nanoseconds, microseconds, milliseconds, seconds, minutes, hours, days]
 #    external-url-max-ttl: 168 # Maximum life of an external storage link, longer requests are clamped
+#    plugin-datasource-dir: data/db/plugin # Directory holding the SQLite databases of the plugins that declare one ({dir}/{pluginId}/{datasourceName}.db)
+#    plugin-datasource-pool-size: 5 # Most connections one plugin datasource may hold open
 #    local:
 #      root: data # File storage root path, the 'objects/' and 'files/' segments are appended automatically
 #    s3:

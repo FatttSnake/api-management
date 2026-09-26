@@ -14,6 +14,8 @@ import top.fatweb.apimanagement.vo.api.ApiInterfaceVo
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  * @see ApiPlugin
+ * @see ApiInterfaceVo
+ * @see JsonNode
  * @see ApiDocVo
  */
 fun ApiPlugin.toDocVo(interfaces: List<ApiInterfaceVo>, openapi: JsonNode?) = ApiDocVo(

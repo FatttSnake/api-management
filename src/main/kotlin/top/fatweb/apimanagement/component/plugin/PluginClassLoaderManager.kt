@@ -9,6 +9,7 @@ import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path
 import java.util.jar.JarFile
+import javax.sql.DataSource
 
 /**
  * Plugin class loader manager
@@ -28,12 +29,20 @@ class PluginClassLoaderManager {
          * Class name prefixes always resolved from the parent (gateway) class loader
          */
         private val PARENT_FIRST_PREFIXES = listOf(
-            "java.", "javax.", "jakarta.", "sun.", "jdk.",
-            "org.springframework.", "org.slf4j.",
-            "tools.jackson.", "com.fasterxml.",
-            "io.swagger.", "org.springdoc.",
+            "java.",
+            "javax.",
+            "jakarta.",
+            "sun.",
+            "jdk.",
+            "org.springframework.",
+            "org.slf4j.",
+            "tools.jackson.",
+            "com.fasterxml.",
+            "io.swagger.",
+            "org.springdoc.",
             "com.baomidou.",
-            "kotlin.", "kotlinx.",
+            "kotlin.",
+            "kotlinx.",
             "top.fatweb.apimanagement."
         )
 
@@ -107,51 +116,79 @@ class PluginClassLoaderManager {
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see PluginRuntime
  */
 data class MountedEndpoint(
     /**
      * Controller bean instance
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     val controller: Any,
 
     /**
      * Endpoint handler method
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see Method
      */
     val method: Method,
 
     /**
      * API scoping code, e.g. api:echo:v1:ping
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     val code: String,
 
     /**
      * Endpoint display name (from @Operation.summary, fallback: method name)
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     val name: String,
 
     /**
      * Endpoint description (from @Operation.description)
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     val description: String,
 
     /**
      * Literal request path, e.g. /api/echo/v1/ping
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     val fullPath: String,
 
     /**
      * HTTP method
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     val httpMethod: String,
 
     /**
      * API version
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     val apiVersion: Int,
 
     /**
      * The exact RequestMappingInfo registered, needed to unregister later
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see RequestMappingInfo
      */
     val info: RequestMappingInfo
 )
@@ -165,51 +202,100 @@ data class MountedEndpoint(
 data class PluginRuntime(
     /**
      * Plugin ID
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     val pluginId: String,
 
     /**
      * Child-first class loader over the plugin jar
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see URLClassLoader
      */
     val classLoader: URLClassLoader,
 
     /**
      * Plugin child Spring context
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see GenericApplicationContext
      */
     val context: GenericApplicationContext,
 
     /**
      * The plugin-facing context bean exposed to the plugin
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see PluginContext
      */
     val pluginContext: PluginContext,
 
     /**
      * Controller bean instances
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     val controllerBeans: List<Any>,
 
     /**
      * Mounted endpoints
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see MountedEndpoint
      */
     val endpoints: List<MountedEndpoint>,
 
     /**
      * Local path of the plugin jar the class loader reads
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see Path
      */
     val tempJarPath: Path,
 
     /**
      * SHA-256 of the jar content
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     val fileHash: String,
 
     /**
+     * Datasources supplied to the plugin, by declared name
+     *
+     * Held on the runtime rather than reached through the plugin-facing context: an
+     * unmount has to close every pool it opened, and that is a fact about what this
+     * mount built, not about what the plugin API happens to expose.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see DataSource
+     */
+    val datasources: Map<String, DataSource>,
+
+    /**
      * Signer public key fingerprint
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     val signerKeyId: String,
 
     /**
      * Plugin lifecycle implementation, or null
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see PluginLifecycle
      */
     val lifecycle: PluginLifecycle?
 )

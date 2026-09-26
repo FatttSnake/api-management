@@ -126,7 +126,6 @@ class ApiUsage : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see BigDecimal
      */
     @TableField("cost")
     var cost: BigDecimal? = null
@@ -162,16 +161,6 @@ class ApiUsage : Serializable {
     var updateTime: LocalDateTime? = null
 
     /**
-     * Deleted
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    @TableField("deleted")
-    @TableLogic
-    var deleted: Long? = null
-
-    /**
      * Version
      *
      * @author FatttSnake, fatttsnake@gmail.com
@@ -182,6 +171,6 @@ class ApiUsage : Serializable {
     var version: Int? = null
 
     override fun toString(): String {
-        return "ApiUsage(id=$id, apiKeyId=$apiKeyId, apiId=$apiId, apiCode=$apiCode, userId=$userId, requestPath=$requestPath, requestMethod=$requestMethod, responseCode=$responseCode, success=$success, executeTime=$executeTime, requestIp=$requestIp, traceId=$traceId, cost=$cost, billingMode=$billingMode, createTime=$createTime, updateTime=$updateTime, deleted=$deleted, version=$version)"
+        return "ApiUsage(id=$id, apiKeyId=$apiKeyId, apiId=$apiId, apiCode=$apiCode, userId=$userId, requestPath=$requestPath, requestMethod=$requestMethod, responseCode=$responseCode, success=$success, executeTime=$executeTime, requestIp=$requestIp, traceId=$traceId, cost=$cost, billingMode=$billingMode, createTime=$createTime, updateTime=$updateTime, version=$version)"
     }
 }

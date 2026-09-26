@@ -35,7 +35,7 @@ The backend is written in **Kotlin + Spring Boot**. The stable API surface neede
 - **RBAC permission tree** — users, groups, roles and fine-grained powers (module / menu / operation / scope); available APIs are **grouped by plugin** in the permission tree.
 - **Self-service for consumers** — "My API accounts", "My API keys", "API docs" and "My usage" endpoints for end users.
 - **Observability & audit** — API usage statistics, monitoring, reports and aggregated statistics (periodically computed), plus operation audit and system logs.
-- **Plugin SDK** — lifecycle hooks, an **isolated per-plugin datasource**, and a controlled context exposing the current caller, balance, interface configuration and plugin settings.
+- **Plugin SDK** — lifecycle hooks, **isolated per-plugin datasources** (several named ones per plugin, MySQL or SQLite), and a controlled context exposing the current caller, balance, interface configuration and plugin settings.
 - **Flexible storage & mail** — file storage on local disk or **S3**; built-in mail delivery (registration, security notices, etc.).
 - **Auto-migrated dual database** — MySQL holds key business data while SQLite holds high-volume data such as logs; both are initialized by Flyway.
 
@@ -186,6 +186,22 @@ To make the SDK and the Gradle plugin available to plugin projects, publish them
 ```shell
 ./gradlew :plugin-sdk:publishToMavenLocal :plugin-gradle-plugin:publishToMavenLocal
 ```
+
+## Plugin configuration and datasources
+
+A plugin ships a `META-INF/plugin-config.json` inside its own jar declaring which settings it has (their type, default, constraints, whether they are secrets, which named datasources it needs and in which dialect). The gateway reads it **while mounting**, snapshots it onto the plugin row, and the console renders a form from it; the plugin itself only reads `PluginContext.getSetting(key)`, with the gateway resolving defaults. A key declared there belongs to the administrator, and the plugin's `saveSetting` raises on it.
+
+| Endpoint | Description |
+|---|---|
+| `GET /system/api/plugin/{pluginId}/config` | Declared schema plus current values (a stored secret comes back as the mask `******`, never its value), the settings a datasource is composed from, and each declared datasource's name, dialect, requiredness and state |
+| `PUT /system/api/plugin/config` | Save configuration; **an ordinary value takes effect immediately** (the plugin reads per call), sending a secret's mask back keeps the stored one, and a **blank one clears it**. A change to a datasource's settings **remounts the plugin**, because the gateway is what builds the connection from them |
+| `POST /system/api/plugin/{pluginId}/config/datasource/test` | Try a connection with values that have not been saved yet (`name` plus the config values to use; a value left out, and a masked secret, mean "read what is stored"). MySQL only - a SQLite datasource is a file the gateway supplies. Answers 40067 with the driver's reason when it fails |
+| `POST /system/api/plugin/{pluginId}/reload` | Remount the installed jar in place, for a **jar that has been replaced** - it leaves the plugin's configuration and data untouched. A datasource change does not need it |
+
+- Only a plugin that declares a `datasources` entry gets anything in `context.datasources`, and only the ones that are configured: a name that is absent is a datasource the gateway has nothing to connect with yet. One plugin can declare several and mix the two dialects.
+- The dialect is declared by the plugin (`dbType`), never chosen by the administrator: the plugin's own SQL and DDL decide it, and its author is the only one who knows which dialect it was verified against. **SQLite needs no configuration at all** - declaring it is what supplies it, from `app.storage.plugin-datasource-dir/{pluginId}/{name}.db`, with no row stored and no administrator action.
+- **A MySQL datasource is described by ordinary config fields**, named one by one in its declaration. They are settings like any other, so they get a rendered form, the declared constraints and secret encryption for free - the password in particular is an ordinary secret, which is what makes clearing it expressible. The gateway composes the JDBC URL and passes `params` to the driver as connection properties, so nobody writes a connection string. **A datasource counts as configured once its host has a value**; blanking that host is how it is un-configured, and the plugin simply stops being given it. `params` is refused for properties that reach past the connection (`autoDeserialize`, `allowLoadLocalInfile`, `propertiesTransform`, …) - a mitigation rather than a sandbox: the boundary that holds is the plugin signature and the trust store behind it.
+- **An upgrade keeps the plugin's configuration and data**; `DELETE /system/api/plugin/{pluginId}?purgeData=true` is what purges the plugin's settings, its SQLite database directory and its file area (the default, `false`, keeps them so a reinstall continues where it left off). **An external MySQL database is not in that list**: it belongs to whoever operates it, so the gateway never drops tables it does not own.
 
 # Security
 

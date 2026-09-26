@@ -17,19 +17,33 @@ import javax.sql.DataSource
  * Bridges a plugin to the gateway through the narrow, sanctioned data interaction
  * channel. The plugin never sees the gateway's own datasource / MyBatis mappers;
  * it reads gateway data only through these methods and writes its own data via
- * [datasource] and [storage].
+ * [datasources] and [storage].
+ *
+ * Settings come in two flavours that share one read method but not one owner. A key
+ * declared by the plugin's own config schema is administrator-owned: the value is
+ * resolved from the settings table, falls back to the schema default, and never comes
+ * from the plugin itself. Any other key is the plugin's own runtime state, written
+ * through [saveSetting] exactly as before.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see PluginContext
+ * @see DataSource
  * @see PluginStorage
+ * @see IApiAccountService
+ * @see IApiPluginSettingService
+ * @see PluginConfigSchemaCache
+ * @see PluginSettingReader
+ * @see ApiInterface
+ * @see PluginContext
  */
 class PluginContextImpl(
     override val pluginId: String,
-    override val datasource: DataSource?,
+    override val datasources: Map<String, DataSource>,
     override val storage: PluginStorage,
     private val apiAccountService: IApiAccountService,
     private val apiPluginSettingService: IApiPluginSettingService,
+    private val configSchemaCache: PluginConfigSchemaCache,
+    private val pluginSettingReader: PluginSettingReader,
     private val interfaceLookup: (String) -> ApiInterface?
 ) : PluginContext {
     override fun currentUserId(): Long? = getApiKeyPrincipal()?.userId ?: getLoginUserId()
@@ -52,7 +66,13 @@ class PluginContextImpl(
             )
         }
 
-    override fun getSetting(key: String): String? = apiPluginSettingService.get(pluginId, key)
+    override fun getSetting(key: String): String? = pluginSettingReader.resolve(pluginId, key)
 
-    override fun saveSetting(key: String, value: String) = apiPluginSettingService.set(pluginId, key, value)
+    override fun saveSetting(key: String, value: String) {
+        require(configSchemaCache.get(pluginId)?.isDeclared(key) != true) {
+            "Setting '$key' is declared by the plugin config schema and can only be changed by an administrator"
+        }
+
+        apiPluginSettingService.set(pluginId, key, value)
+    }
 }

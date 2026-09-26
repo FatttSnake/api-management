@@ -67,7 +67,6 @@ class ApiPlugin : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see BigDecimal
      */
     @TableField("default_price")
     var defaultPrice: BigDecimal? = null
@@ -155,6 +154,16 @@ class ApiPlugin : Serializable {
     var openapi: String? = null
 
     /**
+     * Embedded plugin config schema JSON snapshot (from META-INF/plugin-config.json),
+     * refreshed on every mount so it always matches the installed version
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @TableField("config_schema")
+    var configSchema: String? = null
+
+    /**
      * Last mount error message (null when the plugin loaded successfully)
      *
      * @author FatttSnake, fatttsnake@gmail.com
@@ -184,16 +193,6 @@ class ApiPlugin : Serializable {
     var updateTime: LocalDateTime? = null
 
     /**
-     * Deleted
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    @TableField("deleted")
-    @TableLogic
-    var deleted: Long? = null
-
-    /**
      * Version
      *
      * @author FatttSnake, fatttsnake@gmail.com
@@ -204,6 +203,6 @@ class ApiPlugin : Serializable {
     var version: Int? = null
 
     override fun toString(): String {
-        return "ApiPlugin(id=$id, pluginId=$pluginId, name=$name, description=$description, enable=$enable, defaultPrice=$defaultPrice, defaultRateLimit=$defaultRateLimit, defaultAccessMode=$defaultAccessMode, source=$source, versionName=$versionName, versionCode=$versionCode, fileHash=$fileHash, jarName=$jarName, signerKeyId=$signerKeyId, loadError=$loadError, createTime=$createTime, updateTime=$updateTime, deleted=$deleted, version=$version)"
+        return "ApiPlugin(id=$id, pluginId=$pluginId, name=$name, description=$description, enable=$enable, defaultPrice=$defaultPrice, defaultRateLimit=$defaultRateLimit, defaultAccessMode=$defaultAccessMode, source=$source, versionName=$versionName, versionCode=$versionCode, fileHash=$fileHash, jarName=$jarName, signerKeyId=$signerKeyId, loadError=$loadError, createTime=$createTime, updateTime=$updateTime, version=$version)"
     }
 }

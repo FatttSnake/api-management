@@ -21,6 +21,7 @@ import top.fatweb.apimanagement.vo.api.ApiDocVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
+ * @see JsonMapper
  * @see IApiPluginService
  */
 @BaseController(path = ["/user/api/docs"], name = "用户 API 文档", description = "用户可调用 API 文档")

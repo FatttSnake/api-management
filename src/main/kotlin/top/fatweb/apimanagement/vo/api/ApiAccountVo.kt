@@ -38,7 +38,6 @@ data class ApiAccountVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see BigDecimal
      */
     @field:Schema(description = "余额", example = "100.0000")
     @field:JsonSerialize(using = ToStringSerializer::class)
