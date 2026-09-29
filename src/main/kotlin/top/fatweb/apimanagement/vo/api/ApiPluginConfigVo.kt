@@ -2,7 +2,6 @@ package top.fatweb.apimanagement.vo.api
 
 import io.swagger.v3.oas.annotations.media.Schema
 import java.math.BigDecimal
-import top.fatweb.apimanagement.component.plugin.PluginConfigSchemaUtil
 
 /**
  * Plugin config value object
@@ -40,7 +39,7 @@ data class ApiPluginConfigVo(
      *
      * Their connection settings are ordinary declared fields and arrive in [groups] with
      * every other one, which is the whole point of declaring them: the console renders
-     * them, constrains them and masks their secrets without knowing what a datasource is.
+     * them, constrains them and never sees their secrets, without knowing what a datasource is.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -145,17 +144,23 @@ data class ApiPluginConfigFieldVo(
     val description: String?,
 
     /**
-     * Effective value; a secret is masked rather than returned
+     * Effective value; a secret is never returned
      *
-     * The stored or declared value of an ordinary field. A secret never comes back: a set
-     * one is reported as [PluginConfigSchemaUtil.SECRET_MASK], which the console sends back
-     * untouched to mean "keep it", replacing it with any other value and clearing it with a
-     * blank one. An unset secret reports null like any other unset field.
+     * What the field holds, and what a console renders into its form: the administrator's
+     * stored value when there is one, and otherwise the declared default for every type but
+     * a number - a text field, where a blank string is a value rather than an absence, and a
+     * boolean or an enumeration, whose controls have no unset appearance to render. A number
+     * has no blank form and therefore no value until one is submitted, and reads as null.
+     * [hasValue] is what tells the two apart.
+     *
+     * A secret comes back as null however it is stored: [hasValue] says whether one is
+     * there, leaving the key out of a submission is what keeps it, and a blank clears it.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
+     * @see hasValue
      */
-    @field:Schema(description = "配置值（secret 回掩码，不回明文）", example = "2")
+    @field:Schema(description = "配置值（secret 不回值；未设置时数字项为 null，其余为声明的默认值）", example = "2")
     val value: String?,
 
     /**
@@ -193,6 +198,21 @@ data class ApiPluginConfigFieldVo(
      */
     @field:Schema(description = "是否为密钥项", example = "false")
     val secret: Boolean,
+
+    /**
+     * Whether the stored secret is one the gateway can no longer read
+     *
+     * Only ever true for a secret that has a value stored: the token secret the gateway
+     * encrypts one under was rotated after it was written, and re-entering the value is the
+     * only thing that fixes it. Reported rather than raised, so the administrator is told
+     * which field to fill in rather than finding out from a plugin that fails to mount.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see secret
+     */
+    @field:Schema(description = "已存密钥是否已无法解密（token secret 轮换）", example = "false")
+    val unreadable: Boolean,
 
     /**
      * Input placeholder

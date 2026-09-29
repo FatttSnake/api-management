@@ -100,13 +100,14 @@ class PluginDatasourceFactory(
      *
      * @param pluginId Plugin ID
      * @param name Datasource name
-     * @param values Submitted values, keyed by config key
+     * @param values Submitted values, keyed by config key; a key that is absent or null is
+     *        read from what is stored
      * @throws PluginDatasourceException when the datasource is undeclared, not configurable,
      *         not configured, described by values that do not belong to it, or unreachable
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun test(pluginId: String, name: String, values: Map<String, String>) {
+    fun test(pluginId: String, name: String, values: Map<String, String?>) {
         val schema = pluginConfigSchemaCache.get(pluginId)
             ?: throw PluginDatasourceException("Plugin '$pluginId' declares no configuration")
 
@@ -131,19 +132,10 @@ class PluginDatasourceFactory(
             )
         }
 
+        // A value the caller left out, or sent with no value, is the stored one: a form that
+        // was not filled in is testing the configuration the plugin is running with
         val resolved = PluginDatasourceUtil.resolve(declaration) { key ->
-            val submitted = values[key]
-
-            // An absent value, and a mask, both mean "use the stored one" - the mask because
-            // the ciphertext a secret is held as can never be compared against a submission,
-            // so the console sends the mask back instead of pretending to hold the value
-            when {
-                submitted == null -> pluginSettingReader.resolve(pluginId, key)
-                schema.isSecret(key) && PluginConfigSchemaUtil.isMasked(submitted) ->
-                    pluginSettingReader.resolve(pluginId, key)
-
-                else -> submitted
-            }
+            values[key] ?: pluginSettingReader.resolve(pluginId, key)
         } as? ResolvedDatasource.Mysql
             ?: throw PluginDatasourceException("Datasource '$name' is not configured")
 

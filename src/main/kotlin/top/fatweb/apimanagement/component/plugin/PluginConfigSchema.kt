@@ -59,6 +59,8 @@ data class PluginConfigSchema(
 
     private val fieldsByKey: Map<String, PluginConfigField> = fields.associateBy { it.key }
 
+    private val groupsByKey: Map<String, PluginConfigFieldGroup> = groups.associateBy { it.key }
+
     private val datasourcesByName: Map<String, PluginDatasourceSchema> =
         datasources.associateBy { it.name }
 
@@ -102,6 +104,20 @@ data class PluginConfigSchema(
      * @see PluginConfigField
      */
     fun fieldOf(key: String): PluginConfigField? = fieldsByKey[key]
+
+    /**
+     * Get a declared group
+     *
+     * A submission is written and checked one group at a time, so the group is also what
+     * says which required fields a save answers for.
+     *
+     * @param key Group key
+     * @return Group declaration, or null when not declared
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see PluginConfigFieldGroup
+     */
+    fun groupOf(key: String): PluginConfigFieldGroup? = groupsByKey[key]
 
     /**
      * Get a declared datasource by name
@@ -151,7 +167,7 @@ data class PluginConfigSchema(
  * A plugin asking for its own isolated database, and nothing more than the asking:
  * the connection itself is declared as ordinary config fields, which [slots] points
  * at. That is what keeps one mechanism in charge of every setting an administrator
- * owns - the same form, the same constraints, the same encryption and secret masking
+ * owns - the same form, the same constraints, the same encryption and secret handling
  * - while the gateway still knows which of those values mean "host" and which mean
  * "password" when it composes a connection.
  *
@@ -557,6 +573,12 @@ enum class PluginConfigFieldType {
     /**
      * Multi-line text
      *
+     * A [STRING] the console renders as a textarea, and nothing more than that: the two are
+     * held to the same constraints, both can describe a text-shaped datasource slot, and
+     * both are stored exactly as submitted, so a blank one is a value rather than an
+     * absence. No rule tells them apart - which is why the distinction is the type itself
+     * rather than a flag beside a type.
+     *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
@@ -593,6 +615,19 @@ enum class PluginConfigFieldType {
      * @since 1.0.0
      */
     SECRET;
+
+    /**
+     * Whether the type holds free text
+     *
+     * [STRING] and [TEXT] are one rule with two renderings, so everything that has to ask
+     * "is this text?" asks this rather than naming both - including what a blank submission
+     * means, which is a value here and a clear everywhere else.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see PluginConfigFieldType
+     */
+    val isText: Boolean get() = this == STRING || this == TEXT
 
     companion object {
         /**

@@ -2,6 +2,7 @@ package top.fatweb.apimanagement.component.plugin
 
 import tools.jackson.databind.json.JsonMapper
 import java.math.BigDecimal
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Plugin config schema util
@@ -21,20 +22,6 @@ import java.math.BigDecimal
  */
 object PluginConfigSchemaUtil {
     /**
-     * Value standing in for a stored secret
-     *
-     * A secret is encrypted at rest and never returned by the admin API, so a console
-     * cannot answer "is this still the value I loaded" by comparing values. It is handed
-     * this mask instead: sending it back means "keep the stored one", any other value
-     * replaces it, and a blank one clears it. Nothing derived from the secret itself ever
-     * goes over the wire.
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    const val SECRET_MASK = "******"
-
-    /**
      * Config and group key pattern
      *
      * @author FatttSnake, fatttsnake@gmail.com
@@ -43,12 +30,50 @@ object PluginConfigSchemaUtil {
     private val KEY_REGEX = Regex("^[A-Za-z][A-Za-z0-9._-]*$")
 
     /**
-     * Longest config key, kept in sync with `t_b_api_plugin_setting.setting_key`
+     * Longest setting key, kept in sync with `t_b_api_plugin_setting.setting_key`
+     *
+     * A key the plugin writes for its own runtime state lands in the same column, so the
+     * same limit applies to both - see `PluginContextImpl.saveSetting`.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    private const val MAX_KEY_LENGTH = 100
+    const val MAX_KEY_LENGTH = 100
+
+    /**
+     * Longest setting value, in UTF-8 bytes
+     *
+     * A backstop rather than a rule: the column is a `text`, so its limit is bytes and a
+     * form pasting something enormous would otherwise reach the driver and come back as a
+     * database error. Characters are what a declared `maxLength` counts, so this only ever
+     * fires on a field that declares no maximum of its own.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    private const val MAX_VALUE_BYTES = 65535
+
+    /**
+     * Compiled declared patterns, by their source
+     *
+     * Held here rather than on `PluginConfigField`: that is a data class, and a `Regex`
+     * carries no structural equality, so a field holding one would stop comparing equal to
+     * an identical field. A schema holds a handful of patterns at most, so it needs no
+     * eviction.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see validateValue
+     */
+    private val patternCache = ConcurrentHashMap<String, Regex>()
+
+    /**
+     * Every property a schema may carry
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    private val SCHEMA_PROPERTIES = setOf("version", "groups", "datasources")
 
     /**
      * Every property a datasource declaration may carry
@@ -89,6 +114,15 @@ object PluginConfigSchemaUtil {
             throw IllegalArgumentException("Plugin config schema must be a JSON object: ${e.message}")
         } ?: throw IllegalArgumentException("Plugin config schema must be a JSON object")
 
+        // A property the schema does not have is refused rather than skipped over: one that
+        // spells `datasources` the singular way declares no datasource at all, and the plugin
+        // would mount with nothing to connect to and nothing said about why
+        val unknown = root.keys.filterNot { it is String && it in SCHEMA_PROPERTIES }
+        require(unknown.isEmpty()) {
+            "Plugin config schema declares properties it does not support: ${unknown.joinToString()}" +
+                    " (a schema takes ${SCHEMA_PROPERTIES.joinToString()})"
+        }
+
         val version = intOf(root, "version", "Plugin config schema") ?: 1
         val fieldKeys = mutableSetOf<String>()
         val groupKeys = mutableSetOf<String>()
@@ -115,21 +149,88 @@ object PluginConfigSchemaUtil {
     }
 
     /**
-     * Check whether a submitted secret means "keep the stored one"
+     * Read what a submission says about one field
      *
-     * @param value Submitted value of a secret field
-     * @return true=the mask of the stored value was sent back untouched
+     * The one definition of the three states a submitted value has, shared by everything
+     * that has to agree on them: validation, the write itself, and the value the plugin
+     * reads once the write is done. Deriving them at each call site is how they drift.
+     *
+     * A blank submission is a value of its own for free text - and only for free text,
+     * since no other type has a blank form to store - so it clears the key there and
+     * nowhere else. Leaving a key out is not a submission at all: a console saving a form
+     * submits the fields it changed and leaves the rest as they were.
+     *
+     * @param field Field the value belongs to
+     * @param submitted Submitted value, or null when the key was left out
+     * @return What the submission means
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
+     * @see PluginConfigValueAction
      */
-    fun isMasked(value: String): Boolean = value == SECRET_MASK
+    fun actionOf(field: PluginConfigField, submitted: String?): PluginConfigValueAction = when {
+        submitted == null -> PluginConfigValueAction.KEEP
+        submitted.isNotEmpty() -> PluginConfigValueAction.SET
+        field.type.isText -> PluginConfigValueAction.SET
+        else -> PluginConfigValueAction.CLEAR
+    }
 
     /**
-     * Validate submitted config values against a schema
+     * Read the value a field holds once a submission is written
+     *
+     * What the plugin reads back, and what the gateway composes a datasource from: a
+     * cleared key falls back to the declared default exactly as a key that was never
+     * stored does, and a kept one is the value already there.
+     *
+     * @param field Field the value belongs to
+     * @param submitted Submitted value, or null when the key was left out
+     * @param storedValue Value already stored under the key, or null when there is none
+     * @return Value after the submission, or null when neither a value nor a default is left
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see actionOf
+     */
+    fun effectiveValue(field: PluginConfigField, submitted: String?, storedValue: String?): String? =
+        when (actionOf(field, submitted)) {
+            PluginConfigValueAction.SET -> submitted
+            PluginConfigValueAction.CLEAR -> field.default
+            PluginConfigValueAction.KEEP -> storedValue ?: field.default
+        }
+
+    /**
+     * Read the value every declared field holds once a submission is written
+     *
+     * @param schema Schema the values belong to
+     * @param submitted Submitted values, by config group and then by config key; a null
+     *        value is a key that was left out
+     * @param stored Values already stored, by config key - a secret as its plaintext
+     * @return Values after the submission, by config key; a key that neither a value nor a
+     *         default covers reads as null
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see effectiveValue
+     */
+    fun effectiveValues(
+        schema: PluginConfigSchema,
+        submitted: Map<String, Map<String, String?>>,
+        stored: Map<String, String?>
+    ): Map<String, String?> {
+        val submittedByKey = submitted.values.flatMap { it.entries }.associate { it.key to it.value }
+
+        return schema.fields.associate { it.key to effectiveValue(it, submittedByKey[it.key], stored[it.key]) }
+    }
+
+    /**
+     * Validate a submission against a schema
      *
      * The stored values are passed in because a required field may already be satisfied by
-     * an earlier save, and because a masked secret is a "keep" rather than a submitted
-     * value - see [SECRET_MASK].
+     * an earlier save, and because whatever a submission leaves alone is read back out of
+     * them - see [effectiveValues].
+     *
+     * Two scopes, and they are not the same. A value is held to the constraints its own
+     * field declares. A required field is only checked when the group it belongs to is part
+     * of the submission, because a console saves one group at a time: making a save of one
+     * group wait on an unfinished field in another is how a form becomes impossible to fill
+     * in - the same reason a datasource slot is never a required field.
      *
      * Only the declared constraints of the fields themselves. A key that describes a
      * datasource is held to one more set of rules on top of these, because a field's
@@ -138,46 +239,55 @@ object PluginConfigSchemaUtil {
      * path and the mount both go through.
      *
      * @param schema Schema the values belong to
-     * @param values Submitted values, keyed by config key
-     * @param stored Keys that already hold a stored value
-     * @throws IllegalArgumentException when a key is undeclared or a value is invalid
+     * @param submitted Submitted values, by config group and then by config key; a null
+     *        value is a key that was left out
+     * @param stored Values already stored, by config key - a secret as its plaintext, and a
+     *        blank one being no value at all
+     * @throws IllegalArgumentException when a group or key is undeclared, a value is
+     *         invalid, or a required field of a submitted group is left empty
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      * @see PluginConfigSchema
      */
-    fun validate(schema: PluginConfigSchema, values: Map<String, String>, stored: Set<String> = emptySet()) {
-        values.forEach { (key, value) ->
-            val field = schema.fieldOf(key)
-                ?: throw IllegalArgumentException("Plugin config key '$key' is not declared by the plugin")
+    fun validate(
+        schema: PluginConfigSchema,
+        submitted: Map<String, Map<String, String?>>,
+        stored: Map<String, String?> = emptyMap()
+    ) {
+        submitted.forEach { (groupKey, values) ->
+            val group = schema.groupOf(groupKey)
+                ?: throw IllegalArgumentException(
+                    "Plugin config group '$groupKey' is not declared by the plugin"
+                )
 
-            // Neither a mask nor a blank carries a value: the first keeps the stored one and
-            // the second clears it, so there is nothing to check - validating the mask itself
-            // would trip whatever length or pattern the field declares. Whether a cleared
-            // secret is allowed at all is the required check's business, below
-            if (field.type == PluginConfigFieldType.SECRET && (value.isEmpty() || isMasked(value))) {
-                return@forEach
+            values.forEach { (key, value) ->
+                val field = group.fields.firstOrNull { it.key == key }
+                    ?: throw IllegalArgumentException(
+                        "Plugin config key '$key' is not declared by group '$groupKey'"
+                    )
+
+                when (actionOf(field, value)) {
+                    // Nothing carries a value: a kept key's value is already stored, and a
+                    // cleared one has no value left for a length or a pattern to apply to
+                    PluginConfigValueAction.KEEP,
+                    PluginConfigValueAction.CLEAR -> Unit
+
+                    PluginConfigValueAction.SET -> validateValue(field, value!!)
+                }
             }
-
-            validateValue(field, value)
         }
 
-        schema.fields.filter { it.required }.forEach { field ->
-            val submitted = values[field.key]
-            val satisfied = when {
-                // A masked secret is only satisfied by a value that is actually stored
-                field.type == PluginConfigFieldType.SECRET && submitted != null && isMasked(submitted) ->
-                    stored.contains(field.key)
-
-                // Anything else submitted has to carry a value, since a blank submission
-                // clears the key rather than keeping it
-                submitted != null -> submitted.isNotEmpty()
-
-                // Nothing was submitted for this key, so the stored value or the declared
-                // default the plugin would fall back to has to be there instead
-                else -> stored.contains(field.key) || field.default != null
-            }
-
-            require(satisfied) { "Plugin config key '${field.key}' is required" }
+        // Only the groups this submission writes. A value already stored, or a default the
+        // plugin would fall back to, satisfies a required field without being submitted
+        val effective = effectiveValues(schema, submitted, stored)
+        submitted.keys.forEach { groupKey ->
+            schema.groupOf(groupKey)?.fields.orEmpty()
+                .filter { it.required }
+                .forEach { field ->
+                    require(!effective[field.key].isNullOrEmpty()) {
+                        "Plugin config key '${field.key}' is required"
+                    }
+                }
         }
     }
 
@@ -325,7 +435,7 @@ object PluginConfigSchemaUtil {
         PluginDatasourceSlot.HOST,
         PluginDatasourceSlot.DATABASE,
         PluginDatasourceSlot.USERNAME,
-        PluginDatasourceSlot.PARAMS -> type == PluginConfigFieldType.STRING || type == PluginConfigFieldType.TEXT
+        PluginDatasourceSlot.PARAMS -> type.isText
     }
 
     /**
@@ -424,7 +534,7 @@ object PluginConfigSchemaUtil {
             "Plugin config field '$key' declares minLength / maxLength / pattern but is not text"
         }
         pattern?.let {
-            runCatching { Regex(it) }.getOrElse { error ->
+            runCatching { patternOf(it) }.getOrElse { error ->
                 throw IllegalArgumentException("Plugin config field '$key' has an invalid pattern: ${error.message}")
             }
         }
@@ -503,6 +613,12 @@ object PluginConfigSchemaUtil {
     private fun validateValue(field: PluginConfigField, value: String) {
         val key = field.key
 
+        // Checked before the type's own rules: this is the one limit that belongs to the
+        // column rather than to the field, so it has to hold whatever the field declares
+        require(value.toByteArray(Charsets.UTF_8).size <= MAX_VALUE_BYTES) {
+            "Plugin config key '$key' is longer than $MAX_VALUE_BYTES bytes"
+        }
+
         when (field.type) {
             PluginConfigFieldType.BOOLEAN -> require(value.equals("true", true) || value.equals("false", true)) {
                 "Plugin config key '$key' must be 'true' or 'false', got '$value'"
@@ -542,11 +658,25 @@ object PluginConfigSchemaUtil {
                     require(value.length <= it) { "Plugin config key '$key' must be at most $it characters" }
                 }
                 field.pattern?.let {
-                    require(Regex(it).matches(value)) { "Plugin config key '$key' does not match $it" }
+                    require(patternOf(it).matches(value)) { "Plugin config key '$key' does not match $it" }
                 }
             }
         }
     }
+
+    /**
+     * Read a compiled declared pattern
+     *
+     * Compiled once per distinct source rather than per validation: the same field is
+     * checked on every save, and a plugin author's pattern is otherwise re-parsed each time.
+     *
+     * @param pattern Declared pattern
+     * @return Compiled pattern
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see patternCache
+     */
+    private fun patternOf(pattern: String): Regex = patternCache.computeIfAbsent(pattern) { Regex(it) }
 
     /**
      * Read a config or group key
@@ -667,4 +797,41 @@ object PluginConfigSchemaUtil {
 
         return if (decimal.scale() <= 0) decimal.toBigInteger().toString() else decimal.toPlainString()
     }
+}
+
+/**
+ * What a submission says about one config key
+ *
+ * @author FatttSnake, fatttsnake@gmail.com
+ * @since 1.0.0
+ * @see PluginConfigSchemaUtil.actionOf
+ */
+enum class PluginConfigValueAction {
+    /**
+     * The key was left out: the stored value, or the declared default, stands
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    KEEP,
+
+    /**
+     * A blank value was submitted for a type that has no blank form: the key is cleared and
+     * the declared default applies again
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    CLEAR,
+
+    /**
+     * A value was submitted: it is stored and read back as it is
+     *
+     * A blank submitted for a text field is one of these, since a blank is a value there
+     * rather than the absence of one - see [PluginConfigSchemaUtil.actionOf].
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    SET
 }

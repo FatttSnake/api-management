@@ -195,6 +195,14 @@ class ApiPluginController(
     /**
      * Update the configuration of a plugin
      *
+     * Saved a group at a time, and a group is also what the submission answers for: the
+     * required fields of the groups it names have to hold a value once it is written, while a
+     * group left out is one nothing was decided about.
+     *
+     * A value left out keeps the stored one, a blank one clears the key so the declared
+     * default applies again - except for a text field, where a blank is a value it can hold -
+     * and any other value is stored as submitted.
+     *
      * An ordinary value takes effect on the plugin's next read, so nothing is remounted for
      * it. A value that describes a datasource is different, because the gateway is what
      * builds the connection from it: changing one of those remounts the plugin, so the
@@ -230,8 +238,8 @@ class ApiPluginController(
      *
      * Asked for rather than checked while saving, in both directions: a configuration whose
      * server is not up yet is still worth storing, and a test can be run against values
-     * that have not been saved yet. A `values` entry that is left out is read from what is
-     * stored, which is also what a masked secret means.
+     * that have not been saved yet. A `values` entry that is left out, or sent with no value,
+     * is read from what is stored.
      *
      * Only a MySQL datasource can be tested: a SQLite one is a file the gateway owns and
      * supplies itself, so there is no connection of the administrator's to check.
@@ -259,8 +267,10 @@ class ApiPluginController(
         apiPluginService.testPluginDatasource(
             pluginId,
             apiPluginDatasourceTestParam.name.orEmpty(),
+            // A value that is left out keeps its null, which is what says the stored one is
+            // read: a form testing the configuration it was loaded with submits neither
             apiPluginDatasourceTestParam.values.orEmpty()
-                .mapNotNull { value -> value.key?.let { it to (value.value ?: "") } }
+                .mapNotNull { value -> value.key?.let { it to value.value } }
                 .toMap()
         )
 
