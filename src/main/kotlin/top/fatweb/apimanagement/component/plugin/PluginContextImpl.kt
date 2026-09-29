@@ -72,6 +72,11 @@ class PluginContextImpl(
         require(configSchemaCache.get(pluginId)?.isDeclared(key) != true) {
             "Setting '$key' is declared by the plugin config schema and can only be changed by an administrator"
         }
+        // Both kinds of key land in the same column, so a key the plugin names for itself is
+        // held to the limit an administrator's key is - see PluginConfigSchemaUtil
+        require(key.length <= PluginConfigSchemaUtil.MAX_KEY_LENGTH) {
+            "Setting key '$key' is longer than ${PluginConfigSchemaUtil.MAX_KEY_LENGTH} characters"
+        }
 
         apiPluginSettingService.set(pluginId, key, value)
     }

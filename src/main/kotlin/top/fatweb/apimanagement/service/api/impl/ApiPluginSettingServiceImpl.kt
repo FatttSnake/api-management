@@ -33,7 +33,12 @@ class ApiPluginSettingServiceImpl : ServiceImpl<ApiPluginSettingMapper, ApiPlugi
 
     override fun listByPlugin(pluginId: String): Map<String, String> =
         list(KtQueryWrapper(ApiPluginSetting()).eq(ApiPluginSetting::pluginId, pluginId))
-            .mapNotNull { setting -> setting.settingKey?.let { key -> key to (setting.settingValue ?: "") } }
+            .mapNotNull { setting ->
+                val key = setting.settingKey
+                val value = setting.settingValue
+
+                if (key == null || value == null) null else key to value
+            }
             .toMap()
 
     @Transactional

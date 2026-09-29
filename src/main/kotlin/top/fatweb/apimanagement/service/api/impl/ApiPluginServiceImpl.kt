@@ -300,9 +300,15 @@ class ApiPluginServiceImpl(
         val schema = configSchemaOf(pluginId)
         val stored = apiPluginSettingService.listByPlugin(pluginId)
 
+            // A stored secret the gateway itself can no longer read: reported rather than raised,
+        // because re-entering the value is the administrator's to do and nothing else fixes it
+        val unreadable = schema?.secretKeys().orEmpty()
+            .filterNot { pluginSettingReader.isReadable(pluginId, it) }
+            .toSet()
+
         return ApiPluginConfigVo(
             pluginId = pluginId,
-            groups = schema?.toGroupVo(stored) ?: emptyList(),
+            groups = schema?.toGroupVo(stored, unreadable) ?: emptyList(),
             // Answered from the values already read rather than by connecting to anything: a
             // datasource is configured exactly when the config says where to connect to, and
             // reporting the state of one the gateway would refuse to use is more useful to
@@ -323,65 +329,112 @@ class ApiPluginServiceImpl(
         val schema = configSchemaOf(pluginId)
             ?: throw IllegalArgumentException("Plugin '$pluginId' does not declare any configuration")
 
-        val values = apiPluginConfigUpdateParam.values.orEmpty()
-            .mapNotNull { value -> value.key?.let { it to (value.value ?: "") } }
-            .toMap()
-        val stored = apiPluginSettingService.listByPlugin(pluginId)
-        PluginConfigSchemaUtil.validate(schema, values, stored.keys)
+        val submitted = submittedGroupsOf(apiPluginConfigUpdateParam)
 
-        // What the values will read back as: a mask is the console keeping the stored secret
-        // rather than a value of its own, so it is not what the connection would be built from
-        val effective = stored + values.filter { (key, value) ->
-            !(schema.isSecret(key) && PluginConfigSchemaUtil.isMasked(value))
-        }
+        // What is stored right now, secrets as plaintext. Read before anything is written: it
+        // is both what a key the submission leaves out is checked against, and what "did this
+        // change anything" is answered from
+        val stored = pluginSettingReader.resolveAll(pluginId)
+        PluginConfigSchemaUtil.validate(schema, submitted, stored)
+
+        // What the values read back as once they are written
+        val effective = PluginConfigSchemaUtil.effectiveValues(schema, submitted, stored)
 
         // The gateway's own rules on top of the field constraints, applied before anything is
         // written: a value that commits and only then fails the mount would leave the plugin
         // down with nothing in the response to say why
         schema.datasources.forEach { declaration ->
-            PluginDatasourceUtil.resolve(declaration) { key -> effective[key] ?: schema.fieldOf(key)?.default }
+            PluginDatasourceUtil.resolve(declaration) { key -> effective[key] }
         }
 
         // Whether the plugin has to be remounted for the values to reach it, as opposed to
-        // being visible on its next read. A console submits the whole form every time, so
-        // reacting to the request rather than to the change would restart the plugin on
-        // every unrelated edit and throw away whatever it held in memory
-        val datasourceChanged = values.any { (key, value) ->
-            key in schema.datasourceKeys &&
-                    !(schema.isSecret(key) && PluginConfigSchemaUtil.isMasked(value)) &&
-                    value != stored[key].orEmpty()
-        }
+        // being visible on its next read. Asked as "did the value this datasource is described
+        // by change" rather than "was something submitted": a console submits the fields of the
+        // group it was saving, so reacting to the request would restart the plugin over a value
+        // that already is the one it is running with - and a secret can only be compared as
+        // plaintext, which is why it is read decrypted
+        val previous = PluginConfigSchemaUtil.effectiveValues(schema, emptyMap(), stored)
+        val datasourceChanged = schema.datasourceKeys.any { previous[it] != effective[it] }
 
-        values.forEach { (key, value) ->
-            if (!schema.isSecret(key)) {
-                apiPluginSettingService.set(pluginId, key, value)
-                return@forEach
+        submitted.values.forEach { values ->
+            values.forEach { (key, value) ->
+                // validate has already read this schema, so the field is there
+                val field = schema.fieldOf(key) ?: return@forEach
+
+                when (PluginConfigSchemaUtil.actionOf(field, value)) {
+                    // Nothing was decided about this key, so nothing is written for it
+                    PluginConfigValueAction.KEEP -> Unit
+
+                    // Clearing removes the row rather than storing a blank, so the plugin reads
+                    // the declared default again - a secret has no default, and reads nothing
+                    PluginConfigValueAction.CLEAR -> apiPluginSettingService.delete(pluginId, key)
+
+                    PluginConfigValueAction.SET -> {
+                        val set = value!!
+                        // A secret is stored as ciphertext, which is the only value in the table
+                        // that is not the one the plugin reads back
+                        apiPluginSettingService.set(
+                            pluginId,
+                            key,
+                            if (field.type == PluginConfigFieldType.SECRET) {
+                                PluginCryptoUtil.encrypt(serverProperties.security.tokenSecret, set)
+                            } else {
+                                set
+                            }
+                        )
+                    }
+                }
             }
-
-            // The mask is what "keep the stored one" looks like: the ciphertext a secret
-            // is held as can never be compared against a submission, so the console sends
-            // the mask back instead of pretending it holds the value
-            if (PluginConfigSchemaUtil.isMasked(value)) {
-                return@forEach
-            }
-
-            // A blank one is the only way to clear a secret: it has no default to fall
-            // back to, so the row goes and the plugin reads no value at all
-            if (value.isEmpty()) {
-                apiPluginSettingService.delete(pluginId, key)
-                return@forEach
-            }
-
-            apiPluginSettingService.set(
-                pluginId,
-                key,
-                PluginCryptoUtil.encrypt(serverProperties.security.tokenSecret, value)
-            )
         }
 
         if (datasourceChanged) {
             onCommitted { remountQuietly(pluginId) }
         }
+    }
+
+    /**
+     * Read a submission as values by group
+     *
+     * The structural mistakes are refused here - a group named twice, a key named twice - since
+     * neither can be anything but the caller's bug, while whether a group or a key is declared
+     * at all is the schema's business and is where `PluginConfigSchemaUtil.validate` reads it.
+     *
+     * @param apiPluginConfigUpdateParam Update API plugin config parameters
+     * @return Submitted values, by config group and then by config key; a null value is a key
+     *         that was left out
+     * @throws IllegalArgumentException when a group or a key is named more than once
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiPluginConfigGroupParam
+     */
+    private fun submittedGroupsOf(
+        apiPluginConfigUpdateParam: ApiPluginConfigUpdateParam
+    ): Map<String, Map<String, String?>> {
+        val groups = apiPluginConfigUpdateParam.groups.orEmpty()
+        requireDistinct(groups.mapNotNull { it.key }, "Plugin config groups are submitted")
+
+        return groups.associate { group ->
+            val groupKey = group.key!!
+            val values = group.values.orEmpty()
+            requireDistinct(values.mapNotNull { it.key }, "Plugin config group '$groupKey' submits a key")
+
+            groupKey to values.associate { it.key!! to it.value }
+        }
+    }
+
+    /**
+     * Refuse a submission that names the same thing twice
+     *
+     * @param names Names as submitted
+     * @param what What was named, for the error message
+     * @throws IllegalArgumentException when a name appears more than once
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    private fun requireDistinct(names: List<String>, what: String) {
+        val duplicated = names.groupingBy { it }.eachCount().filterValues { it > 1 }.keys
+
+        require(duplicated.isEmpty()) { "$what more than once: ${duplicated.joinToString()}" }
     }
 
     override fun uninstallPlugin(pluginId: String, purgeData: Boolean) = synchronized(mountLock) {
@@ -404,7 +457,7 @@ class ApiPluginServiceImpl(
         remount(pluginId)
     }
 
-    override fun testPluginDatasource(pluginId: String, name: String, values: Map<String, String>) {
+    override fun testPluginDatasource(pluginId: String, name: String, values: Map<String, String?>) {
         // Checked against the installed plugin rather than the schema cache alone, so an
         // unknown plugin is reported as one rather than as a plugin without declaration
         if (getByPluginId(pluginId) == null) {
@@ -783,6 +836,11 @@ class ApiPluginServiceImpl(
 
             // ---- 3. upgrade rule ----
             val existing = getByPluginIdOrQuery(descriptor.pluginId)
+            // An upgrade removes the row below and has the install rebuild it, so the
+            // administrator's enable flag has to be carried across by hand - see
+            // upsertPluginRow. Reading it before the removal is the whole point: afterwards
+            // there is nothing left to read it from
+            val previousEnable = existing?.enable
             if (checkVersion && existing != null) {
                 val currentCode = existing.versionCode ?: 0
                 if (descriptor.versionCode <= currentCode) {
@@ -824,7 +882,8 @@ class ApiPluginServiceImpl(
             // ---- 7. database rows + permission tree ----
             upsertPluginRow(
                 descriptor, fileHash, jarName, signerKeyId,
-                readJarEntry(jarPath, OPENAPI_ENTRY), configSchemaJson
+                readJarEntry(jarPath, OPENAPI_ENTRY), configSchemaJson,
+                enable = previousEnable ?: 1
             )
             dbRowsCreated = true
             val pluginMenu = ensureMenu(descriptor.pluginId, descriptor.name, API_ROOT_MENU_ID, API_MODULE_ID)
@@ -869,7 +928,11 @@ class ApiPluginServiceImpl(
             pluginRuntimes[descriptor.pluginId] = runtime
             lifecycle?.onInstall(pluginContext)
             lifecycle?.onStart(pluginContext)
+            // The row alone, and the cache was refreshed before this: a list reads a plugin out
+            // of the cache, so clearing an error without refreshing afterwards would leave a
+            // mounted plugin reported as a failed one until something else happened to refresh
             clearLoadError(descriptor.pluginId)
+            refreshCache()
 
             return getByPluginIdOrQuery(descriptor.pluginId)
                 ?.toVo()
@@ -1147,7 +1210,8 @@ class ApiPluginServiceImpl(
         jarName: String,
         signerKeyId: String,
         openapi: String?,
-        configSchema: String?
+        configSchema: String?,
+        enable: Int = 1
     ) {
         val existing = getOne(KtQueryWrapper(ApiPlugin()).eq(ApiPlugin::pluginId, descriptor.pluginId))
         if (existing == null) {
@@ -1156,7 +1220,7 @@ class ApiPluginServiceImpl(
                     this.pluginId = descriptor.pluginId
                     this.name = descriptor.name
                     this.description = descriptor.description
-                    this.enable = 1
+                    this.enable = enable
                     this.source = "UPLOADED"
                     this.versionName = descriptor.versionName
                     this.versionCode = descriptor.versionCode
@@ -1168,8 +1232,9 @@ class ApiPluginServiceImpl(
                 })
             }
         } else {
-            // enable is deliberately untouched: a remount or an upgrade must not
-            // resurrect a plugin the administrator disabled
+            // enable is deliberately untouched here, so a remount leaves a disabled plugin
+            // disabled. An upgrade arrives through the insert above instead - it removes
+            // the row first - which is why that branch takes the flag as a parameter
             existing.name = descriptor.name
             existing.description = descriptor.description
             existing.source = "UPLOADED"
@@ -1180,7 +1245,6 @@ class ApiPluginServiceImpl(
             existing.signerKeyId = signerKeyId
             existing.openapi = openapi
             existing.configSchema = configSchema
-            existing.loadError = null
             updateOrThrowException { updateById(existing) }
         }
     }
@@ -1315,18 +1379,22 @@ class ApiPluginServiceImpl(
     private fun refreshCache() {
         interfaceCodeMap.clear()
         pluginIdMap.clear()
-        pluginConfigSchemaCache.clear()
         apiInterfaceMapper.selectList(null).forEach { apiInterface ->
             apiInterface.code?.let { interfaceCodeMap[it] = apiInterface }
         }
+        val schemas = mutableMapOf<String, PluginConfigSchema?>()
         list().forEach { plugin ->
             plugin.pluginId?.let {
                 pluginIdMap[it] = plugin
                 // Parsed here rather than per plugin request: the plugin context resolves
                 // config defaults on the hot path of every call it serves
-                pluginConfigSchemaCache.put(it, parseConfigSchemaOrNull(plugin.configSchema))
+                schemas[it] = parseConfigSchemaOrNull(plugin.configSchema)
             }
         }
+        // Swapped in once it is complete: adding schemas one at a time would leave a window
+        // in which a plugin that has one appears to declare nothing, and a schema is what
+        // says which of its stored values are secrets - see PluginConfigSchemaCache
+        pluginConfigSchemaCache.replaceAll(schemas)
     }
 
     /**
@@ -1372,9 +1440,17 @@ class ApiPluginServiceImpl(
 
     private fun setLoadError(pluginId: String, message: String?) {
         runCatching {
-            val plugin = getByPluginIdOrQuery(pluginId) ?: return
-            plugin.loadError = message
-            updateOrThrowException { updateById(plugin) }
+            // Set explicitly rather than through an entity: a null field is left out of the
+            // statement the default strategy builds, so an entity carrying no message would
+            // "clear" a column it never mentions - which is why the other nullable columns are
+            // cleared this way too (see UserServiceImpl)
+            updateOrThrowException {
+                update(
+                    KtUpdateWrapper(ApiPlugin())
+                        .eq(ApiPlugin::pluginId, pluginId)
+                        .set(ApiPlugin::loadError, message)
+                )
+            }
         }
     }
 

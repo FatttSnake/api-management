@@ -42,7 +42,8 @@ interface PluginContext {
      *
      * Each datasource is built while mounting, and saving a change to a datasource's
      * configuration remounts the plugin on its own, so a plugin only has to expect its
-     * `onStop` and `onStart` to run again - any state it holds in memory is lost with them.
+     * `onStop`, `onInstall` and `onStart` to run again - any state it holds in memory is
+     * lost with them. See [PluginLifecycle] for what a mount and an unmount really mean.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -82,11 +83,11 @@ interface PluginContext {
      * Get the account balance of a user
      *
      * @param userId User ID
-     * @return Balance, or null when the account does not exist
+     * @return Balance
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun getBalance(userId: Long): BigDecimal?
+    fun getBalance(userId: Long): BigDecimal
 
     /**
      * Get the runtime configuration of a registered interface
@@ -130,10 +131,11 @@ interface PluginContext {
      * config schema belongs to the administrator, and writing it raises rather than
      * silently diverging from what the administrator sees and edits.
      *
-     * @param key Setting key
+     * @param key Setting key, at most 100 characters - the same limit administrator-owned
+     *        keys are held to, since both are stored in the same column
      * @param value Setting value
      * @throws IllegalArgumentException when the key is declared by the plugin's config
-     *         schema and is therefore administrator-owned
+     *         schema and is therefore administrator-owned, or is longer than the limit
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */

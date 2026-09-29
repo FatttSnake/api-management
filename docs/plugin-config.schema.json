@@ -1,0 +1,451 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/FatttSnake/api-management/master/docs/plugin-config.schema.json",
+  "title": "Plugin config schema (META-INF/plugin-config.json)",
+  "description": "JSON Schema for the META-INF/plugin-config.json a plugin ships inside its own jar. It declares which settings the administrator owns, how they render and what constrains them - never their current value.\n\nThe gateway parses this file while mounting and rejects it outright when it cannot be honoured, so this schema is meant to be wired into your editor or build for early feedback. It mirrors the checks in PluginConfigSchemaUtil.parse; the rules it cannot express (uniqueness of keys, slot references, slot/field-type compatibility, a default satisfying its own constraints, ...) are listed in the repository docs and still fail the install.\n\nTwo notes on faithfulness:\n- The gateway parses `type`, `dbType` and the slot names case-insensitively. This schema only accepts the canonical lowercase forms, which is also what its autocomplete offers.\n- The gateway accepts a negative `minLength` / `maxLength` (it never range-checks them). This schema rejects those as authoring mistakes; no valid file is affected.\n\nA `$schema` key inside the file itself is NOT permitted - the gateway refuses any top-level property other than `version`, `groups` and `datasources`. Wire this schema up through your editor or build instead (see docs).",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "default": 1,
+      "description": "Schema format version. Absent means 1. Only 1 exists today: the value is read but never branched on.",
+      "$comment": "Read with PluginConfigSchemaUtil.intOf and parsed with a plain Int cast."
+    },
+    "groups": {
+      "type": "array",
+      "description": "Config field groups, in declaration order. Absent means none. Declaring the same key twice, as a group or as a field, is refused by the gateway.",
+      "items": {
+        "$ref": "#/$defs/group"
+      }
+    },
+    "datasources": {
+      "type": "array",
+      "description": "Datasource declarations, in declaration order. Absent means none - and no isolated database is ever injected, however many rows exist. Names are unique in the plugin and a config key is claimed by at most one slot across every declaration.",
+      "items": {
+        "$ref": "#/$defs/datasource"
+      }
+    }
+  },
+  "$defs": {
+    "key": {
+      "type": "string",
+      "maxLength": 100,
+      "pattern": "^[A-Za-z][A-Za-z0-9._-]*$",
+      "description": "Config key: it is the setting key in t_b_api_plugin_setting, so it is held to the column's 100 characters. Unique across the whole schema. A key declared here belongs to the administrator - the plugin's saveSetting raises on it.",
+      "$comment": "PluginConfigSchemaUtil.KEY_REGEX and MAX_KEY_LENGTH."
+    },
+    "group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "fields"
+      ],
+      "properties": {
+        "key": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/key"
+            }
+          ],
+          "description": "Group key, unique in the plugin. It is also the unit a save is written and checked in: a required field is only checked when the group it belongs to is part of a submission."
+        },
+        "title": {
+          "type": "string",
+          "description": "Display title."
+        },
+        "description": {
+          "type": "string",
+          "description": "Display description."
+        },
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Fields of this group, in declaration order. A group with no field is refused.",
+          "items": {
+            "$ref": "#/$defs/field"
+          }
+        }
+      }
+    },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "type"
+      ],
+      "properties": {
+        "key": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/key"
+            }
+          ],
+          "description": "Config key, unique across the whole schema."
+        },
+        "type": {
+          "description": "Drives validation and rendering. Every value is a plain string on the wire and in the database - the type never changes what is stored, only what is accepted and how a console renders it.",
+          "enum": [
+            "string",
+            "text",
+            "number",
+            "boolean",
+            "enum",
+            "secret"
+          ],
+          "$comment": "Parsed case-insensitively by PluginConfigFieldType.parse; lowercase is the documented form. string and text are one rule with two renderings (the console shows text as a textarea): same constraints, both can describe a text datasource slot, and a blank is a stored value for both. secret is encrypted at rest and never returned by the API."
+        },
+        "title": {
+          "type": "string",
+          "description": "Display title."
+        },
+        "description": {
+          "type": "string",
+          "description": "Display description."
+        },
+        "default": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ],
+          "description": "Value an unset key reads as. It is never stored as a row: the plugin's getSetting falls back to it. Scalar JSON is accepted in its natural shape and normalised to the stored string (an integral number loses its fractional part, a boolean becomes \"true\" / \"false\"). It must itself satisfy the field's own constraints, and a secret must not declare one - both are checked by the gateway rather than by this schema. A JSON null is treated as absent.",
+          "$comment": "PluginConfigSchemaUtil.scalarOf + the validateValue(field, default) call in parseField."
+        },
+        "required": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the field must resolve to a value. Checked only within a submitted group, and satisfied by a stored value or a declared default - which is also why a datasource slot is never declared required."
+        },
+        "placeholder": {
+          "type": "string",
+          "description": "Input placeholder."
+        },
+        "minimum": {
+          "type": "number",
+          "description": "Lowest accepted value of a number field."
+        },
+        "maximum": {
+          "type": "number",
+          "description": "Highest accepted value of a number field. minimum must not exceed maximum; the gateway does not check that either."
+        },
+        "integer": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether a number field rejects a fractional part."
+        },
+        "minLength": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Lowest accepted length of a string, text or secret field, in characters."
+        },
+        "maxLength": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Highest accepted length of a string, text or secret field, in characters. Note that a host declaring minLength or pattern refuses the blank that would un-configure its datasource."
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Regular expression a string, text or secret field must match (Kotlin Regex, ECMA-262 compatible). An uncompilable pattern fails the install.",
+          "$comment": "Anchoring is the author's business: the gateway uses Regex.matches, which anchors both ends, while an editor's live regex check of a draft value may not."
+        },
+        "options": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "Allowed values of an enum field, non-empty and with unique values. Declaring options on any other type is refused. `uniqueItems` only catches identical whole entries, so two options sharing a `value` but not a `label` are still refused by the gateway at install time.",
+          "items": {
+            "$ref": "#/$defs/option"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "$comment": "minimum / maximum / integer are a number's constraints.",
+          "if": {
+            "properties": {
+              "type": {
+                "const": "number"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "else": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "minimum"
+                  ]
+                },
+                {
+                  "required": [
+                    "maximum"
+                  ]
+                },
+                {
+                  "required": [
+                    "integer"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$comment": "minLength / maxLength / pattern are a text's constraints - and a secret is text that is encrypted at rest.",
+          "if": {
+            "properties": {
+              "type": {
+                "enum": [
+                  "string",
+                  "text",
+                  "secret"
+                ]
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "else": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "minLength"
+                  ]
+                },
+                {
+                  "required": [
+                    "maxLength"
+                  ]
+                },
+                {
+                  "required": [
+                    "pattern"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$comment": "A secret must never declare a default: a default is not a secret, and it would be shipped in the clear inside the jar.",
+          "if": {
+            "properties": {
+              "type": {
+                "const": "secret"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "not": {
+              "required": [
+                "default"
+              ]
+            }
+          }
+        },
+        {
+          "$comment": "An enum's options are what it accepts, so they are required - and only an enum may declare them.",
+          "if": {
+            "properties": {
+              "type": {
+                "const": "enum"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "options"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "options"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "option": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value"
+      ],
+      "properties": {
+        "value": {
+          "type": "string",
+          "description": "The string stored when this option is chosen."
+        },
+        "label": {
+          "type": "string",
+          "description": "Display label; the value itself is shown when absent."
+        }
+      }
+    },
+    "datasource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "dbType"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "The name the plugin asks this datasource by, through PluginContext.datasources - part of the plugin's own vocabulary rather than a console label. It is also the SQLite filename and a child-context bean-name suffix, which is why it is held to a plain lowercase word. Unique in the plugin.",
+          "$comment": "PluginDatasourceSchema.NAME_REGEX and MAX_NAME_LENGTH."
+        },
+        "dbType": {
+          "description": "The dialect the plugin is written against. Declared by the plugin, never chosen by the administrator: the plugin's own SQL and DDL decide it, so only its author knows which one it was verified against. It is required rather than defaulted for the same reason.",
+          "enum": [
+            "mysql",
+            "sqlite"
+          ],
+          "$comment": "Parsed case-insensitively by PluginDatasourceType.parse."
+        },
+        "required": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the plugin cannot run without this datasource. Reporting only: an incomplete configuration is shown to the administrator while the plugin still installs and mounts, because installing first and configuring after is the normal order. It never makes a config field required."
+        },
+        "host": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/key"
+            }
+          ],
+          "description": "mysql only: the config key holding the host. A datasource counts as configured once its host has a value, so blanking that host is how it is un-configured and the plugin simply stops being given it. The field it points at must be a string or text one, and must exist in the schema."
+        },
+        "port": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/key"
+            }
+          ],
+          "description": "mysql only: the config key holding the port. The field it points at must be a number one. The driver's own default applies when unset."
+        },
+        "database": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/key"
+            }
+          ],
+          "description": "mysql only: the config key holding the database name. The field it points at must be a string or text one."
+        },
+        "username": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/key"
+            }
+          ],
+          "description": "mysql only: the config key holding the credential username. The field it points at must be a string or text one."
+        },
+        "password": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/key"
+            }
+          ],
+          "description": "mysql only: the config key holding the credential password. The field it points at must be a secret one - a password stored in the clear is the whole reason the rule exists - and must not be required, since a required field refuses the blank submission that would clear the password. Held as an ordinary secret, it is encrypted at rest and never returned by the API."
+        },
+        "params": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/key"
+            }
+          ],
+          "description": "mysql only: the config key holding driver properties, as key=value pairs. The gateway hands them to the driver as connection properties, so nobody writes a connection string. Properties that reach past the connection (allowLoadLocalInfile, autoDeserialize, propertiesTransform, ...) are refused when the connection is composed. The field it points at must be a string or text one."
+        }
+      },
+      "allOf": [
+        {
+          "$comment": "Without these two there is nothing to connect to, whatever else is declared.",
+          "if": {
+            "properties": {
+              "dbType": {
+                "const": "mysql"
+              }
+            },
+            "required": [
+              "dbType"
+            ]
+          },
+          "then": {
+            "required": [
+              "host",
+              "database"
+            ]
+          }
+        },
+        {
+          "$comment": "A SQLite database is a file the gateway owns and derives from the declared name, so there is nothing an administrator could decide about it.",
+          "if": {
+            "properties": {
+              "dbType": {
+                "const": "sqlite"
+              }
+            },
+            "required": [
+              "dbType"
+            ]
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "host"
+                  ]
+                },
+                {
+                  "required": [
+                    "port"
+                  ]
+                },
+                {
+                  "required": [
+                    "database"
+                  ]
+                },
+                {
+                  "required": [
+                    "username"
+                  ]
+                },
+                {
+                  "required": [
+                    "password"
+                  ]
+                },
+                {
+                  "required": [
+                    "params"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

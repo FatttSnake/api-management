@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.spring.service.IService
 import top.fatweb.apimanagement.entity.api.ApiInterface
 import top.fatweb.apimanagement.entity.api.ApiPlugin
 import top.fatweb.apimanagement.exception.NoRecordFoundException
-import top.fatweb.apimanagement.exception.PluginInstallException
 import top.fatweb.apimanagement.param.system.api.*
 import top.fatweb.apimanagement.vo.PageVo
 import top.fatweb.apimanagement.vo.api.ApiGroupVo
@@ -214,15 +213,15 @@ interface IApiPluginService : IService<ApiPlugin> {
      *
      * @param pluginId Plugin ID
      * @param name Datasource name
-     * @param values Config values to try, keyed by config key; a key left out is read
-     *        from what is stored, which is also what a masked secret means
+     * @param values Config values to try, keyed by config key; a key left out, or sent as
+     *        null, is read from what is stored
      * @throws top.fatweb.apimanagement.exception.PluginDatasourceException when the
      *         datasource is undeclared, not configurable, not configured, described by
      *         values that do not belong to it, or unreachable
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun testPluginDatasource(pluginId: String, name: String, values: Map<String, String>)
+    fun testPluginDatasource(pluginId: String, name: String, values: Map<String, String?>)
 
     /**
      * Get the configuration of a plugin
@@ -237,6 +236,10 @@ interface IApiPluginService : IService<ApiPlugin> {
 
     /**
      * Save the configuration of a plugin
+     *
+     * Saved one group at a time, since that is how the console renders it: a submission names
+     * the groups it is deciding about, and the required fields those groups declare are what
+     * it is checked against.
      *
      * @param apiPluginConfigUpdateParam Update API plugin config parameters
      * @author FatttSnake, fatttsnake@gmail.com

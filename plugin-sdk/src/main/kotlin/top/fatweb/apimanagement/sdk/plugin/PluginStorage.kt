@@ -144,7 +144,9 @@ interface PluginStorage {
      *
      * @param path Relative path inside this plugin's namespace
      * @param ttl How long the URL stays valid, or null for the gateway's configured
-     *        default. A value above the gateway's configured maximum is clamped down
+     *        default. A value above the gateway's configured maximum is clamped down; a
+     *        zero or negative one is rejected, because a URL that never works is never
+     *        what a caller means
      * @return External URL, or null when the gateway cannot build an absolute URL
      *         (called outside a request while no public base URL is configured)
      * @author FatttSnake, fatttsnake@gmail.com

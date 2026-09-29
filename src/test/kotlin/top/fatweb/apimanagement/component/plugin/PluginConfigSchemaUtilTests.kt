@@ -132,105 +132,228 @@ class PluginConfigSchemaUtilTests {
     fun `valid values pass`() {
         PluginConfigSchemaUtil.validate(
             schema,
-            mapOf("ttlHours" to "3", "enabled" to "false", "mode" to "slow", "notice" to "hello", "token" to "s3cr3t")
+            submit(
+                "share",
+                "ttlHours" to "3",
+                "enabled" to "false",
+                "mode" to "slow",
+                "notice" to "hello",
+                "token" to "s3cr3t"
+            )
         )
     }
 
     @Test
     fun `a value for an undeclared key is rejected`() {
-        assertFailsWith<IllegalArgumentException> { PluginConfigSchemaUtil.validate(schema, mapOf("nope" to "1")) }
+        assertFailsWith<IllegalArgumentException> {
+            PluginConfigSchemaUtil.validate(schema, submit("share", "nope" to "1"))
+        }
+    }
+
+    @Test
+    fun `a key declared by another group is rejected`() {
+        // Writing a key through a group that does not own it would be a field changing from
+        // under the administrator who can only see the group they submitted
+        assertFailsWith<IllegalArgumentException> {
+            PluginConfigSchemaUtil.validate(schema, submit("elsewhere", "ttlHours" to "3"))
+        }
+    }
+
+    @Test
+    fun `an undeclared group is rejected`() {
+        assertFailsWith<IllegalArgumentException> {
+            PluginConfigSchemaUtil.validate(schema, submit("nowhere", "token" to "x"))
+        }
+    }
+
+    @Test
+    fun `a key that was left out is not checked at all`() {
+        // Nothing was decided about it, so what is stored stands - even if it would not pass
+        // the field's own constraints today
+        PluginConfigSchemaUtil.validate(
+            schema,
+            submit("share", "notice" to null),
+            stored = mapOf("token" to "s3cr3t")
+        )
     }
 
     @Test
     fun `a value of the wrong type is rejected`() {
         assertFailsWith<IllegalArgumentException> {
-            PluginConfigSchemaUtil.validate(schema, mapOf("enabled" to "yes", "token" to "x"))
+            PluginConfigSchemaUtil.validate(schema, submit("share", "enabled" to "yes", "token" to "x"))
         }
     }
 
     @Test
     fun `a number outside its range or with a fraction is rejected`() {
         assertFailsWith<IllegalArgumentException> {
-            PluginConfigSchemaUtil.validate(schema, mapOf("ttlHours" to "169", "token" to "x"))
+            PluginConfigSchemaUtil.validate(schema, submit("share", "ttlHours" to "169", "token" to "x"))
         }
         assertFailsWith<IllegalArgumentException> {
-            PluginConfigSchemaUtil.validate(schema, mapOf("ttlHours" to "1.5", "token" to "x"))
+            PluginConfigSchemaUtil.validate(schema, submit("share", "ttlHours" to "1.5", "token" to "x"))
         }
     }
 
     @Test
     fun `an enum value outside its options is rejected`() {
         assertFailsWith<IllegalArgumentException> {
-            PluginConfigSchemaUtil.validate(schema, mapOf("mode" to "medium", "token" to "x"))
+            PluginConfigSchemaUtil.validate(schema, submit("share", "mode" to "medium", "token" to "x"))
         }
     }
 
     @Test
     fun `a value longer than its maximum is rejected`() {
         assertFailsWith<IllegalArgumentException> {
-            PluginConfigSchemaUtil.validate(schema, mapOf("notice" to "too long", "token" to "x"))
+            PluginConfigSchemaUtil.validate(schema, submit("share", "notice" to "too long", "token" to "x"))
         }
     }
 
     @Test
-    fun `a required field is satisfied by a declared default or a stored value`() {
-        // ttlHours is not required, but the secret is: it can only be satisfied by a
-        // submission or by a value that is already stored, since it has no default
-        assertFailsWith<IllegalArgumentException> { PluginConfigSchemaUtil.validate(schema, emptyMap()) }
+    fun `a value larger than the column is refused`() {
+        // A backstop rather than a declared rule: the setting column is a `text`, so a field
+        // that declares no maximum of its own is still bounded by what can be stored
+        val unbounded = parseField("""{ "key": "a", "type": "text" }""")!!
 
-        PluginConfigSchemaUtil.validate(schema, emptyMap(), setOf("token"))
+        assertEquals(PluginConfigFieldType.TEXT, unbounded.fieldOf("a")!!.type)
+        assertFailsWith<IllegalArgumentException> {
+            PluginConfigSchemaUtil.validate(unbounded, submit("g", "a" to "a".repeat(70_000)))
+        }
+        PluginConfigSchemaUtil.validate(unbounded, submit("g", "a" to "a".repeat(65_000)))
     }
 
     @Test
-    fun `the mask of a stored secret is recognised`() {
-        assertTrue(PluginConfigSchemaUtil.isMasked(PluginConfigSchemaUtil.SECRET_MASK))
-        assertFalse(PluginConfigSchemaUtil.isMasked("s3cr3t"))
+    fun `a blank clears a key that has no blank form to store`() {
+        // A number, a boolean and an enumeration have nothing to store a blank as, so blanking
+        // one is how an administrator gets back to the declared default: the row goes rather
+        // than holding an empty string the type could never read back
+        listOf("ttlHours", "enabled", "mode", "token").forEach { key ->
+            val field = schema.fieldOf(key)!!
+
+            assertEquals(PluginConfigValueAction.KEEP, PluginConfigSchemaUtil.actionOf(field, null), key)
+            assertEquals(PluginConfigValueAction.CLEAR, PluginConfigSchemaUtil.actionOf(field, ""), key)
+            assertEquals(PluginConfigValueAction.SET, PluginConfigSchemaUtil.actionOf(field, "x"), key)
+            assertEquals(
+                field.default,
+                PluginConfigSchemaUtil.effectiveValue(field, "", storedValue = "stored"),
+                "a cleared '$key' should fall back to its declared default"
+            )
+        }
     }
 
     @Test
-    fun `a masked secret means keep the stored one`() {
-        // The mask is what the console sends back for a value it was never shown, so it
-        // stands for the stored one rather than being a submitted value
-        PluginConfigSchemaUtil.validate(schema, mapOf("token" to PluginConfigSchemaUtil.SECRET_MASK), setOf("token"))
+    fun `a blank is a value to a text field`() {
+        // Which is what makes a text field the one kind that cannot be emptied: an empty string
+        // is something it can hold, and the way back to its default is to write the default
+        val notice = schema.fieldOf("notice")!!
+
+        assertEquals(PluginConfigValueAction.KEEP, PluginConfigSchemaUtil.actionOf(notice, null))
+        assertEquals(PluginConfigValueAction.SET, PluginConfigSchemaUtil.actionOf(notice, ""))
+        assertEquals("", PluginConfigSchemaUtil.effectiveValue(notice, "", storedValue = "hello"))
+        PluginConfigSchemaUtil.validate(schema, submit("share", "notice" to "", "token" to "s3cr3t"))
     }
 
     @Test
-    fun `a masked secret is not checked against the field constraints`() {
-        // The mask is six characters, so a secret declaring a longer minimum would be
-        // rejected by its own mask if the mask went through the value checks
+    fun `a text field holds a blank to its own constraints`() {
+        // A field declaring a shortest length is saying a blank is not a value it accepts
+        val constrained = parseField("""{ "key": "a", "type": "string", "minLength": 3 }""")!!
+
+        assertFailsWith<IllegalArgumentException> { PluginConfigSchemaUtil.validate(constrained, submit("g", "a" to "")) }
+    }
+
+    @Test
+    fun `a blank clears a secret without checking it against the field constraints`() {
+        // Clearing leaves no value behind, so a length or a pattern the field declares has
+        // nothing left to apply to
         val constrained = parseField("""{ "key": "token", "type": "secret", "minLength": 20 }""")!!
 
-        PluginConfigSchemaUtil.validate(constrained, mapOf("token" to PluginConfigSchemaUtil.SECRET_MASK))
+        PluginConfigSchemaUtil.validate(constrained, submit("g", "token" to ""))
     }
 
     @Test
-    fun `a blank secret is not checked against the field constraints`() {
-        // Clearing a secret leaves no value behind, so a length or pattern the field declares
-        // has nothing to apply to
-        val constrained = parseField("""{ "key": "token", "type": "secret", "minLength": 20 }""")!!
-
-        PluginConfigSchemaUtil.validate(constrained, mapOf("token" to ""))
-    }
-
-    @Test
-    fun `a masked secret without a stored value does not satisfy a required field`() {
-        // Nothing is there to keep, so the required secret is still unsatisfied
+    fun `a required field is satisfied by a stored value or a declared default`() {
+        // The secret is the only required field here, and it has no default to fall back to,
+        // so a save that decides about it has to leave one behind
         assertFailsWith<IllegalArgumentException> {
-            PluginConfigSchemaUtil.validate(schema, mapOf("token" to PluginConfigSchemaUtil.SECRET_MASK))
+            PluginConfigSchemaUtil.validate(schema, submit("share", "notice" to "hi"))
+        }
+
+        PluginConfigSchemaUtil.validate(
+            schema,
+            submit("share", "notice" to "hi"),
+            stored = mapOf("token" to "s3cr3t")
+        )
+    }
+
+    @Test
+    fun `a required field of a group nobody submitted is not checked`() {
+        // A console saves one group at a time, so a field left unfinished in another group is
+        // not this save's business - otherwise the form could never be saved at all
+        val twoGroups = PluginConfigSchemaUtil.parse(
+            """
+            {
+              "groups": [
+                { "key": "db", "fields": [ { "key": "db.host", "type": "string", "required": true } ] },
+                { "key": "share", "fields": [ { "key": "notice", "type": "string" } ] }
+              ]
+            }
+            """.trimIndent()
+        )!!
+
+        PluginConfigSchemaUtil.validate(twoGroups, submit("share", "notice" to "hi"))
+        assertFailsWith<IllegalArgumentException> { PluginConfigSchemaUtil.validate(twoGroups, submit("db", "db.host" to "")) }
+    }
+
+    @Test
+    fun `a blank is not a value a required field can be satisfied by`() {
+        // A blank clears a key, so a required one is left unsatisfied rather than set to
+        // nothing - whatever is still stored under it
+        val required = PluginConfigSchemaUtil.parse(
+            """
+            { "groups": [ { "key": "g", "fields": [ { "key": "a", "type": "string", "required": true } ] } ] }
+            """.trimIndent()
+        )!!
+
+        assertFailsWith<IllegalArgumentException> { PluginConfigSchemaUtil.validate(required, submit("g", "a" to "")) }
+        PluginConfigSchemaUtil.validate(required, submit("g", "a" to "x"))
+
+        assertFailsWith<IllegalArgumentException> {
+            PluginConfigSchemaUtil.validate(
+                schema,
+                submit("share", "token" to ""),
+                stored = mapOf("token" to "s3cr3t")
+            )
         }
     }
 
     @Test
-    fun `a blank submission clears rather than satisfies a required field`() {
-        // A blank value deletes the stored one, so it cannot count as the required value
-        // just because something is still stored under that key
-        assertFailsWith<IllegalArgumentException> {
-            PluginConfigSchemaUtil.validate(schema, mapOf("token" to ""), setOf("token"))
-        }
+    fun `the values after a save are read from the submission, the stored values and the defaults`() {
+        val effective = PluginConfigSchemaUtil.effectiveValues(
+            schema,
+            submit("share", "ttlHours" to "", "enabled" to "false", "notice" to ""),
+            stored = mapOf("ttlHours" to "5", "mode" to "slow", "token" to "s3cr3t")
+        )
+
+        assertEquals("2", effective["ttlHours"], "a cleared key falls back to its declared default")
+        assertEquals("false", effective["enabled"], "a submitted value is what is read")
+        assertEquals("slow", effective["mode"], "a key that was left out keeps what is stored")
+        assertEquals("", effective["notice"], "a blank is what a text field reads back")
+        assertEquals("s3cr3t", effective["token"], "a secret that was left out is the stored one")
+
+        // Nothing is stored under it and it declares no default, so leaving it alone leaves it
+        // with nothing at all
+        assertNull(PluginConfigSchemaUtil.effectiveValues(schema, emptyMap(), emptyMap())["notice"])
     }
 
     private fun parseField(fields: String) =
         PluginConfigSchemaUtil.parse("""{ "groups": [ { "key": "g", "fields": [ $fields ] } ] }""")
+
+    /**
+     * Submit values to one group, in the shape the API takes them
+     *
+     * A null value is a key that was left out of the request.
+     */
+    private fun submit(groupKey: String, vararg values: Pair<String, String?>) =
+        mapOf(groupKey to values.toMap())
 
     @Test
     fun `a schema without a datasource declares none`() {
