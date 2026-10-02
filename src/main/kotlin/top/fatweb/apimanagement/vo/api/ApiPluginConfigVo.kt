@@ -92,7 +92,26 @@ data class ApiPluginConfigGroupVo(
      * @see ApiPluginConfigFieldVo
      */
     @field:Schema(description = "配置项")
-    val fields: List<ApiPluginConfigFieldVo>
+    val fields: List<ApiPluginConfigFieldVo>,
+
+    /**
+     * Name of the datasource this group describes, or null when it describes none
+     *
+     * A connection is composed from ordinary config fields rather than stored as one, and
+     * the gateway keeps those fields to a single group and that group to a single
+     * connection - so a datasource is edited, saved and tested in one piece, and the group
+     * is what a console can offer a connection test on. Naming it here is what says which
+     * group that is.
+     *
+     * Null for a group that describes none. A SQLITE datasource declares no slot, so it is
+     * described by no group and never appears here.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiPluginConfigDatasourceVo
+     */
+    @field:Schema(description = "本分组描述的数据源名称，未描述任何数据源时为 null")
+    val datasource: String?
 )
 
 /**

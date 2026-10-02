@@ -141,7 +141,7 @@ object PluginConfigSchemaUtil {
         // can be checked - and checking it is the whole point of declaring slots by key
         val datasources = when (val datasourcesNode = root["datasources"]) {
             null -> emptyList()
-            is List<*> -> parseDatasources(datasourcesNode, groups.flatMap { it.fields })
+            is List<*> -> parseDatasources(datasourcesNode, groups)
             else -> throw IllegalArgumentException("Plugin config schema 'datasources' must be an array")
         }
 
@@ -295,26 +295,37 @@ object PluginConfigSchemaUtil {
      * Parse the datasource declarations
      *
      * @param nodes Declared nodes, in declaration order
-     * @param fields Every field declared by the schema, which the slots point into
+     * @param groups Every group declared by the schema, which the slots point into
      * @return Datasource declarations
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginConfigField
+     * @see PluginConfigFieldGroup
      * @see PluginDatasourceSchema
      */
     private fun parseDatasources(
         nodes: List<*>,
-        fields: List<PluginConfigField>
+        groups: List<PluginConfigFieldGroup>
     ): List<PluginDatasourceSchema> {
-        val byKey = fields.associateBy { it.key }
+        val byKey = groups.flatMap { it.fields }.associateBy { it.key }
+
+        // Which group declares each key, so a slot can be traced back to the form it is
+        // edited and submitted in. Only parsing needs it - it is what lets a declaration
+        // whose slots are spread over several forms be refused here, rather than discovered
+        // by an administrator who cannot save the connection as one
+        val groupOf = groups.flatMap { group -> group.fields.map { it.key to group.key } }.toMap()
+
         val names = mutableSetOf<String>()
 
         // Which slot already claimed a key: two connections composed from one value would
         // mean the administrator edits a field whose other reader they cannot see
         val claimed = mutableMapOf<String, String>()
 
+        // Which datasource already claimed a group, for the same reason at the size of a
+        // whole form: a group offers the one connection test it has room for
+        val described = mutableMapOf<String, String>()
+
         return nodes.mapIndexed { index, node ->
-            parseDatasource(node, index, byKey, names, claimed)
+            parseDatasource(node, index, byKey, groupOf, names, claimed, described)
         }
     }
 
@@ -324,8 +335,10 @@ object PluginConfigSchemaUtil {
      * @param node Declared node
      * @param index Position of the declaration, for error messages
      * @param fields Declared fields, by key
+     * @param groupOf Group each declared key belongs to, by key
      * @param names Datasource names seen so far
      * @param claimed Config keys already claimed, by the slot that claimed them
+     * @param described Groups already claimed, by the datasource that claimed them
      * @return Datasource declaration
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -336,8 +349,10 @@ object PluginConfigSchemaUtil {
         node: Any?,
         index: Int,
         fields: Map<String, PluginConfigField>,
+        groupOf: Map<String, String>,
         names: MutableSet<String>,
-        claimed: MutableMap<String, String>
+        claimed: MutableMap<String, String>,
+        described: MutableMap<String, String>
     ): PluginDatasourceSchema {
         val what = "Plugin config schema datasource #$index"
         val map = node as? Map<*, *> ?: throw IllegalArgumentException("$what must be an object")
@@ -402,6 +417,26 @@ object PluginConfigSchemaUtil {
             // Nothing an administrator could decide about it, so nothing to point at
             PluginDatasourceType.SQLITE -> require(slots.isEmpty()) {
                 "$what is a SQLITE datasource, which the gateway supplies itself and which declares no slot"
+            }
+        }
+
+        // A group is the unit a connection is edited, saved and tested in, so one whose
+        // fields are spread over several forms could never be submitted in one piece. A
+        // SQLITE datasource names no slot and so belongs to no group, which is not this case
+        val owners = slots.values.mapNotNull { groupOf[it] }.toSet()
+        require(owners.size <= 1) {
+            "$what is described by fields of ${owners.size} groups (${owners.sorted().joinToString()})," +
+                    " but a datasource has to be described by a single one"
+        }
+
+        // And the other way round: a form describes one connection, so a second one drawn
+        // beside it would be the one an administrator cannot ask about
+        owners.firstOrNull()?.let { groupKey ->
+            described.put(groupKey, name)?.let { previous ->
+                throw IllegalArgumentException(
+                    "$what is described by group '$groupKey', which already describes the" +
+                            " datasource '$previous': a group describes at most one"
+                )
             }
         }
 

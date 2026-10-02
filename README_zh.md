@@ -193,7 +193,7 @@ knife4j:
 
 | 接口 | 说明 |
 |---|---|
-| `GET /system/api/plugin/{pluginId}/config` | 配置结构 + 当前值（**secret 不回值**，`hasValue` 表示是否已设置、`unreadable` 表示已存的密文解不开）+ 构成数据源的配置项 + 每个数据源的名称、方言、是否必需与当前状态 |
+| `GET /system/api/plugin/{pluginId}/config` | 配置结构 + 当前值（**secret 不回值**，`hasValue` 表示是否已设置、`unreadable` 表示已存的密文解不开）+ 构成数据源的配置项 + 每个数据源的名称、方言、是否必需与当前状态 + 每个分组所描述的那个数据源（未描述任何数据源时为 `null`；控制台就是在这个分组上给出「测试连接」的） |
 | `PUT /system/api/plugin/config` | **按分组保存**：`{pluginId, groups:[{key, values:[{key, value}]}]}`，一次提交一个（或几个）分组。`value` **缺省即不动**、**留空即清除回默认**（文本项例外，见下）、非空即写入。**普通配置项立即生效**（插件每次读取都查库），**改到数据源相关配置项会重挂载插件**——连接是网关按这些值构建的 |
 | `POST /system/api/plugin/{pluginId}/config/datasource/test` | 用**尚未保存**的值试连一次（`name` + 要用的配置项；某项不传或传 `null` 都表示用已存值）。仅 MySQL：SQLite 是网关自备的文件，没有管理员的连接可试。失败回 40067 与驱动原文 |
 | `POST /system/api/plugin/{pluginId}/reload` | 用已存储的 jar 原地重挂载，用于**换了 jar**；配置与数据不受影响。改数据源**不需要**它 |
@@ -202,7 +202,7 @@ knife4j:
 - **secret 永不回值**：留下不提交即保持原值，提交空串即清除；有没有值看 `hasValue`。
 - 只有声明了 `datasources` 的插件才会拿到 `context.datasources`，且只包含**已配置**的那些：名字不在 map 里，就是网关还没有东西可连。一个插件可以声明多个，两种方言也可以混用。
 - 方言由插件声明（`dbType`），不由管理员选——写 SQL/DDL 的是插件作者，他才知道自己在哪个方言上验证过。**SQLite 零配置**：声明即由网关按 `app.storage.plugin-datasource-dir/{pluginId}/{name}.db` 供给，不落配置行、无需管理员动作。
-- **MySQL 数据源就是几条普通配置项**，在声明里逐个点名。它们和其它配置项走同一套机制，因此表单、声明的约束、密钥加密全部复用——密码尤其就是一个普通 secret，这也正是「能清空密码」得以成立的原因。JDBC URL 由网关拼装，`params` 以**连接属性**下发给驱动，没人写连接串。**host 有值即视为已配置**；清空 host 就是取消配置，插件随即不再拿到该数据源——注意 host 要是声明了 `minLength` 或 `pattern`，空串过不了它自己的校验，也就无法再被清空。`params` 会拒绝越出连接本身的属性（`autoDeserialize`、`allowLoadLocalInfile`、`propertiesTransform` 等）——这是缓解而非沙箱，真正的边界仍是插件签名与信任库。
+- **MySQL 数据源就是几条普通配置项**，在声明里逐个点名。它们和其它配置项走同一套机制，因此表单、声明的约束、密钥加密全部复用——密码尤其就是一个普通 secret，这也正是「能清空密码」得以成立的原因。JDBC URL 由网关拼装，`params` 以**连接属性**下发给驱动，没人写连接串。**host 有值即视为已配置**；清空 host 就是取消配置，插件随即不再拿到该数据源——注意 host 要是声明了 `minLength` 或 `pattern`，空串过不了它自己的校验，也就无法再被清空。`params` 会拒绝越出连接本身的属性（`autoDeserialize`、`allowLoadLocalInfile`、`propertiesTransform` 等）——这是缓解而非沙箱，真正的边界仍是插件签名与信任库。**这些配置项必须落在同一个分组里，一个分组也只能描述一条连接**：分组就是一条连接被填写、保存和测试的单位，槽位跨分组的声明、以及一个已经描述过某数据源的分组再描述第二条连接，都会在安装期被拒；它们共处的那一个分组，也正是控制台给出「测试连接」的地方。
 - **升级不清除插件配置与数据**；`DELETE /system/api/plugin/{pluginId}?purgeData=true` 才会清除插件设置、SQLite 数据库目录与文件区（默认 `false` 即保留，便于重装续用）。**外部 MySQL 库里的数据不在此列**：那是 DBA 的库，网关不会去删对方库里的表。
 
 # 安全
