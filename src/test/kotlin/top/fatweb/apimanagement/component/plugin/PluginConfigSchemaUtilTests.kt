@@ -491,6 +491,106 @@ class PluginConfigSchemaUtilTests {
     }
 
     @Test
+    fun `a datasource has to be described by one group`() {
+        // A group is the form a connection is filled in, saved and tested as, so fields
+        // spread over two of them describe a connection nothing could submit in one piece.
+        // The refusal names the groups, since moving a field is what it asks the author for
+        val error = assertFailsWith<IllegalArgumentException> {
+            PluginConfigSchemaUtil.parse(
+                """
+                {
+                  "datasources": [ { "name": "main", "dbType": "MYSQL", "host": "db.host", "database": "db.name" } ],
+                  "groups": [
+                    { "key": "server", "fields": [ { "key": "db.host", "type": "string" } ] },
+                    { "key": "database", "fields": [ { "key": "db.name", "type": "string" } ] }
+                  ]
+                }
+                """.trimIndent()
+            )
+        }
+
+        assertTrue(
+            error.message!!.contains("server") && error.message!!.contains("database"),
+            "the refusal should name both groups: ${error.message}"
+        )
+
+        // The same connection gathered into one group is what the rule asks for, and the
+        // group it lands in need not be the first one
+        val gathered = PluginConfigSchemaUtil.parse(
+            """
+            {
+              "datasources": [ { "name": "main", "dbType": "MYSQL", "host": "db.host", "database": "db.name" } ],
+              "groups": [
+                { "key": "share", "fields": [ { "key": "notice", "type": "text" } ] },
+                { "key": "database", "fields": [
+                  { "key": "db.host", "type": "string" },
+                  { "key": "db.name", "type": "string" }
+                ] }
+              ]
+            }
+            """.trimIndent()
+        )
+
+        assertEquals("main", gathered!!.datasourceOf("main")?.name)
+    }
+
+    @Test
+    fun `a group describes at most one datasource`() {
+        // The other half of the same rule: a group is one form, and a form offers the one
+        // connection test it has room for, so a second connection drawn beside the first
+        // would be the one an administrator cannot ask about
+        val error = assertFailsWith<IllegalArgumentException> {
+            PluginConfigSchemaUtil.parse(
+                """
+                {
+                  "datasources": [
+                    { "name": "main", "dbType": "MYSQL", "host": "db.host", "database": "db.name" },
+                    { "name": "archive", "dbType": "MYSQL", "host": "old.host", "database": "old.name" }
+                  ],
+                  "groups": [
+                    { "key": "db", "fields": [
+                      { "key": "db.host", "type": "string" },
+                      { "key": "db.name", "type": "string" },
+                      { "key": "old.host", "type": "string" },
+                      { "key": "old.name", "type": "string" }
+                    ] }
+                  ]
+                }
+                """.trimIndent()
+            )
+        }
+
+        assertTrue(
+            error.message!!.contains("main") && error.message!!.contains("db"),
+            "the refusal should name the group and what already has it: ${error.message}"
+        )
+
+        // Two connections described by two groups are what the rule asks for
+        val split = PluginConfigSchemaUtil.parse(
+            """
+            {
+              "datasources": [
+                { "name": "main", "dbType": "MYSQL", "host": "db.host", "database": "db.name" },
+                { "name": "archive", "dbType": "MYSQL", "host": "old.host", "database": "old.name" }
+              ],
+              "groups": [
+                { "key": "db", "fields": [
+                  { "key": "db.host", "type": "string" },
+                  { "key": "db.name", "type": "string" }
+                ] },
+                { "key": "archive", "fields": [
+                  { "key": "old.host", "type": "string" },
+                  { "key": "old.name", "type": "string" }
+                ] }
+              ]
+            }
+            """.trimIndent()
+        )
+
+        assertEquals(2, split!!.datasources.size)
+    }
+
+    @Test
     fun `a password slot cannot point at a required field`() {
         // A required field refuses a blank submission, so the stored password could never be
         // cleared - which is the whole reason the password is an ordinary secret field

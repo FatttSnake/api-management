@@ -14,6 +14,11 @@ import top.fatweb.apimanagement.vo.api.ApiPluginConfigOptionVo
  * The declared values are folded into the declaration, so what the administrator's
  * console renders is one payload rather than a schema joined against a list of values.
  *
+ * A group also names the datasource it describes, which is what says where a console can
+ * offer a connection test. A datasource is composed from fields the gateway holds to one
+ * group, and a group to one connection, so the two are found in each other whole or not at
+ * all; one naming no slot - a SQLITE datasource - is described by no group.
+ *
  * What `value` holds depends on the field, because whether an unset field reads as its
  * declared default depends on the type. Every type but a number reports the default as its
  * value, none of them having a blank appearance to render: a text field, where a blank
@@ -37,6 +42,16 @@ fun PluginConfigSchema.toGroupVo(
     unreadable: Set<String> = emptySet()
 ): List<ApiPluginConfigGroupVo> =
     groups.map { group ->
+        val groupKeys = group.fields.map { it.key }.toSet()
+
+        // A datasource belongs to the group every one of its slots is a field of, and to
+        // only that one: the gateway refuses a declaration whose slots are spread over
+        // several groups and a group that would describe two, so this finds one whole or
+        // not at all - and the empty slot map of a SQLITE datasource matches nothing
+        val described = datasources
+            .firstOrNull { it.slots.isNotEmpty() && it.slots.values.all { key -> key in groupKeys } }
+            ?.name
+
         ApiPluginConfigGroupVo(
             key = group.key,
             title = group.title,
@@ -87,7 +102,8 @@ fun PluginConfigSchema.toGroupVo(
                     pattern = field.pattern,
                     options = field.options.orEmpty().map { ApiPluginConfigOptionVo(it.value, it.label) }
                 )
-            }
+            },
+            datasource = described
         )
     }
 
