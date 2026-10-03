@@ -10,6 +10,7 @@ import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.aop.support.AopUtils
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.config.BeanDefinitionCustomizer
 import org.springframework.boot.ApplicationArguments
 import org.springframework.boot.ApplicationRunner
@@ -70,6 +71,7 @@ import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executor
 import java.util.function.Supplier
 import java.util.jar.JarFile
 import javax.sql.DataSource
@@ -114,6 +116,7 @@ import io.swagger.v3.oas.annotations.Operation as SwaggerOperation
 @DS("master")
 class ApiPluginServiceImpl(
     private val objectMapper: JsonMapper,
+    @param:Qualifier("pluginRemountExecutor") private val remountExecutor: Executor,
     private val applicationContext: ApplicationContext,
     @Lazy private val requestMappingHandlerMapping: RequestMappingHandlerMapping,
     private val serverProperties: ServerProperties,
@@ -229,6 +232,17 @@ class ApiPluginServiceImpl(
      * one coarse lock costs nothing worth measuring.
      */
     private val mountLock = Any()
+
+    /**
+     * Plugin IDs with a remount owed to a committed configuration change
+     *
+     * An ID being here means one is already queued or running, which is what collapses a burst
+     * of saves of one plugin into the single remount that reads the newest committed values
+     * anyway. An ID is removed before its remount runs rather than after, so a change that
+     * lands while that remount is in flight adds it back and gets its own pass.
+     */
+    private val pendingRemounts: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
     private val pluginIdMap = ConcurrentHashMap<String, ApiPlugin>()
     private val pluginRuntimes = ConcurrentHashMap<String, PluginRuntime>()
     private val interfaceCodeMap = ConcurrentHashMap<String, ApiInterface>()
@@ -388,7 +402,7 @@ class ApiPluginServiceImpl(
         }
 
         if (datasourceChanged) {
-            onCommitted { remountQuietly(pluginId) }
+            onCommitted { scheduleRemount(pluginId) }
         }
     }
 
@@ -569,6 +583,11 @@ class ApiPluginServiceImpl(
      * `load_error`. Both have to happen outside the transaction: inside it the remount would
      * hold a database connection for as long as it takes, and the failure it wrote would be
      * rolled back together with the values it was reacting to.
+     *
+     * `afterCommit` runs on the thread that committed, which is the request thread, so what it
+     * is given has to be a hand-off rather than the work itself - see [scheduleRemount]. It
+     * also still has that transaction's connection bound to it, which is worth leaving: a
+     * write made here would ride a connection whose transaction is already over.
      */
     private fun onCommitted(action: () -> Unit) {
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
@@ -601,33 +620,88 @@ class ApiPluginServiceImpl(
     }
 
     /**
+     * Queue a remount of a plugin whose configuration just committed
+     *
+     * Runs from a transaction's afterCommit, so it must neither block nor throw: it records
+     * the plugin and hands the work to [remountExecutor]. The save request is answered as
+     * soon as this returns, which is what keeps a datasource that cannot be connected to from
+     * holding the request open - the remount is where that shows up, and it shows up in
+     * `load_error` rather than in the response.
+     *
+     * Recording rather than submitting directly is what makes a burst of saves of one plugin
+     * cost one remount: a remount re-reads the values it applies, so an ID already owed a
+     * remount needs no second task - it is the same newest state either way.
+     *
+     * @param pluginId Plugin ID
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    private fun scheduleRemount(pluginId: String) {
+        pendingRemounts.add(pluginId)
+        remountExecutor.execute(::drainRemounts)
+    }
+
+    /**
+     * Remount every plugin currently owed one
+     *
+     * A weakly consistent walk of the pending set: a plugin added while this runs is either
+     * seen here or picked up by the drain its own submit queued, so no change is lost. Each
+     * plugin is remounted on its own, so one failure does not stop the others.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    private fun drainRemounts() {
+        val iterator = pendingRemounts.iterator()
+        while (iterator.hasNext()) {
+            val pluginId = iterator.next()
+            iterator.remove()
+
+            remountQuietly(pluginId)
+        }
+    }
+
+    /**
      * Remount a plugin whose configuration changed
      *
-     * Runs after the configuration has been committed, so it holds no transaction and
-     * cannot roll the administrator's values back: a remount that fails because of them
-     * leaves the values stored and the reason in `load_error`, which is where the
-     * administrator can see it and correct it. Rolling the values back instead would
-     * discard the very thing that has to be edited to fix the problem.
+     * Runs after the configuration has been committed, and on [remountExecutor] rather than on
+     * the thread that committed it, so it holds no transaction and cannot roll the
+     * administrator's values back: a remount that fails because of them leaves the values
+     * stored and the reason in `load_error`, which is where the administrator can see it and
+     * correct it. Rolling the values back instead would discard the very thing that has to be
+     * edited to fix the problem.
      *
      * A plugin whose code the gateway does not own - a built-in one - has no jar to
      * remount from; its configuration reaches it when the gateway next starts.
+     *
+     * Nothing here runs on a request thread, so a plugin's lifecycle hooks see no request
+     * identity: `PluginContext.currentUserId` and `currentAccessKeyId` read the security
+     * context, which is thread-bound and absent here. A hook that has to know who saved the
+     * configuration cannot ask for it this way. Calls the plugin serves are unaffected - those
+     * run on their own request's thread, with that caller's identity.
+     *
+     * @param pluginId Plugin ID
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     private fun remountQuietly(pluginId: String) {
-        val plugin = getByPluginIdOrQuery(pluginId) ?: return
-        if (plugin.source != "UPLOADED") {
-            logger.debug(
-                "Remount after a configuration change skipped for plugin '{}': its source is '{}'",
-                pluginId,
-                plugin.source
-            )
+        runCatching {
+            val plugin = getByPluginIdOrQuery(pluginId) ?: return
+            if (plugin.source != "UPLOADED") {
+                logger.debug(
+                    "Remount after a configuration change skipped for plugin '{}': its source is '{}'",
+                    pluginId,
+                    plugin.source
+                )
 
-            return
-        }
-
-        synchronized(mountLock) {
-            runCatching { remount(pluginId) }.onFailure {
-                logger.warn("Failed to remount plugin '{}' after a configuration change: {}", pluginId, it.message)
+                return
             }
+
+            // Read outside the lock because it can throw and is cheap; remount re-reads under
+            // it, so an uninstall racing this resolves to "plugin not found" and is caught
+            synchronized(mountLock) { remount(pluginId) }
+        }.onFailure {
+            logger.warn("Failed to remount plugin '{}' after a configuration change: {}", pluginId, it.message)
         }
     }
 

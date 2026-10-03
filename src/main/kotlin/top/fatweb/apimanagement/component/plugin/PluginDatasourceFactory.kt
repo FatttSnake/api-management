@@ -47,6 +47,27 @@ class PluginDatasourceFactory(
          * Same limit in milliseconds, which is the form the driver takes it in
          */
         private const val CONNECT_TIMEOUT_MILLIS = CONNECT_TIMEOUT_SECONDS * 1000
+
+        /**
+         * How long a borrow of a plugin datasource may wait for a connection
+         *
+         * Hikari's own default is 30 s, which is as long as an administration request is
+         * willing to wait for anything - a server that cannot be reached would be reported as
+         * the request timing out rather than as itself. Kept above
+         * [POOL_CONNECT_TIMEOUT_MILLIS] and above Hikari's 5 s validation timeout, so that one
+         * driver attempt is what decides the answer.
+         */
+        private const val POOL_CONNECTION_TIMEOUT_MILLIS = 10_000L
+
+        /**
+         * How long one physical attempt at a connection may take
+         *
+         * The MySQL driver's own default is 0, which is "wait forever": against a host that
+         * drops packets the connect never returns, and the thread making it is held for as long
+         * as the operating system allows. Applied as a default only - a server behind a slow
+         * link is the administrator's to describe, and they describe it by setting this.
+         */
+        private const val POOL_CONNECT_TIMEOUT_MILLIS = 5_000
     }
 
     /**
@@ -205,9 +226,10 @@ class PluginDatasourceFactory(
     /**
      * Build one connection pool
      *
-     * Built explicitly rather than through `DataSourceBuilder`, because two of the settings
-     * below are the point: how many connections a plugin may hold open, and that building a
-     * pool must not require the server to be up.
+     * Built explicitly rather than through `DataSourceBuilder`, because the settings below are
+     * the point: how many connections a plugin may hold open, that building a pool must not
+     * require the server to be up, and that a server which is not up must be reported in
+     * seconds rather than outlast the request that asked for it.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -233,15 +255,50 @@ class PluginDatasourceFactory(
         // Driver properties rather than URL parameters: what a server needs beyond its
         // defaults is a property of the connection, and a property cannot rewrite the URL
         // it belongs to
-        config.dataSourceProperties = params
+        config.dataSourceProperties = driverParams(driver, params)
         config.poolName = "plugin-$pluginId-$name"
         config.maximumPoolSize = serverProperties.storage.pluginDatasourcePoolSize
         config.minimumIdle = 0
         // Mounting happens whether or not the database is reachable right now: a server that
         // is down, or a firewall that is not open yet, must not make a plugin disappear
         config.initializationFailTimeout = -1
+        // ...but a caller that does wait for a connection must not wait longer than whatever
+        // asked it to. Hikari's 30 s default outlasts an administration request, which is how
+        // a typo in a host becomes a request that times out with nothing said about why
+        config.connectionTimeout = POOL_CONNECTION_TIMEOUT_MILLIS
 
         return HikariDataSource(config)
+    }
+
+    /**
+     * Add a bound to how long one connect attempt may take
+     *
+     * Only a default, and only for MySQL: a property the administrator named is kept, because a
+     * server behind a slow link is theirs to describe. The driver's own default is 0, which is
+     * no bound at all, so without this a host that never answers holds a pool thread for as
+     * long as the operating system allows.
+     *
+     * The comparison is case-insensitive because the driver looks its properties up that way,
+     * and a `connectTimeout` set with different capitalisation is still one that was set.
+     *
+     * @param driver Driver class name
+     * @param params Validated driver properties
+     * @return Properties to hand the driver
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see Properties
+     */
+    private fun driverParams(driver: String, params: Properties): Properties {
+        val merged = Properties()
+        merged.putAll(params)
+
+        if (driver == PluginDatasourceUtil.MYSQL_DRIVER &&
+            merged.stringPropertyNames().none { it.equals("connectTimeout", ignoreCase = true) }
+        ) {
+            merged["connectTimeout"] = POOL_CONNECT_TIMEOUT_MILLIS.toString()
+        }
+
+        return merged
     }
 
     /**
