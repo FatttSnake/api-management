@@ -330,11 +330,17 @@ enum class PluginDatasourceSlot {
 enum class PluginDatasourceType {
     /**
      * External MySQL server, described by the administrator's settings
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     MYSQL,
 
     /**
      * Local SQLite file, derived and supplied by the gateway
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     SQLITE;
 

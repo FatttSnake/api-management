@@ -72,6 +72,9 @@ class PluginDatasourceFactory(
 
     /**
      * Directory the gateway keeps the databases of SQLite datasources in
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     private val datasourceDir: String get() = serverProperties.storage.pluginDatasourceDir
 

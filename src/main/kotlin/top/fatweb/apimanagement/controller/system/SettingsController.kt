@@ -229,7 +229,7 @@ class SettingsController(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      * @see ResponseResult
-     * @see top.fatweb.apimanagement.vo.api.ApiSettingsVo
+     * @see ApiSettingsVo
      */
     @Operation(summary = "获取 API 平台设置")
     @GetMapping("/api")

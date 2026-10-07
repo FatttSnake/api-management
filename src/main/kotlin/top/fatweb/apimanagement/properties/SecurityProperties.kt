@@ -104,6 +104,9 @@ data class SecurityProperties(
 
     /**
      * Prefix of secret key
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     @field:NotBlank val secretKeyPrefix: String = "Basic "
 )

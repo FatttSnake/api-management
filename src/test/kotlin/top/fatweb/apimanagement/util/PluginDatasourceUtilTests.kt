@@ -251,6 +251,10 @@ class PluginDatasourceUtilTests {
 
     /**
      * Resolve a MySQL datasource declaring every slot, from the values given
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ResolvedDatasource.Mysql
      */
     private fun mysql(
         host: String? = "10.0.0.240",
@@ -274,6 +278,10 @@ class PluginDatasourceUtilTests {
 
     /**
      * Declaration naming every slot of a MySQL datasource
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see PluginDatasourceSchema
      */
     private fun mysqlSchema() = PluginDatasourceSchema(
         name = "main",

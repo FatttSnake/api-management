@@ -16,12 +16,18 @@ import io.swagger.v3.oas.annotations.media.Schema
 data class ApiGroupVo(
     /**
      * Plugin ID
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     @Schema(description = "所属插件 ID", example = "echo")
     val pluginId: String?,
 
     /**
      * Plugin display name
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     @Schema(description = "插件名称", example = "Echo 插件")
     val pluginName: String?,
@@ -37,6 +43,10 @@ data class ApiGroupVo(
 
     /**
      * Interfaces belonging to the plugin
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiInterfaceVo
      */
     @Schema(description = "该插件下的接口列表")
     val interfaces: List<ApiInterfaceVo>

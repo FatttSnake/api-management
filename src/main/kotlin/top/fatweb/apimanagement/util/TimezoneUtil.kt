@@ -18,6 +18,9 @@ object TimezoneUtil {
     /**
      * Header carrying the time zone offset of the client in minutes, keep in sync with the allowed
      * headers of the CORS configuration
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     const val TIMEZONE_OFFSET_HEADER = "X-Timezone-Offset"
 

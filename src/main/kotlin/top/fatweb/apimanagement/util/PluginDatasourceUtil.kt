@@ -53,12 +53,19 @@ object PluginDatasourceUtil {
 
     /**
      * Highest TCP port
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     private const val MAX_PORT = 65535
 
     /**
      * Accepted host in the shapes a server is named in: a name or an IPv4 address,
      * and nothing that could rewrite the authority it is composed into
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see Regex
      */
     private val HOST_REGEX = Regex("^[A-Za-z0-9][A-Za-z0-9.-]*$")
 
@@ -67,12 +74,20 @@ object PluginDatasourceUtil {
      *
      * The charset alone would admit nonsense, so a match is confirmed by resolving it -
      * which never reaches the network for a literal containing a colon.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see Regex
      */
     private val IPV6_REGEX = Regex("^[0-9A-Fa-f:.]+(%[A-Za-z0-9]+)?$")
 
     /**
      * Accepted database name: what MySQL itself allows, minus anything that could end
      * the path segment it is composed into
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see Regex
      */
     private val DATABASE_REGEX = Regex("^[A-Za-z0-9_$-]+$")
 
@@ -81,6 +96,9 @@ object PluginDatasourceUtil {
      *
      * The value may itself contain `=`, which MySQL properties such as
      * `sessionVariables` rely on, but nothing that could end the pair.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     private val PARAMS_REGEX = Regex("^[A-Za-z0-9_.-]+=[^&\\s]*(&[A-Za-z0-9_.-]+=[^&\\s]*)*$")
 
@@ -89,6 +107,9 @@ object PluginDatasourceUtil {
      *
      * The value is stored in `t_b_api_plugin_setting.setting_value`, which is a `text`
      * column; the limit is here so a form cannot hand the driver something absurd.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     private const val MAX_PARAMS_LENGTH = 500
 

@@ -37,11 +37,17 @@ import java.util.jar.JarOutputStream
 object PluginSigner {
     /**
      * Jar entry path of the signature
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     const val SIGNATURE_ENTRY = "META-INF/plugin.sig"
 
     /**
      * Jar entry path of the public key
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     const val PUBLIC_KEY_ENTRY = "META-INF/plugin.pub.pem"
 

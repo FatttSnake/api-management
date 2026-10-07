@@ -349,6 +349,9 @@ class PluginConfigSchemaUtilTests {
      * Submit values to one group, in the shape the API takes them
      *
      * A null value is a key that was left out of the request.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     private fun submit(groupKey: String, vararg values: Pair<String, String?>) =
         mapOf(groupKey to values.toMap())
@@ -649,6 +652,10 @@ class PluginConfigSchemaUtilTests {
 
     /**
      * Parse a `datasources` array against a group declaring every slot's field
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see PluginConfigSchema
      */
     private fun parseDatasources(datasources: String) =
         PluginConfigSchemaUtil.parse(

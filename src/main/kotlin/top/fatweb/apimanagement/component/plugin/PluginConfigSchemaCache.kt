@@ -32,6 +32,10 @@ class PluginConfigSchemaCache {
      * A map that is swapped whole, so a reader holds either the set before a refresh or the
      * set after it and never a mixture of the two. A plugin whose schema is absent declares
      * nothing - which is a real state, and the reason a refresh may not be visible as one.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see PluginConfigSchema
      */
     @Volatile
     private var schemas: Map<String, PluginConfigSchema> = emptyMap()

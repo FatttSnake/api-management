@@ -237,6 +237,9 @@ class ApiPluginServiceImpl(
      * registered with no runtime left to unregister them - making every request to that
      * plugin's paths fail as ambiguous. Mounting is a rare administrator operation, so
      * one coarse lock costs nothing worth measuring.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     private val mountLock = Any()
 
@@ -247,6 +250,9 @@ class ApiPluginServiceImpl(
      * of saves of one plugin into the single remount that reads the newest committed values
      * anyway. An ID is removed before its remount runs rather than after, so a change that
      * lands while that remount is in flight adds it back and gets its own pass.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     private val pendingRemounts: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
@@ -257,6 +263,9 @@ class ApiPluginServiceImpl(
      *
      * Set before anything is torn down, so a configuration change committed on the way out
      * cannot queue a remount that lands after the plugin it would mount has been closed.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     @Volatile
     private var shuttingDown = false
@@ -650,6 +659,9 @@ class ApiPluginServiceImpl(
      * is given has to be a hand-off rather than the work itself - see [scheduleRemount]. It
      * also still has that transaction's connection bound to it, which is worth leaving: a
      * write made here would ride a connection whose transaction is already over.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     private fun onCommitted(action: () -> Unit) {
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
@@ -924,6 +936,9 @@ class ApiPluginServiceImpl(
     /**
      * Re-mount every uploaded plugin from the blob store at startup. A failing
      * plugin is skipped and its error recorded; it never blocks gateway startup.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     private fun loadUploadedPlugins() {
         val plugins = list(KtQueryWrapper(ApiPlugin()).eq(ApiPlugin::source, "UPLOADED"))

@@ -72,6 +72,9 @@ class S3FileStorageProvider(
     /**
      * Region embedded in presigned URLs. SigV4 requires a real signing region, so the
      * 'auto' that object stores such as MinIO accept cannot be used verbatim.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     private val presignRegion: String = run {
         s3Properties.signingRegion?.trim()?.takeIf { it.isNotEmpty() } ?: run {
@@ -97,6 +100,10 @@ class S3FileStorageProvider(
      * client's endpoint and region, and the client's `forcePathStyle` is not carried
      * over at all - the presigner rewrites a path-style key into a virtual-hosted
      * subdomain unless told otherwise.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see S3Presigner
      */
     private val presigner: S3Presigner by lazy {
         S3Presigner

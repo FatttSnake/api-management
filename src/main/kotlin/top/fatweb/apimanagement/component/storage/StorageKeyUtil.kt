@@ -20,21 +20,36 @@ import top.fatweb.apimanagement.sdk.plugin.PluginDescriptor
 object StorageKeyUtil {
     /**
      * Content key pattern: one lowercase SHA-256 hex digest
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see Regex
      */
     val CONTENT_KEY_REGEX = Regex("^[0-9a-f]{64}$")
 
     /**
      * Path segment pattern: URL-safe, no separator, no traversal, no Windows special
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see Regex
      */
     private val SEGMENT_REGEX = Regex("^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
     /**
      * Names Windows reserves as devices whatever the extension
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see Regex
      */
     private val WINDOWS_RESERVED_REGEX = Regex("^(?i:con|prn|aux|nul|com[1-9]|lpt[1-9])(\\..*)?$")
 
     /**
      * Prefix every plugin file lives under, inside the location-addressed root
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
      */
     private const val PLUGIN_DATA_DIR = "plugin-data"
 
