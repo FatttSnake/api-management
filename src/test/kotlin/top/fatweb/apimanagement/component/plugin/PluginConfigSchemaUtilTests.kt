@@ -19,7 +19,6 @@ class PluginConfigSchemaUtilTests {
     private val schema = PluginConfigSchemaUtil.parse(
         """
         {
-          "version": 1,
           "datasources": [ { "name": "cache", "dbType": "sqlite", "required": true } ],
           "groups": [
             {
@@ -42,7 +41,6 @@ class PluginConfigSchemaUtilTests {
 
     @Test
     fun `a declared schema is readable`() {
-        assertEquals(1, schema.version)
         assertEquals("cache", schema.datasources.single().name)
         assertEquals(true, schema.datasources.single().required)
         assertEquals(PluginDatasourceType.SQLITE, schema.datasources.single().dbType)

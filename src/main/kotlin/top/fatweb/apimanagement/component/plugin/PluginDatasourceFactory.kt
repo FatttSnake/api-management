@@ -3,9 +3,9 @@ package top.fatweb.apimanagement.component.plugin
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.springframework.stereotype.Component
-import top.fatweb.apimanagement.component.storage.StorageKeyUtil
 import top.fatweb.apimanagement.exception.PluginDatasourceException
 import top.fatweb.apimanagement.properties.ServerProperties
+import top.fatweb.apimanagement.sdk.plugin.PluginDescriptor
 import top.fatweb.apimanagement.util.PluginDatasourceUtil
 import top.fatweb.apimanagement.util.ResolvedDatasource
 import java.nio.file.Files
@@ -175,7 +175,7 @@ class PluginDatasourceFactory(
      * @since 1.0.0
      */
     fun removeData(pluginId: String) {
-        require(StorageKeyUtil.PLUGIN_ID_REGEX.matches(pluginId)) { "Invalid plugin ID: '$pluginId'" }
+        require(PluginDescriptor.PLUGIN_ID_REGEX.matches(pluginId)) { "Invalid plugin ID: '$pluginId'" }
 
         val directory = Path.of(datasourceDir, pluginId)
         if (!Files.exists(directory)) {

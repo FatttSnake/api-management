@@ -64,8 +64,6 @@ class StatisticsServiceImpl(
         javaVersion = systemProperties.getProperty("java.version"),
         javaVersionDate = systemProperties.getProperty("java.version.date"),
         javaVendor = systemProperties.getProperty("java.vendor"),
-        javaRuntime = systemProperties.getProperty("java.runtime.name"),
-        javaRuntimeVersion = systemProperties.getProperty("java.runtime.version"),
         jvm = systemProperties.getProperty("java.vm.name"),
         jvmVersion = systemProperties.getProperty("java.vm.version"),
         jvmInfo = systemProperties.getProperty("java.vm.info"),

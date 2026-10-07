@@ -42,8 +42,8 @@ interface PluginContext {
      *
      * Each datasource is built while mounting, and saving a change to a datasource's
      * configuration remounts the plugin on its own, so a plugin only has to expect its
-     * `onStop`, `onInstall` and `onStart` to run again - any state it holds in memory is
-     * lost with them. See [PluginLifecycle] for what a mount and an unmount really mean.
+     * `onStart` and `onStop` to run again - any state it holds in memory is lost with them.
+     * See [PluginLifecycle] for what a mount and an unmount really mean.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0

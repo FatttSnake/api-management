@@ -22,14 +22,6 @@ import java.math.BigDecimal
  */
 data class PluginConfigSchema(
     /**
-     * Schema format version declared by the plugin
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    val version: Int,
-
-    /**
      * Datasource declarations in declaration order; empty when the plugin uses no
      * database of its own
      *
@@ -63,14 +55,6 @@ data class PluginConfigSchema(
 
     private val datasourcesByName: Map<String, PluginDatasourceSchema> =
         datasources.associateBy { it.name }
-
-    /**
-     * Every declared config key
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    val keys: Set<String> get() = fieldsByKey.keys
 
     /**
      * Every config key that holds a connection slot of some datasource

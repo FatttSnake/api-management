@@ -236,15 +236,10 @@ data class PluginRuntime(
     val pluginContext: PluginContext,
 
     /**
-     * Controller bean instances
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    val controllerBeans: List<Any>,
-
-    /**
      * Mounted endpoints
+     *
+     * The controllers themselves are reached through these, which is why the runtime holds no
+     * second reference to them.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -262,14 +257,6 @@ data class PluginRuntime(
     val tempJarPath: Path,
 
     /**
-     * SHA-256 of the jar content
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    val fileHash: String,
-
-    /**
      * Datasources supplied to the plugin, by declared name
      *
      * Held on the runtime rather than reached through the plugin-facing context: an
@@ -281,14 +268,6 @@ data class PluginRuntime(
      * @see DataSource
      */
     val datasources: Map<String, DataSource>,
-
-    /**
-     * Signer public key fingerprint
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    val signerKeyId: String,
 
     /**
      * Plugin lifecycle implementation, or null

@@ -66,26 +66,6 @@ data class SoftwareInfoVo(
     val javaVendor: String,
 
     /**
-     * Name of Java runtime
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    @Deprecated("Will be removed in the next minor version")
-    @field:Schema(description = "Java 运行时")
-    val javaRuntime: String,
-
-    /**
-     * Version of Java runtime
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    @Deprecated("Will be removed in the next minor version")
-    @field:Schema(description = "Java 运行时版本")
-    val javaRuntimeVersion: String,
-
-    /**
      * Name of Java virtual machine
      *
      * @author FatttSnake, fatttsnake@gmail.com

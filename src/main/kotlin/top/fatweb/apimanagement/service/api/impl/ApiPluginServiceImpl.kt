@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.kotlin.KtQueryWrapper
 import com.baomidou.mybatisplus.extension.kotlin.KtUpdateWrapper
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl
+import jakarta.annotation.PreDestroy
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.aop.support.AopUtils
@@ -22,6 +23,7 @@ import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.env.StandardEnvironment
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
 import org.springframework.core.type.filter.AnnotationTypeFilter
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
 import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -71,7 +73,6 @@ import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executor
 import java.util.function.Supplier
 import java.util.jar.JarFile
 import javax.sql.DataSource
@@ -90,6 +91,7 @@ import io.swagger.v3.oas.annotations.Operation as SwaggerOperation
  * @since 1.0.0
  * @see JsonMapper
  * @see ApplicationContext
+ * @see ThreadPoolTaskExecutor
  * @see RequestMappingHandlerMapping
  * @see ServerProperties
  * @see FileStorageProvider
@@ -104,6 +106,7 @@ import io.swagger.v3.oas.annotations.Operation as SwaggerOperation
  * @see IApiAccountService
  * @see PluginDatasourceFactory
  * @see PluginStorageFactory
+ * @see PluginRegistryCache
  * @see PluginConfigSchemaCache
  * @see PluginSettingReader
  * @see ServiceImpl
@@ -116,7 +119,7 @@ import io.swagger.v3.oas.annotations.Operation as SwaggerOperation
 @DS("master")
 class ApiPluginServiceImpl(
     private val objectMapper: JsonMapper,
-    @param:Qualifier("pluginRemountExecutor") private val remountExecutor: Executor,
+    @param:Qualifier("pluginRemountExecutor") private val remountExecutor: ThreadPoolTaskExecutor,
     private val applicationContext: ApplicationContext,
     @Lazy private val requestMappingHandlerMapping: RequestMappingHandlerMapping,
     private val serverProperties: ServerProperties,
@@ -132,7 +135,9 @@ class ApiPluginServiceImpl(
     @Lazy private val apiAccountService: IApiAccountService,
     private val pluginDatasourceFactory: PluginDatasourceFactory,
     private val pluginStorageFactory: PluginStorageFactory,
+    private val pluginRegistryCache: PluginRegistryCache,
     private val pluginConfigSchemaCache: PluginConfigSchemaCache,
+    private val pluginInFlightTracker: PluginInFlightTracker,
     private val pluginSettingReader: PluginSettingReader
 ) : ServiceImpl<ApiPluginMapper, ApiPlugin>(), IApiPluginService,
     ApplicationRunner {
@@ -178,17 +183,19 @@ class ApiPluginServiceImpl(
         private const val POWER_TYPE_OPERATION = 4
 
         /**
-         * Plugin ID format: lowercase letter, then lowercase letters / digits / hyphens
-         *
-         * @author FatttSnake, fatttsnake@gmail.com
-         * @since 1.0.0
-         */
-        private val PLUGIN_ID_REGEX = Regex("^[a-z][a-z0-9-]*$")
-
-        /**
          * Maximum accepted plugin jar size (50 MB)
          */
         private const val MAX_JAR_SIZE = 50L * 1024 * 1024
+
+        /**
+         * How long an unmount waits for the plugin's in-flight requests to finish
+         *
+         * Bounds the administrator's request that triggered the unmount: a plugin whose request
+         * will not return (a hung external call, a lock) must not hold an install, an uninstall
+         * or a configuration save open forever. What it costs when it expires is that the
+         * plugin's resources are closed under a request that is still running.
+         */
+        private const val IN_FLIGHT_DRAIN_TIMEOUT_MILLIS = 10_000L
 
         /**
          * Jar entry path of the plugin descriptor
@@ -243,9 +250,16 @@ class ApiPluginServiceImpl(
      */
     private val pendingRemounts: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
-    private val pluginIdMap = ConcurrentHashMap<String, ApiPlugin>()
     private val pluginRuntimes = ConcurrentHashMap<String, PluginRuntime>()
-    private val interfaceCodeMap = ConcurrentHashMap<String, ApiInterface>()
+
+    /**
+     * Whether the gateway is shutting down
+     *
+     * Set before anything is torn down, so a configuration change committed on the way out
+     * cannot queue a remount that lands after the plugin it would mount has been closed.
+     */
+    @Volatile
+    private var shuttingDown = false
 
     override fun run(args: ApplicationArguments) {
         try {
@@ -259,6 +273,54 @@ class ApiPluginServiceImpl(
             // Populated even when a plugin failed to mount: the administrator still has to
             // see it, and the configuration it declares is what explains the failure
             refreshCache()
+        }
+    }
+
+    /**
+     * Stop every plugin as the gateway stops
+     *
+     * A plugin's mount owns a class loader, a child Spring context and the datasource pools it
+     * opened, none of which the main context knows about - the child contexts are parented to
+     * it but not registered with it, so closing the gateway does not close them. Left alone they
+     * are only reclaimed by the JVM exiting, and the plugin's own `onStop` never runs at all,
+     * which is the hook a plugin that buffers anything is told to flush in.
+     *
+     * Each plugin is stopped on its own, so one that will not come down does not keep the rest
+     * up, and the jars are left in place: they are content-addressed and are re-materialised
+     * from the blob store on the next start.
+     *
+     * Runs after [remountExecutor] has already been stopped, not before: Spring stops its
+     * `SmartLifecycle` beans (which is what a `ThreadPoolTaskExecutor` is) before it runs any
+     * `@PreDestroy`, so the pool is down by the time this is called. What that leaves is a drain
+     * that was still running when the pool stopped: it holds [mountLock], so the loop below
+     * waits for it and unmounts whatever it mounted, and the flag makes sure the drain's own
+     * check under that same lock stops it from mounting anything else.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @PreDestroy
+    fun onShutdown() {
+        shuttingDown = true
+        // Already stopped in the ordinary path, since SmartLifecycle beans go first; kept
+        // because it costs nothing and covers a close that never got as far as stopping it
+        runCatching { remountExecutor.shutdown() }
+
+        val mounted = pluginRuntimes.keys.toList()
+        if (mounted.isEmpty()) {
+            logger.debug("No plugin was mounted at shutdown")
+        } else {
+            logger.info("Stopping {} plugin(s) at shutdown: {}", mounted.size, mounted.joinToString())
+        }
+
+        mounted.forEach { pluginId ->
+            runCatching {
+                pluginRuntimes.remove(pluginId)?.let { runtime ->
+                    synchronized(mountLock) { unmount(runtime, deleteJar = false) }
+                }
+            }.onFailure {
+                logger.warn("Failed to stop plugin '{}' at shutdown: {}", pluginId, it.message)
+            }
         }
     }
 
@@ -564,9 +626,9 @@ class ApiPluginServiceImpl(
         refreshCache()
     }
 
-    override fun getByPluginId(pluginId: String): ApiPlugin? = pluginIdMap[pluginId]
+    override fun getByPluginId(pluginId: String): ApiPlugin? = pluginRegistryCache.getByPluginId(pluginId)
 
-    override fun getByCode(code: String): ApiInterface? = interfaceCodeMap[code]
+    override fun getByCode(code: String): ApiInterface? = pluginRegistryCache.getByCode(code)
 
     override fun listEnabledInterfaces(): List<ApiInterface> =
         apiInterfaceMapper.selectList(KtQueryWrapper(ApiInterface()).eq(ApiInterface::enable, 1))
@@ -637,8 +699,18 @@ class ApiPluginServiceImpl(
      * @since 1.0.0
      */
     private fun scheduleRemount(pluginId: String) {
+        // Nothing is remounted on the way out: the plugin this would mount has just been
+        // unmounted, and a mount that lands after shutdown would leave a class loader, a child
+        // context and a pool behind that nothing is left to close
+        if (shuttingDown) {
+            return
+        }
+
         pendingRemounts.add(pluginId)
-        remountExecutor.execute(::drainRemounts)
+        // This runs inside a transaction's afterCommit, where a rejected submit has nowhere to
+        // be reported, so a closing pool is recorded rather than thrown out of a commit
+        runCatching { remountExecutor.execute(::drainRemounts) }
+            .onFailure { logger.debug("Remount of plugin '{}' skipped: {}", pluginId, it.message) }
     }
 
     /**
@@ -685,6 +757,10 @@ class ApiPluginServiceImpl(
      * @since 1.0.0
      */
     private fun remountQuietly(pluginId: String) {
+        if (shuttingDown) {
+            return
+        }
+
         runCatching {
             val plugin = getByPluginIdOrQuery(pluginId) ?: return
             if (plugin.source != "UPLOADED") {
@@ -699,7 +775,16 @@ class ApiPluginServiceImpl(
 
             // Read outside the lock because it can throw and is cheap; remount re-reads under
             // it, so an uninstall racing this resolves to "plugin not found" and is caught
-            synchronized(mountLock) { remount(pluginId) }
+            synchronized(mountLock) {
+                // Checked again under the lock, and this is the one that matters: a remount
+                // queued before shutdown waits here for the unmount that shutdown is running,
+                // and would otherwise mount a plugin back after everything had been taken down
+                if (shuttingDown) {
+                    return
+                }
+
+                remount(pluginId)
+            }
         }.onFailure {
             logger.warn("Failed to remount plugin '{}' after a configuration change: {}", pluginId, it.message)
         }
@@ -708,7 +793,29 @@ class ApiPluginServiceImpl(
     /**
      * Remount an installed plugin from the jar its row points at
      *
+     * The new mount is built in full while the running one keeps serving, and only then swapped
+     * in, so something wrong with the jar itself - it vanished, it is not a plugin, it no longer
+     * parses - costs nothing but the attempt and leaves the plugin that was serving alone. The
+     * swap is the one part that cannot be made free of a gap: the dispatcher has no way to
+     * replace a mapping atomically, and registering the new one first would make it reject both.
+     *
+     * What the plugin's own `onStart` does is not treated as a reason to refuse the swap. A
+     * reload and a configuration save are both ways of asking for a plugin to come back up on
+     * something new, and a plugin that cannot come up on it has to be *seen* not to: swapping it
+     * out and reporting why in `load_error` is what leaves the administrator something to fix,
+     * whereas declining quietly would leave the plugin serving the configuration it was built
+     * with while the stored configuration said otherwise. A remount and an install therefore
+     * land in exactly the same state when a plugin will not start.
+     *
      * The caller holds [mountLock].
+     *
+     * @param pluginId Plugin ID
+     * @return Installed plugin information
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see prepareMount
+     * @see activateMount
+     * @see ApiPluginVo
      */
     private fun remount(pluginId: String): ApiPluginVo {
         val plugin = getByPluginIdOrQuery(pluginId)
@@ -718,38 +825,33 @@ class ApiPluginServiceImpl(
             ?: throw PluginInstallException("Plugin has no jar file hash and cannot be reloaded")
         val jarName = plugin.jarName ?: "$pluginId.jar"
 
-        return try {
-            // Everything that can fail cheaply is checked while the running plugin is
-            // still serving, so a blob that vanished or a jar that is no longer the
-            // plugin's own never costs availability.
-            val bytes = storageBlobService.loadFile(fileHash)
-                ?: throw PluginInstallException("Plugin jar blob not found for hash $fileHash")
-            val pluginDir = Path.of(serverProperties.storage.pluginDir)
-            Files.createDirectories(pluginDir)
-            val jarPath = pluginDir.resolve("$fileHash.jar")
-            Files.write(jarPath, bytes)
-            val descriptor = readDescriptor(jarPath)
-            if (descriptor.pluginId != pluginId) {
-                throw PluginInstallException(
-                    "Plugin jar blob belongs to '${descriptor.pluginId}', not '$pluginId'"
-                )
-            }
+        // The blob and the jar it materialises are read before anything is built: a blob that
+        // vanished is a failure that costs nothing, and placing the file is what lets the build
+        // below read it
+        val bytes = storageBlobService.loadFile(fileHash)
+            ?: throw PluginInstallException("Plugin jar blob not found for hash $fileHash")
+        val pluginDir = Path.of(serverProperties.storage.pluginDir)
+        Files.createDirectories(pluginDir)
+        val jarPath = pluginDir.resolve("$fileHash.jar")
+        Files.write(jarPath, bytes)
 
-            // The old runtime must be gone before the new mappings are registered: two
-            // live mappings for the same path make the dispatcher reject every request
-            // to that path as ambiguous. Its jar survives because that is the very file
-            // the new mount reads from.
+        // Nothing below this line has touched the running plugin, and this call has to succeed
+        // for it to stay that way: it is the last point at which a failure is free
+        val prepared = prepareMount(
+            jarPath, jarName, persistBlob = false, checkVersion = false, expectedPluginId = pluginId
+        )
+
+        return try {
+            // The old runtime must be gone before the new mappings are registered: two live
+            // mappings for the same path make the dispatcher reject every request to that path
+            // as ambiguous. Its jar survives because that is the very file the new mount read.
             pluginRuntimes.remove(pluginId)?.let { unmount(it, deleteJar = false) }
 
-            doInstall(jarPath, jarName, persistBlob = false, checkVersion = false, preserveRegistration = true)
+            activateMount(prepared, preserveRegistration = true)
         } catch (e: Exception) {
+            // activateMount has already recorded the failure and refreshed the cache, since it
+            // is also the path a failed install takes
             logger.error("Failed to remount plugin '{}': {}", pluginId, e.message, e)
-            // The row survives a failed remount, so from here on it claims to be installed
-            // while no route is registered. load_error is the only channel the gateway
-            // has to publish that, and it reaches the administrator through the plugin
-            // list. setLoadError writes the row alone, so the cache is refreshed here too.
-            setLoadError(pluginId, e.message ?: "Unknown error")
-            refreshCache()
 
             throw e
         }
@@ -757,6 +859,12 @@ class ApiPluginServiceImpl(
 
     /**
      * Tear a plugin down
+     *
+     * What the gateway deletes is only what the gateway keeps: the plugin's settings, the
+     * SQLite databases it created and the files it stored under its own namespace. Data the
+     * plugin put anywhere else - tables in an external MySQL, the content-addressed objects it
+     * saved, anything outside the gateway - is its own to delete, which is what the `onPurge`
+     * hook it is offered before this teardown is for.
      *
      * @param pluginId Plugin ID
      * @param purgeData Whether everything the plugin owns - its settings, its datasource
@@ -768,6 +876,7 @@ class ApiPluginServiceImpl(
      *        reinstall could never pick up where it left off
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
+     * @see PluginLifecycle
      */
     private fun removePlugin(pluginId: String, purgeData: Boolean) {
         val plugin = getOne(KtQueryWrapper(ApiPlugin()).eq(ApiPlugin::pluginId, pluginId)) ?: return
@@ -777,7 +886,7 @@ class ApiPluginServiceImpl(
             KtQueryWrapper(ApiInterface()).eq(ApiInterface::pluginId, pluginId)
         ).mapNotNull { it.code }
 
-        runtime?.let { unmount(it) }
+        runtime?.let { unmount(it, purgeRequested = purgeData) }
 
         updateOrThrowException { removeById(plugin.id) }
         apiInterfaceMapper.delete(KtQueryWrapper(ApiInterface()).eq(ApiInterface::pluginId, pluginId))
@@ -788,10 +897,11 @@ class ApiPluginServiceImpl(
         runtime?.lifecycle?.let { runCatching { it.onUninstall(runtime.pluginContext) } }
 
         // Purged after onUninstall so a plugin flushing state while it tears down still
-        // has a namespace to write into. A failure here is logged rather than raised:
-        // the database rows are already gone, so aborting would only leave a
-        // half-uninstalled plugin behind. Each kind is attempted on its own, so one
-        // failure does not spare the others.
+        // has a namespace to write into, and after the plugin's own onPurge, which ran while
+        // its datasources were still open - see unmount. A failure here is logged rather than
+        // raised: the database rows are already gone, so aborting would only leave a
+        // half-uninstalled plugin behind. Each kind is attempted on its own, so one failure
+        // does not spare the others.
         if (purgeData) {
             runCatching { apiPluginSettingService.deleteByPlugin(pluginId) }.onFailure {
                 logger.warn("Failed to purge the configuration of plugin '{}': {}", pluginId, it.message)
@@ -858,6 +968,8 @@ class ApiPluginServiceImpl(
      * @since 1.0.0
      * @see Path
      * @see ApiPluginVo
+     * @see prepareMount
+     * @see activateMount
      */
     private fun doInstall(
         jarPath: Path,
@@ -865,15 +977,117 @@ class ApiPluginServiceImpl(
         persistBlob: Boolean,
         checkVersion: Boolean,
         preserveRegistration: Boolean = false
-    ): ApiPluginVo {
+    ): ApiPluginVo =
+        activateMount(
+            prepareMount(jarPath, jarName, persistBlob, checkVersion, expectedPluginId = null),
+            preserveRegistration
+        )
+
+    /**
+     * Everything a mount builds before it is allowed to touch the gateway
+     *
+     * The split between building and activating is what keeps a remount from taking a running
+     * plugin down while its replacement is still being prepared: a failure while this is being
+     * built leaves whatever was serving untouched. It is also what lets the plugin's own
+     * `onStart` run before any route of its is registered, so no request can reach a mount that
+     * has not finished coming up.
+     *
+     * The runtime is not a field here because one is created from this on activation, and the
+     * fields that a mount only needs to write its rows with - the file hash and the signer -
+     * stay here rather than moving onto [PluginRuntime], which holds what teardown reads.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see prepareMount
+     * @see activateMount
+     * @see PluginRuntime
+     */
+    private class PreparedMount(
+        val descriptor: PluginDescriptor,
+        val fileHash: String,
+        val signerKeyId: String,
+        val jarName: String,
+        val jarPath: Path,
+        val openapiJson: String?,
+        val configSchemaJson: String?,
+        val classLoader: URLClassLoader,
+        val context: GenericApplicationContext,
+        val endpoints: List<MountedEndpoint>,
+        val datasources: Map<String, DataSource>,
+        val pluginContext: PluginContext,
+        val lifecycle: PluginLifecycle?,
+        val previousEnable: Int?,
+        val savedFileHash: String?,
+        val replacedPluginId: String?,
+
+        /**
+         * Why the plugin's own `onStart` failed, or null when it came up
+         *
+         * Carried as a value rather than thrown, because it is not a failure of the mount: the
+         * plugin is registered either way and the reason goes into `load_error`, whether this
+         * came from an install, a reload or a configuration save.
+         *
+         * @author FatttSnake, fatttsnake@gmail.com
+         * @since 1.0.0
+         * @see PluginLifecycle.onStart
+         */
+        val startupError: Throwable?
+    ) {
+        /**
+         * The runtime record this mount becomes once it is activated
+         *
+         * @return Runtime holding what teardown reads
+         * @author FatttSnake, fatttsnake@gmail.com
+         * @since 1.0.0
+         * @see PluginRuntime
+         */
+        fun toRuntime() = PluginRuntime(
+            pluginId = descriptor.pluginId,
+            classLoader = classLoader,
+            context = context,
+            pluginContext = pluginContext,
+            endpoints = endpoints,
+            tempJarPath = jarPath,
+            datasources = datasources,
+            lifecycle = lifecycle
+        )
+    }
+
+    /**
+     * Build a plugin's mount without activating it
+     *
+     * Verifies the jar, reads its descriptor, scans its controllers, opens the child-first
+     * class loader and the child Spring context, builds its datasources, computes its endpoints
+     * and runs its `onStart` - and changes nothing the gateway serves: no route is registered,
+     * no row is written and no cache is refreshed. Everything built here is closed again if any
+     * step fails, so a failed call leaves no resource behind and no trace on a plugin that was
+     * already running.
+     *
+     * @param jarPath Local path of the signed plugin jar
+     * @param jarName Original jar name
+     * @param persistBlob Whether the jar should be written to the blob store
+     * @param checkVersion Whether the declared version must beat the installed one
+     * @param expectedPluginId Plugin ID the jar must declare, or null to take the jar's own.
+     *        A remount passes the install it is replacing, so a jar that turns out to belong to
+     *        a different plugin is caught while the running one is still serving
+     * @return Built mount, ready to activate
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see PreparedMount
+     * @see activateMount
+     */
+    private fun prepareMount(
+        jarPath: Path,
+        jarName: String,
+        persistBlob: Boolean,
+        checkVersion: Boolean,
+        expectedPluginId: String?
+    ): PreparedMount {
         var mountedLoader: URLClassLoader? = null
         var mountedContext: GenericApplicationContext? = null
         var mountedDatasources = emptyMap<String, DataSource>()
-        var registeredMappings = emptyList<RequestMappingInfo>()
         var savedFileHash: String? = null
-        var runtime: PluginRuntime?
-        var installedPluginId: String? = null
-        var dbRowsCreated = false
+        var publishedSchemaFor: String? = null
         try {
             // ---- 1. signature + trust ----
             val publicKeyPem = PluginSigner.readPublicKey(jarPath)
@@ -893,9 +1107,13 @@ class ApiPluginServiceImpl(
 
             // ---- 2. descriptor + controller scan ----
             val descriptor = readDescriptor(jarPath)
-            installedPluginId = descriptor.pluginId
-            require(PLUGIN_ID_REGEX.matches(descriptor.pluginId)) {
-                "Invalid plugin ID: '${descriptor.pluginId}' (must match $PLUGIN_ID_REGEX)"
+            require(PluginDescriptor.PLUGIN_ID_REGEX.matches(descriptor.pluginId)) {
+                "Invalid plugin ID: '${descriptor.pluginId}' (must match ${PluginDescriptor.PLUGIN_ID_REGEX})"
+            }
+            if (expectedPluginId != null && descriptor.pluginId != expectedPluginId) {
+                throw PluginInstallException(
+                    "Plugin jar blob belongs to '${descriptor.pluginId}', not '$expectedPluginId'"
+                )
             }
             val loader = PluginClassLoaderManager.create(jarPath.toUri().toURL())
             mountedLoader = loader
@@ -910,21 +1128,23 @@ class ApiPluginServiceImpl(
 
             // ---- 3. upgrade rule ----
             val existing = getByPluginIdOrQuery(descriptor.pluginId)
-            // An upgrade removes the row below and has the install rebuild it, so the
-            // administrator's enable flag has to be carried across by hand - see
-            // upsertPluginRow. Reading it before the removal is the whole point: afterwards
-            // there is nothing left to read it from
+            // An upgrade replaces the old registration at activation, so the administrator's
+            // enable flag has to be carried across by hand - see upsertPluginRow. Reading it
+            // here is the whole point: by activation the old row is gone
             val previousEnable = existing?.enable
-            if (checkVersion && existing != null) {
+            val replacedPluginId = if (checkVersion && existing != null) {
                 val currentCode = existing.versionCode ?: 0
                 if (descriptor.versionCode <= currentCode) {
                     throw PluginVersionConflictException(
                         "Version code ${descriptor.versionCode} is not greater than current $currentCode"
                     )
                 }
-                // An upgrade replaces the code, never the plugin's own data: its settings,
-                // its datasource configuration and its stored files all outlive the version
-                removePlugin(descriptor.pluginId, purgeData = false)
+                // Only an upgrade reaches here, and only an upgrade may take an existing
+                // registration down: a remount, a reload and a startup re-hydration all mount
+                // over a plugin whose rows have to survive, and pass checkVersion false
+                descriptor.pluginId
+            } else {
+                null
             }
 
             // ---- 4. persist jar into the blob store ----
@@ -949,32 +1169,10 @@ class ApiPluginServiceImpl(
             mountedContext = childContext
             val controllers = controllerClasses.map { childContext.getBean(it) }
 
-            // ---- 6. register request mappings ----
-            val endpoints = registerMappings(controllers)
-            registeredMappings = endpoints.map { it.info }
+            // ---- 6. endpoints, computed but not registered ----
+            val endpoints = mountEndpoints(controllers)
 
-            // ---- 7. database rows + permission tree ----
-            upsertPluginRow(
-                descriptor, fileHash, jarName, signerKeyId,
-                readJarEntry(jarPath, OPENAPI_ENTRY), configSchemaJson,
-                enable = previousEnable ?: 1
-            )
-            dbRowsCreated = true
-            val pluginMenu = ensureMenu(descriptor.pluginId, descriptor.name, API_ROOT_MENU_ID, API_MODULE_ID)
-            val scopeIds = ConcurrentHashMap<String, Long>()
-            endpoints.forEach { endpoint ->
-                val scopeId = scopeIds.getOrPut("v${endpoint.apiVersion}") {
-                    ensureScope("v${endpoint.apiVersion}", pluginMenu.id!!).id!!
-                }
-                upsertInterface(
-                    descriptor.pluginId, endpoint.code, endpoint.name, endpoint.description,
-                    endpoint.fullPath, endpoint.httpMethod, endpoint.apiVersion
-                )
-                upsertOperation(endpoint.code, endpoint.name, scopeId)
-            }
-            refreshCache()
-
-            // ---- 8. lifecycle + runtime record ----
+            // ---- 7. plugin context + lifecycle ----
             val pluginContext = PluginContextImpl(
                 pluginId = descriptor.pluginId,
                 datasources = datasources,
@@ -986,33 +1184,46 @@ class ApiPluginServiceImpl(
                 interfaceLookup = { getByCode(it) }
             )
             val lifecycle = findLifecycle(childContext, descriptor)
-            runtime = PluginRuntime(
-                pluginId = descriptor.pluginId,
+
+            // Published before the hook runs: the row carrying the schema is only written at
+            // activation, so without this a hook reading a setting would find nothing where the
+            // plugin declared a default. Taken back out if the build fails - see below
+            pluginConfigSchemaCache.put(descriptor.pluginId, configSchema)
+            publishedSchemaFor = descriptor.pluginId
+
+            // The plugin's own startup is caught rather than allowed out: it is where a plugin
+            // reaches its datasources, so it is the step an administrator's misconfigured
+            // connection fails in - and refusing the install over that would leave them nothing
+            // to fix it with, since the row and the config API come from the install itself.
+            // A failure here still means the plugin does not serve: activation registers it
+            // without routes and reports the reason in load_error.
+            val startupError = runCatching { lifecycle?.onStart(pluginContext) }.exceptionOrNull()
+            if (startupError != null) {
+                logger.warn(
+                    "Plugin '{}' was built but did not start: {}", descriptor.pluginId, startupError.message
+                )
+            }
+
+            return PreparedMount(
+                descriptor = descriptor,
+                fileHash = fileHash,
+                signerKeyId = signerKeyId,
+                jarName = jarName,
+                jarPath = jarPath,
+                openapiJson = readJarEntry(jarPath, OPENAPI_ENTRY),
+                configSchemaJson = configSchemaJson,
                 classLoader = loader,
                 context = childContext,
-                pluginContext = pluginContext,
-                controllerBeans = controllers,
                 endpoints = endpoints,
-                tempJarPath = jarPath,
-                fileHash = fileHash,
                 datasources = datasources,
-                signerKeyId = signerKeyId,
-                lifecycle = lifecycle
+                pluginContext = pluginContext,
+                lifecycle = lifecycle,
+                previousEnable = previousEnable,
+                savedFileHash = savedFileHash,
+                replacedPluginId = replacedPluginId,
+                startupError = startupError
             )
-            pluginRuntimes[descriptor.pluginId] = runtime
-            lifecycle?.onInstall(pluginContext)
-            lifecycle?.onStart(pluginContext)
-            // The row alone, and the cache was refreshed before this: a list reads a plugin out
-            // of the cache, so clearing an error without refreshing afterwards would leave a
-            // mounted plugin reported as a failed one until something else happened to refresh
-            clearLoadError(descriptor.pluginId)
-            refreshCache()
-
-            return getByPluginIdOrQuery(descriptor.pluginId)
-                ?.toVo()
-                ?: throw PluginInstallException("Failed to query the installed plugin")
         } catch (e: Exception) {
-            registeredMappings.forEach { runCatching { requestMappingHandlerMapping.unregisterMapping(it) } }
             mountedContext?.let { runCatching { it.close() } }
             // Closed here as well as on unmount: a mount that failed after the pools were
             // built would otherwise leave a pool and its threads behind for good, since no
@@ -1021,13 +1232,135 @@ class ApiPluginServiceImpl(
             mountedLoader?.let { runCatching { it.close() } }
             savedFileHash?.let { runCatching { storageBlobService.removeFile(it) } }
             runCatching { Files.deleteIfExists(jarPath) }
+            // A schema published for a hook that never ran is put back to what the rows say:
+            // they still describe whichever version is actually installed, and a mount that
+            // failed must not leave the plugin reading its settings under a schema that never
+            // took effect
+            publishedSchemaFor?.let { pluginId ->
+                runCatching {
+                    pluginConfigSchemaCache.put(
+                        pluginId,
+                        parseConfigSchemaOrNull(getByPluginIdOrQuery(pluginId)?.configSchema)
+                    )
+                }
+            }
+            throw e
+        }
+    }
+
+    /**
+     * Activate a built mount
+     *
+     * Everything the gateway can see changes here and nowhere else: the plugin's routes are
+     * registered, its rows and permission tree are written, its runtime is recorded and the
+     * caches are refreshed once. It expects [prepareMount] to have validated the plugin, and
+     * closes what that built if any part of this fails, so a failed mount never leaves half of
+     * itself behind.
+     *
+     * A plugin whose own `onStart` failed is registered without being mounted: its rows, its jar
+     * and its configuration are all stored, no route of its is registered, no runtime is
+     * recorded, and the reason goes into `load_error`. That is what leaves an administrator
+     * something to fix - a plugin refused at install would have no row and no config API to
+     * correct the very value that failed, which is the state a misconfigured datasource would
+     * otherwise be stuck in.
+     *
+     * @param prepared Built mount
+     * @param preserveRegistration Whether the plugin's existing registration must survive a
+     *        failure. A remount of an already-installed plugin passes true: its rows existed
+     *        before this call and are still its only record, so the rollback that protects a
+     *        fresh install would instead destroy a healthy plugin
+     * @return Installed plugin information
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see PreparedMount
+     * @see prepareMount
+     * @see ApiPluginVo
+     */
+    private fun activateMount(prepared: PreparedMount, preserveRegistration: Boolean): ApiPluginVo {
+        val pluginId = prepared.descriptor.pluginId
+        var activatedEndpoints = false
+        var dbRowsCreated = false
+        var mountedRuntime: PluginRuntime? = null
+        try {
+            // An upgrade is the one mount that replaces a registration the gateway already
+            // holds, and this is the only point in the whole flow where the old one dies
+            prepared.replacedPluginId?.let { removePlugin(it, purgeData = false) }
+
+            // Registered before the routes, and regardless of whether the plugin came up: the
+            // row is what the config API resolves, so it has to exist for the administrator to
+            // fix what stopped the plugin from starting
+            upsertPluginRow(
+                prepared.descriptor, prepared.fileHash, prepared.jarName, prepared.signerKeyId,
+                prepared.openapiJson, prepared.configSchemaJson,
+                enable = prepared.previousEnable ?: 1
+            )
+            dbRowsCreated = true
+            val pluginMenu = ensureMenu(
+                pluginId, prepared.descriptor.name, API_ROOT_MENU_ID, API_MODULE_ID
+            )
+            val scopeIds = ConcurrentHashMap<String, Long>()
+            prepared.endpoints.forEach { endpoint ->
+                val scopeId = scopeIds.getOrPut("v${endpoint.apiVersion}") {
+                    ensureScope("v${endpoint.apiVersion}", pluginMenu.id!!).id!!
+                }
+                upsertInterface(
+                    pluginId, endpoint.code, endpoint.name, endpoint.description,
+                    endpoint.fullPath, endpoint.httpMethod, endpoint.apiVersion
+                )
+                upsertOperation(endpoint.code, endpoint.name, scopeId)
+            }
+
+            if (prepared.startupError != null) {
+                // Registered but not mounted. What was built is released here rather than by an
+                // unmount, because nothing will ever unmount a plugin that has no runtime - but
+                // the jar is kept in the blob store, which is what a later remount, once the
+                // administrator has fixed what the plugin could not start against, reads
+                closePrepared(prepared)
+                runCatching { Files.deleteIfExists(prepared.jarPath) }
+                setLoadError(pluginId, prepared.startupError.message ?: "Plugin did not start")
+                refreshCache()
+
+                return getByPluginIdOrQuery(pluginId)
+                    ?.toVo()
+                    ?: throw PluginInstallException("Failed to query the installed plugin")
+            }
+
+            activateEndpoints(prepared.endpoints)
+            activatedEndpoints = true
+
+            val runtime = prepared.toRuntime()
+            pluginRuntimes[pluginId] = runtime
+            mountedRuntime = runtime
+            clearLoadError(pluginId)
+            // One refresh, once the rows and the error state are final: the cache is what a
+            // list reads a plugin out of and what the request path admits one through, so it is
+            // published complete rather than in the pieces it was built from
+            refreshCache()
+
+            return getByPluginIdOrQuery(pluginId)
+                ?.toVo()
+                ?: throw PluginInstallException("Failed to query the installed plugin")
+        } catch (e: Exception) {
+            if (activatedEndpoints) {
+                prepared.endpoints.forEach {
+                    runCatching { requestMappingHandlerMapping.unregisterMapping(it.info) }
+                }
+            }
+            runCatching { prepared.context.close() }
+            closeDatasources(prepared.datasources)
+            runCatching { prepared.classLoader.close() }
+            prepared.savedFileHash?.let { runCatching { storageBlobService.removeFile(it) } }
+            runCatching { Files.deleteIfExists(prepared.jarPath) }
+            // Exact removal: the runtime goes in only once the mount is complete, so a bare
+            // remove(pluginId) could also drop a newer runtime that legitimately replaced this
+            // one
+            mountedRuntime?.let { pluginRuntimes.remove(pluginId, it) }
             // Roll back database rows created during the failed install so no orphaned
             // plugin / interface rows remain. A remount must never run this: the rows it
             // would delete are the record of a plugin that existed before the call, and
             // deleting them would turn a failed configuration change into a silent
             // uninstall.
-            val pluginId = installedPluginId
-            if (pluginId != null && dbRowsCreated && !preserveRegistration) {
+            if (dbRowsCreated && !preserveRegistration) {
                 runCatching {
                     val created = getOne(KtQueryWrapper(ApiPlugin()).eq(ApiPlugin::pluginId, pluginId))
                     created?.let { updateOrThrowException { removeById(it.id) } }
@@ -1038,6 +1371,16 @@ class ApiPluginServiceImpl(
                     cleanupPermissionTree(pluginId, codes)
                 }
             }
+            if (preserveRegistration) {
+                // The rows survive a failed remount, so from here on they claim a plugin is
+                // installed while no route serves it. load_error is the only channel the
+                // gateway has to publish that, and it reaches the administrator through the
+                // plugin list
+                setLoadError(pluginId, e.message ?: "Unknown error")
+            }
+            // Refreshed even when nothing was written: a rollback or a load error the cache has
+            // not seen would leave the plugin list describing a state that no longer exists
+            refreshCache()
             throw e
         }
     }
@@ -1045,16 +1388,47 @@ class ApiPluginServiceImpl(
     /**
      * Tear the runtime of a plugin down
      *
+     * Waits for the plugin's in-flight requests first, so the child context, the datasource
+     * pools and the class loader are not closed under code that is still running. The wait is
+     * bounded by [IN_FLIGHT_DRAIN_TIMEOUT_MILLIS]; a request that outlives it is torn down
+     * anyway, because the alternative is an administrator's operation that never returns.
+     *
+     * A request that has not entered yet is refused instead of being waited for, so the wait
+     * covers what was already running and nothing else.
+     *
      * @param runtime Runtime to tear down
      * @param deleteJar Whether the local jar file should be deleted with it. A remount
      *        passes false: the jar is content-addressed and is the very file the new
      *        mount reads from
+     * @param purgeRequested Whether the plugin's own data is being deleted along with it, which
+     *        is what decides whether its `onPurge` hook runs. An upgrade and a remount pass
+     *        false, so a plugin is never asked to destroy data it is about to need again
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      * @see PluginRuntime
+     * @see PluginInFlightTracker
      */
-    private fun unmount(runtime: PluginRuntime, deleteJar: Boolean = true) {
+    private fun unmount(runtime: PluginRuntime, deleteJar: Boolean = true, purgeRequested: Boolean = false) {
+        val pluginId = runtime.pluginId
+
+        // Refusing new requests comes before the routes go, so a request that resolved its
+        // handler a moment ago is turned away cleanly instead of being counted and waited for
+        pluginInFlightTracker.beginDrain(pluginId)
         runtime.endpoints.forEach { runCatching { requestMappingHandlerMapping.unregisterMapping(it.info) } }
+
+        if (!pluginInFlightTracker.awaitDrain(pluginId, IN_FLIGHT_DRAIN_TIMEOUT_MILLIS)) {
+            logger.warn(
+                "Draining plugin '{}' timed out after {} ms; tearing it down with requests still in flight",
+                pluginId, IN_FLIGHT_DRAIN_TIMEOUT_MILLIS
+            )
+        }
+
+        // Purged while everything the plugin holds is still open and nothing is running: an
+        // external database cannot be reached once the pools are closed, and a table dropped
+        // under a request still using it would fail that request rather than the purge
+        if (purgeRequested) {
+            runtime.lifecycle?.let { runCatching { it.onPurge(runtime.pluginContext) } }
+        }
         runtime.lifecycle?.let { runCatching { it.onStop(runtime.pluginContext) } }
         runCatching { runtime.context.close() }
         // Closed after the context, so a lifecycle bean shutting down can still use its
@@ -1063,9 +1437,31 @@ class ApiPluginServiceImpl(
         // close is idempotent, so a second close from another path stays harmless.
         closeDatasources(runtime.datasources)
         runCatching { runtime.classLoader.close() }
+        // Forgotten after the resources, so a straggler that outlived the drain decrements the
+        // state nothing waits on any more rather than the next mount's
+        pluginInFlightTracker.release(pluginId)
         if (deleteJar) {
             runCatching { Files.deleteIfExists(runtime.tempJarPath) }
         }
+    }
+
+    /**
+     * Release everything a built mount holds
+     *
+     * For a mount that is never going to be activated: the child context, the pools and the class
+     * loader are all per-mount, and no runtime is recorded for one that never mounted, so an
+     * unmount will never come along to close them.
+     *
+     * @param prepared Built mount
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see PreparedMount
+     * @see closeDatasources
+     */
+    private fun closePrepared(prepared: PreparedMount) {
+        runCatching { prepared.context.close() }
+        closeDatasources(prepared.datasources)
+        runCatching { prepared.classLoader.close() }
     }
 
     /**
@@ -1141,7 +1537,20 @@ class ApiPluginServiceImpl(
         return ctx
     }
 
-    private fun registerMappings(controllers: List<Any>): List<MountedEndpoint> {
+    /**
+     * Compute the endpoints of a plugin's controllers
+     *
+     * Separate from registering them so a mount can be built - including running the plugin's
+     * own `onStart` - before any of its routes exist for the dispatcher to hand a request to.
+     *
+     * @param controllers Controller bean instances
+     * @return Mounted endpoints, not yet registered
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see MountedEndpoint
+     * @see activateEndpoints
+     */
+    private fun mountEndpoints(controllers: List<Any>): List<MountedEndpoint> {
         val endpoints = mutableListOf<MountedEndpoint>()
         controllers.forEach { controller ->
             val targetClass = AopUtils.getTargetClass(controller)
@@ -1169,7 +1578,6 @@ class ApiPluginServiceImpl(
                     .consumes(*mapping.consumes.toTypedArray())
                     .customCondition(ApiVersionCondition(annotation.plugin, annotation.version))
                     .build()
-                requestMappingHandlerMapping.registerMapping(info, controller, method)
 
                 endpoints += MountedEndpoint(
                     controller = controller,
@@ -1185,6 +1593,21 @@ class ApiPluginServiceImpl(
             }
         }
         return endpoints
+    }
+
+    /**
+     * Register a plugin's computed endpoints with the dispatcher
+     *
+     * @param endpoints Endpoints computed by [mountEndpoints]
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see mountEndpoints
+     * @see MountedEndpoint
+     */
+    private fun activateEndpoints(endpoints: List<MountedEndpoint>) {
+        endpoints.forEach {
+            requestMappingHandlerMapping.registerMapping(it.info, it.controller, it.method)
+        }
     }
 
     private data class EndpointMapping(
@@ -1261,6 +1684,18 @@ class ApiPluginServiceImpl(
                 throw PluginInstallException(
                     "Field 'versionName' is required in $DESCRIPTOR_ENTRY — set it explicitly " +
                             "when authoring the descriptor by hand (the Gradle plugin fills it from the project version)"
+                )
+            }
+            // Checked rather than left to the deserializer, which would report a missing field
+            // as a parse failure with nothing to say about which one. A descriptor without a
+            // version code is refused instead of being read as 1, since that value decides
+            // whether the install is allowed to replace one already present
+            val versionCode = node.path("versionCode")
+            if (!versionCode.isInt || versionCode.asInt() < 1) {
+                throw PluginInstallException(
+                    "Field 'versionCode' is required in $DESCRIPTOR_ENTRY and must be at least 1 — " +
+                            "set it explicitly when authoring the descriptor by hand " +
+                            "(the Gradle plugin takes it from apiPlugin { versionCode })"
                 )
             }
             objectMapper.treeToValue(node, PluginDescriptor::class.java)
@@ -1451,23 +1886,27 @@ class ApiPluginServiceImpl(
     }
 
     private fun refreshCache() {
-        interfaceCodeMap.clear()
-        pluginIdMap.clear()
+        val interfaces = mutableMapOf<String, ApiInterface>()
         apiInterfaceMapper.selectList(null).forEach { apiInterface ->
-            apiInterface.code?.let { interfaceCodeMap[it] = apiInterface }
+            apiInterface.code?.let { interfaces[it] = apiInterface }
         }
+
+        val plugins = mutableMapOf<String, ApiPlugin>()
         val schemas = mutableMapOf<String, PluginConfigSchema?>()
         list().forEach { plugin ->
             plugin.pluginId?.let {
-                pluginIdMap[it] = plugin
+                plugins[it] = plugin
                 // Parsed here rather than per plugin request: the plugin context resolves
                 // config defaults on the hot path of every call it serves
                 schemas[it] = parseConfigSchemaOrNull(plugin.configSchema)
             }
         }
-        // Swapped in once it is complete: adding schemas one at a time would leave a window
-        // in which a plugin that has one appears to declare nothing, and a schema is what
-        // says which of its stored values are secrets - see PluginConfigSchemaCache
+
+        // Both are swapped in once they are complete, never emptied and refilled: a reader
+        // that arrived half way through would find no interface where one belongs and answer
+        // the request as if the API were disabled. See PluginRegistryCache and
+        // PluginConfigSchemaCache for what each one is read for
+        pluginRegistryCache.replaceAll(interfaces, plugins)
         pluginConfigSchemaCache.replaceAll(schemas)
     }
 

@@ -1,5 +1,7 @@
 package top.fatweb.apimanagement.component.storage
 
+import top.fatweb.apimanagement.sdk.plugin.PluginDescriptor
+
 /**
  * File storage key util
  *
@@ -16,11 +18,6 @@ package top.fatweb.apimanagement.component.storage
  * @since 1.0.0
  */
 object StorageKeyUtil {
-    /**
-     * Plugin ID pattern; kept in sync with the installer's own check
-     */
-    val PLUGIN_ID_REGEX = Regex("^[a-z][a-z0-9-]*$")
-
     /**
      * Content key pattern: one lowercase SHA-256 hex digest
      */
@@ -57,7 +54,7 @@ object StorageKeyUtil {
      * @since 1.0.0
      */
     fun pluginKey(pluginId: String, path: String): String {
-        require(PLUGIN_ID_REGEX.matches(pluginId)) { "Invalid plugin ID: '$pluginId'" }
+        require(PluginDescriptor.PLUGIN_ID_REGEX.matches(pluginId)) { "Invalid plugin ID: '$pluginId'" }
 
         return "$PLUGIN_DATA_DIR/$pluginId/${validatePath(path)}"
     }
@@ -76,7 +73,7 @@ object StorageKeyUtil {
      * @since 1.0.0
      */
     fun pluginReference(pluginId: String, path: String): String {
-        require(PLUGIN_ID_REGEX.matches(pluginId)) { "Invalid plugin ID: '$pluginId'" }
+        require(PluginDescriptor.PLUGIN_ID_REGEX.matches(pluginId)) { "Invalid plugin ID: '$pluginId'" }
 
         return "$pluginId/${validatePath(path)}"
     }
@@ -93,7 +90,7 @@ object StorageKeyUtil {
      * @since 1.0.0
      */
     fun pluginBaseKey(pluginId: String): String {
-        require(PLUGIN_ID_REGEX.matches(pluginId)) { "Invalid plugin ID: '$pluginId'" }
+        require(PluginDescriptor.PLUGIN_ID_REGEX.matches(pluginId)) { "Invalid plugin ID: '$pluginId'" }
 
         return "$PLUGIN_DATA_DIR/$pluginId"
     }

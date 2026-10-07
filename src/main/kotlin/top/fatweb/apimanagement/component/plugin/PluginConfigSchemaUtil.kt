@@ -73,7 +73,7 @@ object PluginConfigSchemaUtil {
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    private val SCHEMA_PROPERTIES = setOf("version", "groups", "datasources")
+    private val SCHEMA_PROPERTIES = setOf("groups", "datasources")
 
     /**
      * Every property a datasource declaration may carry
@@ -123,7 +123,6 @@ object PluginConfigSchemaUtil {
                     " (a schema takes ${SCHEMA_PROPERTIES.joinToString()})"
         }
 
-        val version = intOf(root, "version", "Plugin config schema") ?: 1
         val fieldKeys = mutableSetOf<String>()
         val groupKeys = mutableSetOf<String>()
 
@@ -145,7 +144,7 @@ object PluginConfigSchemaUtil {
             else -> throw IllegalArgumentException("Plugin config schema 'datasources' must be an array")
         }
 
-        return PluginConfigSchema(version = version, datasources = datasources, groups = groups)
+        return PluginConfigSchema(datasources = datasources, groups = groups)
     }
 
     /**

@@ -156,6 +156,12 @@ interface IApiPluginService : IService<ApiPlugin> {
      * request mappings, upserts database rows and the permission tree. Upgrades
      * (same plugin ID) are only allowed when the new version code is higher.
      *
+     * What the gateway checks of the jar itself - its signature, its trust, its descriptor, its
+     * config schema, its controllers - refuses the install. What the plugin's own startup does
+     * does not: a plugin whose `onStart` throws is installed and registered, serving nothing and
+     * carrying the reason in `loadError`, so that the configuration it failed against can be
+     * corrected and the plugin mounted again.
+     *
      * @param jarBytes Plugin jar content
      * @param jarName Original jar file name
      * @return ApiPluginVo object of the installed plugin
@@ -169,8 +175,10 @@ interface IApiPluginService : IService<ApiPlugin> {
     /**
      * Uninstall a plugin by its plugin ID
      *
-     * Unregisters its request mappings, closes its class loader / child context,
-     * soft-deletes its database rows and cleans up the permission tree.
+     * Unregisters its request mappings, waits for the requests it was serving, closes its class
+     * loader / child context, soft-deletes its database rows and cleans up the permission tree.
+     * A purge also runs the plugin's own `onPurge` while its datasources are still open, which
+     * is where it deletes data the gateway does not keep for it.
      *
      * @param pluginId Plugin ID
      * @param purgeData Whether everything the plugin owns should be deleted with it -
@@ -193,9 +201,10 @@ interface IApiPluginService : IService<ApiPlugin> {
      * remounts the plugin on its own, because the gateway is the one that builds the
      * datasource from it.
      *
-     * The plugin is briefly unmounted while the swap happens, and an upgrade path is not
-     * reused: that one deletes and rebuilds the registration, which would reset the
-     * interface configuration the administrator has tuned.
+     * The replacement is built in full while the running one keeps serving, so a jar that can
+     * no longer be mounted leaves the plugin as it was. An upgrade path is not reused: that one
+     * replaces the registration, which would reset the interface configuration the administrator
+     * has tuned.
      *
      * @param pluginId Plugin ID
      * @return ApiPluginVo object of the reloaded plugin

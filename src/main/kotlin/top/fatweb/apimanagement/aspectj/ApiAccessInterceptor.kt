@@ -7,6 +7,7 @@ import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Component
 import org.springframework.web.method.HandlerMethod
 import org.springframework.web.servlet.HandlerInterceptor
+import top.fatweb.apimanagement.component.plugin.PluginInFlightTracker
 import top.fatweb.apimanagement.component.storage.RedisProvider
 import top.fatweb.apimanagement.entity.api.ApiInterface
 import top.fatweb.apimanagement.entity.api.ApiKeyPrincipal
@@ -44,6 +45,7 @@ import java.util.concurrent.Executor
  * @see IApiUsageService
  * @see IApiAccountService
  * @see IApiTransactionService
+ * @see PluginInFlightTracker
  * @see HandlerInterceptor
  */
 @Component
@@ -54,10 +56,12 @@ class ApiAccessInterceptor(
     private val apiPluginService: IApiPluginService,
     private val apiUsageService: IApiUsageService,
     private val apiAccountService: IApiAccountService,
-    private val apiTransactionService: IApiTransactionService
+    private val apiTransactionService: IApiTransactionService,
+    private val pluginInFlightTracker: PluginInFlightTracker
 ) : HandlerInterceptor {
     private companion object {
         const val ATTR_API = "apimanagement.api"
+        const val ATTR_INFLIGHT = "apimanagement.inflight"
         const val ATTR_API_KEY_ID = "apimanagement.apiKeyId"
         const val ATTR_USER_ID = "apimanagement.userId"
         const val ATTR_COST = "apimanagement.cost"
@@ -78,8 +82,8 @@ class ApiAccessInterceptor(
         val annotation = handler.beanType.getAnnotation(ApiController::class.java) ?: return true
         val apiCode = ApiPluginServiceImpl.buildCode(annotation = annotation, method = handler.method)
         val apiInterface = apiPluginService.getByCode(apiCode) ?: throw ApiDisabledException()
-        val plugin = apiPluginService.getByPluginId(apiInterface.pluginId ?: throw ApiDisabledException())
-            ?: throw ApiDisabledException()
+        val pluginId = apiInterface.pluginId ?: throw ApiDisabledException()
+        val plugin = apiPluginService.getByPluginId(pluginId) ?: throw ApiDisabledException()
         if (apiInterface.enable != 1 || plugin.enable != 1) {
             throw ApiDisabledException()
         }
@@ -111,6 +115,14 @@ class ApiAccessInterceptor(
             }
         }
 
+        // Entered last, and only on the paths that actually reach the plugin: an unmount waits
+        // for the requests counted here before it closes the plugin's resources, so a request
+        // counted by anything above this point would be waited for after being refused. Spring
+        // calls afterCompletion only for requests this method admitted, which is what pairs
+        // every entry with an exit.
+        val handle = pluginInFlightTracker.tryEnter(pluginId) ?: throw ApiDisabledException()
+        request.setAttribute(ATTR_INFLIGHT, handle)
+
         return true
     }
 
@@ -120,6 +132,14 @@ class ApiAccessInterceptor(
         handler: Any,
         ex: Exception?
     ) {
+        // Left before anything else can return early: the counter has to come back down on
+        // every admitted request, including one that failed before the API attributes were
+        // read. ATTR_INFLIGHT rather than ATTR_API marks it, because ATTR_API is set before
+        // admission can still refuse the request.
+        (request.getAttribute(ATTR_INFLIGHT) as? PluginInFlightTracker.Handle)?.let {
+            pluginInFlightTracker.exit(it)
+        }
+
         val api = request.getAttribute(ATTR_API) as? ApiInterface ?: return
         val startNanos = request.getAttribute(ATTR_START) as? Long ?: return
         val success = ex == null

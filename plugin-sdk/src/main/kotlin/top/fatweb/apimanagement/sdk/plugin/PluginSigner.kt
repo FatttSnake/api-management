@@ -126,9 +126,9 @@ object PluginSigner {
     }
 
     /**
-     * Sign a plugin jar in place and embed the signature entry. Equivalent to the
-     * CLI `sign` command; used by the Gradle plugin and build tooling so no
-     * subprocess is needed.
+     * Sign a plugin jar in place and embed the signature entry
+     *
+     * Called in-process by the Gradle plugin, so a plugin build needs no external tool.
      *
      * @param jar Plugin jar path (already containing the public key entry)
      * @param privateKeyPem Private key in PKCS8 PEM
@@ -163,43 +163,6 @@ object PluginSigner {
      */
     fun spkiFingerprint(publicKeyPem: String): String =
         sha256Hex(parsePublicKey(publicKeyPem).encoded)
-
-    /**
-     * Command-line entry for plugin builds:
-     * - `genkey <dir>`         generate an Ed25519 key pair into the directory
-     * - `sign <jar> <privateKeyPem>`  sign a jar and embed the signature entry
-     * - `verify <jar>`         verify a jar's embedded signature
-     *
-     * @param args Command-line arguments
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    @JvmStatic
-    fun main(args: Array<String>) {
-        when (args.getOrNull(0)) {
-            "genkey" -> {
-                val dir = Path.of(args[1])
-                Files.createDirectories(dir)
-                val pair = generateKeyPair()
-                Files.writeString(dir.resolve("private.pem"), privateKeyPem(pair.private))
-                Files.writeString(dir.resolve("public.pem"), publicKeyPem(pair.public))
-                println("Ed25519 keys written to $dir")
-            }
-
-            "sign" -> {
-                val jar = Path.of(args[1])
-                signAndEmbed(jar, Files.readString(Path.of(args[2])))
-            }
-
-            "verify" -> {
-                val ok = verify(Path.of(args[1]))
-                println(if (ok) "Signature valid" else "Signature INVALID")
-                if (!ok) kotlin.system.exitProcess(1)
-            }
-
-            else -> error("Usage: genkey <dir> | sign <jar> <privateKeyPem> | verify <jar>")
-        }
-    }
 
     private fun addJarEntry(jarPath: Path, name: String, bytes: ByteArray) {
         val temp = Files.createTempFile("plugin", ".jar")

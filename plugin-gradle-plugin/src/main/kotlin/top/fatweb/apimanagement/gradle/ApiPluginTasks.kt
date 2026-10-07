@@ -10,6 +10,7 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import top.fatweb.apimanagement.sdk.plugin.PluginDescriptor
 import top.fatweb.apimanagement.sdk.plugin.PluginSigner
 import java.io.File
 
@@ -50,8 +51,8 @@ abstract class GeneratePluginDescriptor : DefaultTask() {
     @TaskAction
     fun run() {
         val id = pluginId.get()
-        require(PLUGIN_ID_REGEX.matches(id)) {
-            "apiPlugin.pluginId must match ^[a-z][a-z0-9-]*$ (got \"$id\")"
+        require(PluginDescriptor.PLUGIN_ID_REGEX.matches(id)) {
+            "apiPlugin.pluginId must match ${PluginDescriptor.PLUGIN_ID_REGEX.pattern} (got \"$id\")"
         }
         val name = pluginName.get()
         require(name.isNotBlank()) { "apiPlugin.pluginName must not be blank" }
@@ -83,8 +84,6 @@ abstract class GeneratePluginDescriptor : DefaultTask() {
     }
 
     companion object {
-        private val PLUGIN_ID_REGEX = Regex("^[a-z][a-z0-9-]*$")
-
         private fun json(value: String): String = "\"" +
             value.replace("\\", "\\\\")
                 .replace("\"", "\\\"")

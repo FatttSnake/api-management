@@ -48,6 +48,35 @@ class PluginConfigSchemaCache {
     fun get(pluginId: String): PluginConfigSchema? = schemas[pluginId]
 
     /**
+     * Publish the parsed config schema of one plugin ahead of a full refresh
+     *
+     * A mount publishes the schema it just parsed before it runs the plugin's `onStart`, so a
+     * hook that reads a setting through [top.fatweb.apimanagement.sdk.plugin.PluginContext]
+     * sees the declared default. Until the mount completes there is no row carrying the schema
+     * for [replaceAll] to read it back from, so without this the hook would read nothing where
+     * the plugin declared a value.
+     *
+     * The set is copied rather than mutated, so the swap stays whole for a concurrent reader.
+     *
+     * @param pluginId Plugin ID
+     * @param schema Parsed schema, or null when the plugin declares no configuration
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see PluginConfigSchema
+     */
+    fun put(pluginId: String, schema: PluginConfigSchema?) {
+        val updated = mutableMapOf<String, PluginConfigSchema>()
+        updated.putAll(schemas)
+        if (schema != null) {
+            updated[pluginId] = schema
+        } else {
+            updated.remove(pluginId)
+        }
+
+        schemas = updated
+    }
+
+    /**
      * Replace the parsed config schema of every plugin
      *
      * @param schemas Parsed schemas, by plugin ID; a null schema forgets the plugin, which

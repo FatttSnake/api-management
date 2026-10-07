@@ -1,13 +1,19 @@
 package top.fatweb.apimanagement.service.system.impl
 
+import com.baomidou.mybatisplus.extension.kotlin.KtQueryWrapper
 import com.baomidou.mybatisplus.extension.kotlin.KtUpdateWrapper
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import top.fatweb.apimanagement.component.storage.FileStorageProvider
 import top.fatweb.apimanagement.entity.system.StorageBlob
 import top.fatweb.apimanagement.mapper.system.StorageBlobMapper
 import top.fatweb.apimanagement.service.system.IStorageBlobService
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.util.concurrent.TimeUnit
 
 /**
  * Storage blob service implement
@@ -23,6 +29,7 @@ import top.fatweb.apimanagement.service.system.IStorageBlobService
 class StorageBlobServiceImpl(
     private val fileStorageProvider: FileStorageProvider
 ) : ServiceImpl<StorageBlobMapper, StorageBlob>(), IStorageBlobService {
+    private val logger: Logger = LoggerFactory.getLogger(this::class.java)
     override fun loadFile(fileHash: String): ByteArray? =
         fileStorageProvider.load(fileHash)
 
@@ -54,5 +61,42 @@ class StorageBlobServiceImpl(
         )
 
         return getReferenceCount(fileHash)
+    }
+
+    override fun reclaimUnreferenced(graceMillis: Long): Int {
+        // Compared against the stored timestamps, which are written with utc_timestamp()
+        val cutoff = LocalDateTime.now(ZoneOffset.UTC)
+            .minusNanos(TimeUnit.MILLISECONDS.toNanos(graceMillis))
+
+        val candidates = list(
+            KtQueryWrapper(StorageBlob())
+                .le(StorageBlob::referenceCount, 0)
+                .lt(StorageBlob::updateTime, cutoff)
+        )
+
+        var reclaimed = 0
+        candidates.forEach { blob ->
+            val fileHash = blob.fileHash ?: return@forEach
+
+            // Given up conditionally, so a blob that was referenced again between the read
+            // above and here keeps both its row and its bytes. The row goes first for that
+            // reason: bytes deleted for a blob a live row still points at would be unrecoverable,
+            // while a row deleted before its bytes only wastes them
+            val forgotten = baseMapper.delete(
+                KtQueryWrapper(StorageBlob())
+                    .eq(StorageBlob::fileHash, fileHash)
+                    .le(StorageBlob::referenceCount, 0)
+            ) > 0
+            if (!forgotten) {
+                return@forEach
+            }
+
+            runCatching { fileStorageProvider.delete(fileHash) }.onFailure {
+                logger.warn("Failed to delete the bytes of unreferenced blob '{}': {}", fileHash, it.message)
+            }
+            reclaimed++
+        }
+
+        return reclaimed
     }
 }

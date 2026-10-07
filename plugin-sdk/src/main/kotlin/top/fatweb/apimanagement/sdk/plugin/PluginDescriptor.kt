@@ -41,12 +41,17 @@ data class PluginDescriptor(
 
     /**
      * Monotonic integer version; must be greater than the currently installed
-     * version to allow an upgrade
+     * version to allow an upgrade, and at least 1
+     *
+     * Required in a hand-written descriptor, and has no default: it is what decides whether an
+     * install may replace one already present, so a value nobody chose would be a value nobody
+     * can reason about. The Gradle plugin takes it from `apiPlugin { versionCode }` and refuses
+     * to build without it.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    val versionCode: Int = 1,
+    val versionCode: Int,
 
     /**
      * Plugin description
@@ -71,4 +76,19 @@ data class PluginDescriptor(
      * @since 1.0.0
      */
     val mainClass: String? = null
-)
+) {
+    companion object {
+        /**
+         * Pattern every plugin ID must match
+         *
+         * Lives here, in the one artifact both sides of a plugin build depend on, because it is
+         * the one rule they have to agree on: the Gradle plugin refuses at build time what the
+         * gateway would refuse at install time, and two copies of it that drifted would let a
+         * plugin build and then fail to install.
+         *
+         * @author FatttSnake, fatttsnake@gmail.com
+         * @since 1.0.0
+         */
+        val PLUGIN_ID_REGEX = Regex("^[a-z][a-z0-9-]*$")
+    }
+}
