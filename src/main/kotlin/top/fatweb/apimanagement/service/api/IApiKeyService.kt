@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.spring.service.IService
 import top.fatweb.apimanagement.entity.api.ApiKey
 import top.fatweb.apimanagement.param.system.apiKey.*
 import top.fatweb.apimanagement.vo.PageVo
-import top.fatweb.apimanagement.vo.api.ApiGroupVo
+import top.fatweb.apimanagement.vo.api.ApiKeyAvailableGroupVo
 import top.fatweb.apimanagement.vo.api.ApiKeyVo
 import top.fatweb.apimanagement.vo.api.ApiKeyWithSecretVo
 
@@ -133,12 +133,12 @@ interface IApiKeyService : IService<ApiKey> {
      * @param managed Whether the caller is authorized to manage other users' keys
      * @param userId Owner user ID the grant targets (managed only; null or self-service
      * means the calling user is the owner)
-     * @return List of ApiGroupVo object
+     * @return List of ApiKeyAvailableGroupVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiGroupVo
+     * @see ApiKeyAvailableGroupVo
      */
-    fun availableApis(managed: Boolean, userId: Long? = null): List<ApiGroupVo>
+    fun availableApis(managed: Boolean, userId: Long? = null): List<ApiKeyAvailableGroupVo>
 
     /**
      * Record when the key last executed an interface call

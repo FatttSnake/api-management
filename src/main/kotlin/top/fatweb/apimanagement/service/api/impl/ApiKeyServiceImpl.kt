@@ -30,7 +30,8 @@ import top.fatweb.apimanagement.settings.ApiSettings
 import top.fatweb.apimanagement.settings.SettingsOperator
 import top.fatweb.apimanagement.util.*
 import top.fatweb.apimanagement.vo.PageVo
-import top.fatweb.apimanagement.vo.api.ApiGroupVo
+import top.fatweb.apimanagement.vo.api.ApiKeyAvailableGroupVo
+import top.fatweb.apimanagement.vo.api.ApiKeyAvailableInterfaceVo
 import top.fatweb.apimanagement.vo.api.ApiKeyVo
 import top.fatweb.apimanagement.vo.api.ApiKeyWithSecretVo
 import java.time.LocalDateTime
@@ -197,19 +198,16 @@ class ApiKeyServiceImpl(
         })
     }
 
-    override fun availableApis(managed: Boolean, userId: Long?): List<ApiGroupVo> {
+    override fun availableApis(managed: Boolean, userId: Long?): List<ApiKeyAvailableGroupVo> {
         val ownerId = if (managed) userId ?: getLoginUserIdOrThrow() else getLoginUserIdOrThrow()
         val allApis = apiPluginService.listEnabledInterfaces()
         return selectableApis(ownerId, allApis)
             .groupBy { it.pluginId ?: "" }
             .map { (pluginId, apis) ->
-                val plugin = apiPluginService.getByPluginId(pluginId)
-
-                ApiGroupVo(
+                ApiKeyAvailableGroupVo(
                     pluginId = pluginId.ifBlank { null },
-                    pluginName = plugin?.name,
-                    pluginDescription = plugin?.description,
-                    interfaces = apis.map(ApiInterface::toVo)
+                    pluginName = apiPluginService.getByPluginId(pluginId)?.name,
+                    interfaces = apis.map { ApiKeyAvailableInterfaceVo(it.code, it.name) }
                 )
             }
     }

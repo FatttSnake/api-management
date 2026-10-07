@@ -10,7 +10,7 @@ import top.fatweb.apimanagement.entity.common.ResponseResult
 import top.fatweb.apimanagement.param.system.apiKey.*
 import top.fatweb.apimanagement.service.api.IApiKeyService
 import top.fatweb.apimanagement.vo.PageVo
-import top.fatweb.apimanagement.vo.api.ApiGroupVo
+import top.fatweb.apimanagement.vo.api.ApiKeyAvailableGroupVo
 import top.fatweb.apimanagement.vo.api.ApiKeyVo
 import top.fatweb.apimanagement.vo.api.ApiKeyWithSecretVo
 
@@ -172,10 +172,10 @@ class UserApiKeyController(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      * @see ResponseResult
-     * @see ApiGroupVo
+     * @see ApiKeyAvailableGroupVo
      */
     @Operation(summary = "获取我可授权的 API 列表（按插件分组）")
     @GetMapping("/available-apis")
-    fun availableApis(): ResponseResult<List<ApiGroupVo>> =
+    fun availableApis(): ResponseResult<List<ApiKeyAvailableGroupVo>> =
         ResponseResult.databaseSuccess(data = apiKeyService.availableApis(false))
 }
