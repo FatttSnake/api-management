@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="top.fatweb.apimanagement.mapper.api.ApiPluginMapper">
+    <select id="selectCallablePage" resultMap="apiPluginMap">
+        select t_b_api_plugin.id as api_plugin_id,
+               t_b_api_plugin.plugin_id as api_plugin_plugin_id,
+               t_b_api_plugin.name as api_plugin_name,
+               t_b_api_plugin.description as api_plugin_description,
+               t_b_api_plugin.enable as api_plugin_enable,
+               t_b_api_plugin.default_price as api_plugin_default_price,
+               t_b_api_plugin.default_rate_limit as api_plugin_default_rate_limit,
+               t_b_api_plugin.default_access_mode as api_plugin_default_access_mode,
+               t_b_api_plugin.source as api_plugin_source,
+               t_b_api_plugin.version_name as api_plugin_version_name,
+               t_b_api_plugin.version_code as api_plugin_version_code,
+               t_b_api_plugin.file_hash as api_plugin_file_hash,
+               t_b_api_plugin.jar_name as api_plugin_jar_name,
+               t_b_api_plugin.signer_key_id as api_plugin_signer_key_id,
+               t_b_api_plugin.openapi as api_plugin_openapi,
+               t_b_api_plugin.config_schema as api_plugin_config_schema,
+               t_b_api_plugin.load_error as api_plugin_load_error,
+               t_b_api_plugin.create_time as api_plugin_create_time,
+               t_b_api_plugin.update_time as api_plugin_update_time,
+               t_b_api_plugin.version as api_plugin_version
+        from t_b_api_plugin
+        <where>
+            t_b_api_plugin.enable = 1
+            <if test="searchName != null and searchName != ''">
+                and lower(t_b_api_plugin.name) like concat('%', lower(#{searchName}), '%')
+            </if>
+            and exists (select 1
+            from t_b_api_interface as tbai
+            where tbai.plugin_id = t_b_api_plugin.plugin_id
+            and tbai.enable = 1
+            <if test="!unrestricted">
+                and (coalesce(tbai.access_mode, t_b_api_plugin.default_access_mode, 'RESTRICTED') = 'DEFAULT'
+                <foreach collection="codes" item="item" index="index" open="or tbai.code in (" separator="," close=")" nullable="true">
+                    #{item}
+                </foreach>
+                )
+            </if>
+            )
+        </where>
+        order by t_b_api_plugin.create_time desc, t_b_api_plugin.plugin_id desc
+    </select>
+
+    <resultMap id="apiPluginMap" type="top.fatweb.apimanagement.entity.api.ApiPlugin">
+        <id property="id" column="api_plugin_id"/>
+        <result property="pluginId" column="api_plugin_plugin_id"/>
+        <result property="name" column="api_plugin_name"/>
+        <result property="description" column="api_plugin_description"/>
+        <result property="enable" column="api_plugin_enable"/>
+        <result property="defaultPrice" column="api_plugin_default_price"/>
+        <result property="defaultRateLimit" column="api_plugin_default_rate_limit"/>
+        <result property="defaultAccessMode" column="api_plugin_default_access_mode"/>
+        <result property="source" column="api_plugin_source"/>
+        <result property="versionName" column="api_plugin_version_name"/>
+        <result property="versionCode" column="api_plugin_version_code"/>
+        <result property="fileHash" column="api_plugin_file_hash"/>
+        <result property="jarName" column="api_plugin_jar_name"/>
+        <result property="signerKeyId" column="api_plugin_signer_key_id"/>
+        <result property="openapi" column="api_plugin_openapi"/>
+        <result property="configSchema" column="api_plugin_config_schema"/>
+        <result property="loadError" column="api_plugin_load_error"/>
+        <result property="createTime" column="api_plugin_create_time"/>
+        <result property="updateTime" column="api_plugin_update_time"/>
+        <result property="version" column="api_plugin_version"/>
+    </resultMap>
+</mapper>

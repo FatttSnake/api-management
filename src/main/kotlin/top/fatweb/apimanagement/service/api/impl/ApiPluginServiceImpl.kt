@@ -27,8 +27,6 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
 import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import org.springframework.transaction.support.TransactionSynchronization
-import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping
@@ -639,41 +637,9 @@ class ApiPluginServiceImpl(
 
     override fun getByCode(code: String): ApiInterface? = pluginRegistryCache.getByCode(code)
 
-    override fun listEnabledInterfaces(): List<ApiInterface> =
-        apiInterfaceMapper.selectList(KtQueryWrapper(ApiInterface()).eq(ApiInterface::enable, 1))
-
     override fun resolveAccessMode(api: ApiInterface): ApiInterface.AccessMode =
         api.accessMode ?: getByPluginId(api.pluginId ?: "")?.defaultAccessMode
         ?: ApiInterface.AccessMode.RESTRICTED
-
-    /**
-     * Run something once the transaction around the caller has committed
-     *
-     * A change to a datasource is only worth acting on once it is stored, and acting on it
-     * means remounting - which re-reads the settings it applies and may record a failure in
-     * `load_error`. Both have to happen outside the transaction: inside it the remount would
-     * hold a database connection for as long as it takes, and the failure it wrote would be
-     * rolled back together with the values it was reacting to.
-     *
-     * `afterCommit` runs on the thread that committed, which is the request thread, so what it
-     * is given has to be a hand-off rather than the work itself - see [scheduleRemount]. It
-     * also still has that transaction's connection bound to it, which is worth leaving: a
-     * write made here would ride a connection whose transaction is already over.
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    private fun onCommitted(action: () -> Unit) {
-        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            action()
-
-            return
-        }
-
-        TransactionSynchronizationManager.registerSynchronization(object : TransactionSynchronization {
-            override fun afterCommit() = action()
-        })
-    }
 
     /**
      * Resolve the declared config schema of a plugin

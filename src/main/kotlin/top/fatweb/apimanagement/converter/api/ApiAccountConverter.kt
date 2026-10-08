@@ -16,7 +16,7 @@ import top.fatweb.apimanagement.vo.permission.UserWithInfoVo
  * @see UserWithInfoVo
  * @see ApiAccountVo
  */
-fun ApiAccount.toVo(resolveUserInfo: ((id: Long) -> UserWithInfoVo?)? = null) = ApiAccountVo(
+fun ApiAccount.toVo(resolveUserInfo: ((Long) -> UserWithInfoVo?)? = null) = ApiAccountVo(
     id = this.id,
     userId = this.userId,
     balance = this.balance,
@@ -37,7 +37,7 @@ fun ApiAccount.toVo(resolveUserInfo: ((id: Long) -> UserWithInfoVo?)? = null) = 
  * @see UserWithInfoVo
  * @see PageVo
  */
-fun IPage<ApiAccount>.toVoPage(resolveUserInfo: ((id: Long) -> UserWithInfoVo?)? = null) = PageVo(
+fun IPage<ApiAccount>.toVoPage(resolveUserInfo: ((Long) -> UserWithInfoVo?)? = null) = PageVo(
     total = this.total,
     pages = this.pages,
     size = this.size,

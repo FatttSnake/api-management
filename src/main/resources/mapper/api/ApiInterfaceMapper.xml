@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="top.fatweb.apimanagement.mapper.api.ApiInterfaceMapper">
+    <select id="selectSelectableList" resultMap="apiInterfaceMap">
+        select t_b_api_interface.id as api_interface_id,
+               t_b_api_interface.plugin_id as api_interface_plugin_id,
+               t_b_api_interface.code as api_interface_code,
+               t_b_api_interface.name as api_interface_name,
+               t_b_api_interface.description as api_interface_description,
+               t_b_api_interface.path as api_interface_path,
+               t_b_api_interface.method as api_interface_method,
+               t_b_api_interface.api_version as api_interface_api_version,
+               t_b_api_interface.price as api_interface_price,
+               t_b_api_interface.billing_mode as api_interface_billing_mode,
+               t_b_api_interface.need_key as api_interface_need_key,
+               t_b_api_interface.rate_limit as api_interface_rate_limit,
+               t_b_api_interface.enable as api_interface_enable,
+               t_b_api_interface.access_mode as api_interface_access_mode,
+               t_b_api_interface.create_time as api_interface_create_time,
+               t_b_api_interface.update_time as api_interface_update_time,
+               t_b_api_interface.version as api_interface_version
+        from t_b_api_interface
+        left join t_b_api_plugin tbap on tbap.plugin_id = t_b_api_interface.plugin_id and tbap.enable = 1
+        <where>
+            and t_b_api_interface.enable = 1
+            <foreach collection="pluginIds" item="item" index="index" open="and t_b_api_interface.plugin_id in (" separator="," close=")" nullable="true">
+                #{item}
+            </foreach>
+            <foreach collection="codeIn" item="item" index="index" open="and t_b_api_interface.code in (" separator="," close=")" nullable="true">
+                #{item}
+            </foreach>
+            <if test="!unrestricted">
+                and (coalesce(t_b_api_interface.access_mode, tbap.default_access_mode, 'RESTRICTED') = 'DEFAULT'
+                <foreach collection="codes" item="item" index="index" open="or t_b_api_interface.code in (" separator="," close=")" nullable="true">
+                    #{item}
+                </foreach>
+                )
+            </if>
+        </where>
+        order by t_b_api_interface.name, t_b_api_interface.id
+    </select>
+
+    <resultMap id="apiInterfaceMap" type="top.fatweb.apimanagement.entity.api.ApiInterface">
+        <id property="id" column="api_interface_id"/>
+        <result property="pluginId" column="api_interface_plugin_id"/>
+        <result property="code" column="api_interface_code"/>
+        <result property="name" column="api_interface_name"/>
+        <result property="description" column="api_interface_description"/>
+        <result property="path" column="api_interface_path"/>
+        <result property="method" column="api_interface_method"/>
+        <result property="apiVersion" column="api_interface_api_version"/>
+        <result property="price" column="api_interface_price"/>
+        <result property="billingMode" column="api_interface_billing_mode"/>
+        <result property="needKey" column="api_interface_need_key"/>
+        <result property="rateLimit" column="api_interface_rate_limit"/>
+        <result property="enable" column="api_interface_enable"/>
+        <result property="accessMode" column="api_interface_access_mode"/>
+        <result property="createTime" column="api_interface_create_time"/>
+        <result property="updateTime" column="api_interface_update_time"/>
+        <result property="version" column="api_interface_version"/>
+    </resultMap>
+</mapper>

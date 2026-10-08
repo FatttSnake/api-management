@@ -127,16 +127,6 @@ interface IApiPluginService : IService<ApiPlugin> {
     fun getByCode(code: String): ApiInterface?
 
     /**
-     * List enabled API interfaces
-     *
-     * @return List<ApiInterface> object
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     * @see ApiInterface
-     */
-    fun listEnabledInterfaces(): List<ApiInterface>
-
-    /**
      * Resolve the effective access mode for an interface (interface override or
      * inherited from the owning plugin, defaulting to RESTRICTED)
      *

@@ -15,11 +15,13 @@ import top.fatweb.apimanagement.converter.api.toEntity
 import top.fatweb.apimanagement.converter.api.toVo
 import top.fatweb.apimanagement.converter.api.toVoPage
 import top.fatweb.apimanagement.converter.api.toVoWithSecret
+import top.fatweb.apimanagement.entity.api.ApiCallableScope
 import top.fatweb.apimanagement.entity.api.ApiInterface
 import top.fatweb.apimanagement.entity.api.ApiKey
 import top.fatweb.apimanagement.entity.system.EventLog
 import top.fatweb.apimanagement.exception.ApiKeyInvalidException
 import top.fatweb.apimanagement.exception.ApiKeyPermissionDeniedException
+import top.fatweb.apimanagement.mapper.api.ApiInterfaceMapper
 import top.fatweb.apimanagement.mapper.api.ApiKeyMapper
 import top.fatweb.apimanagement.mapper.permission.UserMapper
 import top.fatweb.apimanagement.param.system.apiKey.*
@@ -57,7 +59,8 @@ class ApiKeyServiceImpl(
     private val serverProperties: ServerProperties,
     private val redisProvider: RedisProvider,
     private val userMapper: UserMapper,
-    private val apiPluginService: IApiPluginService
+    private val apiPluginService: IApiPluginService,
+    private val apiInterfaceMapper: ApiInterfaceMapper
 ) : ServiceImpl<ApiKeyMapper, ApiKey>(), IApiKeyService {
     private companion object {
         /**
@@ -200,8 +203,7 @@ class ApiKeyServiceImpl(
 
     override fun availableApis(managed: Boolean, userId: Long?): List<ApiKeyAvailableGroupVo> {
         val ownerId = if (managed) userId ?: getLoginUserIdOrThrow() else getLoginUserIdOrThrow()
-        val allApis = apiPluginService.listEnabledInterfaces()
-        return selectableApis(ownerId, allApis)
+        return callableApis(ownerId)
             .groupBy { it.pluginId ?: "" }
             .map { (pluginId, apis) ->
                 ApiKeyAvailableGroupVo(
@@ -210,6 +212,21 @@ class ApiKeyServiceImpl(
                     interfaces = apis.map { ApiKeyAvailableInterfaceVo(it.code, it.name) }
                 )
             }
+    }
+
+    override fun callableApis(ownerId: Long?, pluginIds: Collection<String>?): List<ApiInterface> =
+        selectableApis(ownerId ?: getLoginUserIdOrThrow(), pluginIds = pluginIds)
+
+    override fun callableScope(ownerId: Long?): ApiCallableScope {
+        val resolved = ownerId ?: getLoginUserIdOrThrow()
+
+        // The super admin short-circuits before the codes are looked up: those cost a query
+        // over the permission tables, and the answer would not be read.
+        if (isSuperAdmin(resolved)) {
+            return ApiCallableScope(unrestricted = true, codes = emptySet())
+        }
+
+        return ApiCallableScope(unrestricted = false, codes = operationCodesOf(resolved))
     }
 
     private fun isSuperAdmin(userId: Long): Boolean = userId == 0L
@@ -240,26 +257,33 @@ class ApiKeyServiceImpl(
 
     /**
      * Resolve the API interfaces that may be granted to a key owned by the given owner:
-     * a super-admin owner (ID 0) may grant every enabled interface, any other owner only
-     * the interfaces its account is authorized for (operation codes) plus the open DEFAULT
-     * ones. Single source of truth shared by [availableApis] and [resolvePermissions].
+     * a super-admin owner (ID 0) may grant every interface, any other owner only the
+     * interfaces its account is authorized for (operation codes) plus the open DEFAULT
+     * ones. Single source of truth shared by [availableApis], [callableApis] and
+     * [resolvePermissions]; the rule is applied by the database, so the narrowing never
+     * costs a read of the interfaces it excludes.
      *
      * @param ownerId Owner user ID
-     * @param allApis All enabled API interfaces
+     * @param pluginIds Narrow to a set of plugins
+     * @param codeIn Narrow to a set of API codes
      * @return List of API interfaces grantable for the owner
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      * @see ApiInterface
      */
-    private fun selectableApis(ownerId: Long, allApis: List<ApiInterface>): List<ApiInterface> {
-        if (isSuperAdmin(ownerId)) {
-            return allApis
-        }
+    private fun selectableApis(
+        ownerId: Long,
+        pluginIds: Collection<String>? = null,
+        codeIn: Collection<String>? = null
+    ): List<ApiInterface> {
+        val scope = callableScope(ownerId)
 
-        val ownerCodes = operationCodesOf(ownerId)
-        return allApis.filter {
-            it.code in ownerCodes || apiPluginService.resolveAccessMode(it) == ApiInterface.AccessMode.DEFAULT
-        }
+        return apiInterfaceMapper.selectSelectableList(
+            pluginIds = pluginIds,
+            codeIn = codeIn,
+            unrestricted = scope.unrestricted,
+            codes = scope.codes
+        )
     }
 
     private fun resolvePermissions(ownerId: Long, requestCodes: List<String>?): Set<String> {
@@ -271,8 +295,10 @@ class ApiKeyServiceImpl(
             return emptySet()
         }
 
-        val selectable = selectableApis(ownerId, apiPluginService.listEnabledInterfaces())
-            .mapNotNull { it.code }.toSet()
+        // Narrowed to the requested codes, so the check reads those rows rather than every
+        // interface the owner holds.
+        val selectable = selectableApis(ownerId, codeIn = requestSet)
+            .mapNotNullTo(HashSet()) { it.code }
         requestSet.forEach {
             if (it !in selectable) {
                 throw ApiKeyPermissionDeniedException()

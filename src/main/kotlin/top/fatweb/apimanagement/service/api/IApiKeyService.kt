@@ -1,6 +1,8 @@
 package top.fatweb.apimanagement.service.api
 
 import com.baomidou.mybatisplus.spring.service.IService
+import top.fatweb.apimanagement.entity.api.ApiCallableScope
+import top.fatweb.apimanagement.entity.api.ApiInterface
 import top.fatweb.apimanagement.entity.api.ApiKey
 import top.fatweb.apimanagement.param.system.apiKey.*
 import top.fatweb.apimanagement.vo.PageVo
@@ -139,6 +141,41 @@ interface IApiKeyService : IService<ApiKey> {
      * @see ApiKeyAvailableGroupVo
      */
     fun availableApis(managed: Boolean, userId: Long? = null): List<ApiKeyAvailableGroupVo>
+
+    /**
+     * Get the API interfaces the given owner may call
+     *
+     * The same scope [availableApis] grants, read the other way round: a super-admin owner
+     * (ID 0) may call every interface, any other owner only the interfaces its account holds
+     * as operation codes plus the open DEFAULT ones. Both resolve through one selection so
+     * what a key can be granted and what its owner can call never drift apart.
+     *
+     * Interfaces of a disabled plugin are never returned: the plugin is a master switch, and
+     * one that is switched off admits no request whatever its interfaces say.
+     *
+     * @param ownerId Owner user ID; null means the calling user
+     * @param pluginIds Narrow the result to these plugins; null means every plugin
+     * @return List of API interfaces callable by the owner, ordered by name
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiInterface
+     */
+    fun callableApis(ownerId: Long? = null, pluginIds: Collection<String>? = null): List<ApiInterface>
+
+    /**
+     * Resolve what the given owner may call, as a value a query can be filtered with
+     *
+     * A super-admin owner (ID 0) is unrestricted; any other owner resolves to the operation
+     * codes its account holds. Exposed so a caller can filter plugins or interfaces by the
+     * owner's reach inside the database rather than in memory.
+     *
+     * @param ownerId Owner user ID; null means the calling user
+     * @return ApiCallableScope object
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see ApiCallableScope
+     */
+    fun callableScope(ownerId: Long? = null): ApiCallableScope
 
     /**
      * Record when the key last executed an interface call
