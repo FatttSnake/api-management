@@ -29,7 +29,7 @@ create table t_b_api_interface
 (
     id           bigint         not null primary key,
     plugin_id    varchar(64)    not null comment 'Plugin ID',
-    code         varchar(100)   not null comment 'API scoping code',
+    code         varchar(200)   not null comment 'API scoping code',
     name         varchar(100)   not null comment 'API name',
     description  varchar(255)   null comment 'Description',
     path         varchar(200)   not null comment 'Request path',
@@ -79,7 +79,7 @@ create table t_b_api_usage
     id             bigint         not null primary key,
     api_key_id     bigint         null comment 'API key ID',
     api_id         bigint         not null comment 'API ID',
-    api_code       varchar(100)   not null comment 'API scoping code',
+    api_code       varchar(200)   not null comment 'API scoping code',
     user_id        bigint         null comment 'Owner user ID',
     request_path   varchar(200)   not null comment 'Request path',
     request_method varchar(10)    not null comment 'HTTP method',

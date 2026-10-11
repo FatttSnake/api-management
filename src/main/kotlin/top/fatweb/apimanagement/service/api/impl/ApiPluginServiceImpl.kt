@@ -211,18 +211,46 @@ class ApiPluginServiceImpl(
         private const val CONFIG_ENTRY = "META-INF/plugin-config.json"
 
         /**
-         * Build API scoping code from the annotation and the endpoint operationId
+         * Maximum length of an API scoping code
+         *
+         * Must match the width of the columns the code is persisted in - `t_b_api_interface.code`,
+         * `t_s_operation.code` and `t_b_api_usage.api_code` are all `varchar(200)`. The composed
+         * code is `api:` + plugin ID (at most 64, the width of `t_b_api_plugin.plugin_id`) + `:v` +
+         * version + `:` + operation ID, so 200 leaves ample room. Enforced when a plugin is
+         * mounted, so an over-long code is refused with the endpoint named rather than failing the
+         * insert half way through the mount.
+         */
+        private const val MAX_CODE_LENGTH = 200
+
+        /**
+         * Build the endpoint's persisted identity code from the annotation and its `@Operation`
+         *
+         * The code is exactly what the gateway stores as `t_b_api_interface.code` and
+         * `t_s_operation.code` and what a call is authorised by, so the request path reads it back
+         * here unchanged as well as the mount writing it ([mountEndpoints]). There is deliberately
+         * no fallback to the method name: a code that differed between the mount and the request
+         * would authorise against a permission entry that is not the endpoint's.
          *
          * @param annotation API controller annotation
          * @param method Endpoint method
          * @return API scoping code
+         * @throws MissingOperationIdException when the method declares no non-blank
+         *         `@Operation.operationId`. A mount refuses such a method earlier - see
+         *         [mountEndpoints] - so this is reachable only from the request path, as a state
+         *         the gateway never produced, and it is raised rather than answered with a code
+         *         that is not the endpoint's
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
          * @see ApiController
+         * @see Method
          */
         fun buildCode(annotation: ApiController, method: Method): String {
             val operationId = method.getAnnotation(SwaggerOperation::class.java)?.operationId
-                ?.takeIf { it.isNotBlank() } ?: method.name
+                ?.takeIf { it.isNotBlank() }
+                ?: throw MissingOperationIdException(
+                    "Endpoint ${method.declaringClass.name}#${method.name} declares no non-blank " +
+                            "@Operation(operationId = \"...\"), which is its persisted identity"
+                )
             return "api:${annotation.plugin}:v${annotation.version}:$operationId"
         }
     }
@@ -1279,6 +1307,15 @@ class ApiPluginServiceImpl(
             val pluginMenu = ensureMenu(
                 pluginId, prepared.descriptor.name, API_ROOT_MENU_ID, API_MODULE_ID
             )
+
+            // What the plugin's endpoints were, read before the loop below writes over them. The
+            // loop matches an interface on (path, method), so an endpoint whose route is gone - or
+            // whose code changed - would otherwise leave its previous row behind for good, and
+            // upsertOperation can never match a code the mount no longer derives
+            val previousInterfaces = apiInterfaceMapper.selectList(
+                KtQueryWrapper(ApiInterface()).eq(ApiInterface::pluginId, pluginId)
+            )
+
             val scopeIds = ConcurrentHashMap<String, Long>()
             prepared.endpoints.forEach { endpoint ->
                 val scopeId = scopeIds.getOrPut("v${endpoint.apiVersion}") {
@@ -1289,6 +1326,21 @@ class ApiPluginServiceImpl(
                     endpoint.fullPath, endpoint.httpMethod, endpoint.apiVersion
                 )
                 upsertOperation(endpoint.code, endpoint.name, scopeId)
+            }
+
+            // Reconcile, after the endpoints are in place so a scope they still use is never
+            // emptied and rebuilt: drop the interface rows whose route this mount no longer
+            // serves, and the permission entries under a code it no longer derives. A route that
+            // kept its path but changed its code keeps both - the row is updated in place and the
+            // code is still current - so this removes what is gone, not what moved
+            val currentRoutes = prepared.endpoints.mapTo(HashSet()) { it.fullPath to it.httpMethod }
+            previousInterfaces
+                .filterNot { (it.path to it.method) in currentRoutes }
+                .forEach { apiInterfaceMapper.deleteById(it.id) }
+            val currentCodes = prepared.endpoints.mapTo(HashSet()) { it.code }
+            val orphanedCodes = previousInterfaces.mapNotNull { it.code }.filterNot { it in currentCodes }
+            if (orphanedCodes.isNotEmpty()) {
+                cleanupPermissionTree(pluginId, orphanedCodes)
             }
 
             if (prepared.startupError != null) {
@@ -1524,8 +1576,15 @@ class ApiPluginServiceImpl(
      * Separate from registering them so a mount can be built - including running the plugin's
      * own `onStart` - before any of its routes exist for the dispatcher to hand a request to.
      *
+     * Each mapped method is required to carry a non-blank `@Operation.operationId` whose code fits
+     * [MAX_CODE_LENGTH] and is unique within the plugin's version, and a mount that finds otherwise
+     * is refused here, naming the method - before anything is registered or written, so a bad
+     * plugin leaves nothing behind and a healthy one keeps serving through a failed remount.
+     *
      * @param controllers Controller bean instances
      * @return Mounted endpoints, not yet registered
+     * @throws PluginInstallException when a mapped method declares no usable operation ID, its code
+     *         exceeds [MAX_CODE_LENGTH], or two endpoints under one version resolve to the same code
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      * @see MountedEndpoint
@@ -1533,6 +1592,7 @@ class ApiPluginServiceImpl(
      */
     private fun mountEndpoints(controllers: List<Any>): List<MountedEndpoint> {
         val endpoints = mutableListOf<MountedEndpoint>()
+        val codeOwners = mutableMapOf<String, Method>()
         controllers.forEach { controller ->
             val targetClass = AopUtils.getTargetClass(controller)
             val annotation = targetClass.getAnnotation(ApiController::class.java)
@@ -1541,6 +1601,37 @@ class ApiPluginServiceImpl(
             targetClass.declaredMethods.forEach { method ->
                 val mapping = resolveMapping(method) ?: return@forEach
                 val operation = method.getAnnotation(SwaggerOperation::class.java)
+                // Every mapped method has to declare its identity, and the mount is refused -
+                // naming the method - rather than falling back to the method name: the code this
+                // produces is what the interface row and its permission entry are keyed by, so a
+                // silent fallback would persist an identity the author never chose and then leave
+                // the operationId-derived row behind as an orphan on the next mount
+                if (operation == null || operation.operationId.isBlank()) {
+                    throw PluginInstallException(
+                        "Endpoint ${targetClass.name}#${method.name} must declare a non-blank " +
+                                "@Operation(operationId = \"...\"): the operation ID is the " +
+                                "endpoint's persisted identity"
+                    )
+                }
+                val operationId = operation.operationId
+                val code = buildCode(annotation, method)
+                if (code.length > MAX_CODE_LENGTH) {
+                    throw PluginInstallException(
+                        "Endpoint ${targetClass.name}#${method.name} produces a ${code.length}-" +
+                                "character API code, over the $MAX_CODE_LENGTH-character limit: " +
+                                "shorten its operation ID '$operationId'"
+                    )
+                }
+                // Unique per version, because the code embeds the version: the same operation ID
+                // may be declared once under each @ApiController version, but declaring it twice
+                // under one version would make two endpoints claim a single identity
+                codeOwners.put(code, method)?.let { previous ->
+                    throw PluginInstallException(
+                        "Duplicate operation ID: ${previous.declaringClass.name}#${previous.name} " +
+                                "and ${method.declaringClass.name}#${method.name} both map to the " +
+                                "code '$code'; an operation ID must be unique within a plugin version"
+                    )
+                }
                 val methodPath = mapping.path.trim('/')
                 val fullPath = buildString {
                     append("/api/").append(annotation.plugin).append("/v").append(annotation.version)
@@ -1563,9 +1654,9 @@ class ApiPluginServiceImpl(
                 endpoints += MountedEndpoint(
                     controller = controller,
                     method = method,
-                    code = buildCode(annotation, method),
-                    name = operation?.summary?.takeIf { it.isNotBlank() } ?: method.name,
-                    description = operation?.description?.takeIf { it.isNotBlank() } ?: "",
+                    code = code,
+                    name = operation.summary.takeIf { it.isNotBlank() } ?: method.name,
+                    description = operation.description.takeIf { it.isNotBlank() } ?: "",
                     fullPath = fullPath,
                     httpMethod = mapping.method.name,
                     apiVersion = annotation.version,
@@ -1647,8 +1738,15 @@ class ApiPluginServiceImpl(
                     if (clazz.getAnnotation(ApiController::class.java) != null) {
                         result.add(clazz)
                     }
-                } catch (_: Throwable) {
-                    // skip classes that cannot be loaded (optional plugin-internal helpers)
+                } catch (e: Throwable) {
+                    // Logged rather than swallowed: a class that cannot be loaded is usually an
+                    // optional plugin-internal helper, but one of them being an @ApiController
+                    // would otherwise drop the controller from the mount with nothing to say why -
+                    // the plugin would merely look as though it had declared fewer endpoints
+                    logger.warn(
+                        "Skipping class '{}' from plugin jar '{}': it could not be loaded",
+                        className, jarPath.fileName, e
+                    )
                 }
             }
         }

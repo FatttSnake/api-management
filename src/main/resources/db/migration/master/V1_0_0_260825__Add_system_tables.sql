@@ -77,7 +77,7 @@ create table t_s_operation
 (
     id       bigint      not null primary key,
     name     varchar(50) not null comment 'Name',
-    code     varchar(50) null comment 'Operation code',
+    code     varchar(200) null comment 'Operation code',
     scope_id bigint      not null comment 'Scope ID'
 ) comment 'System - Operation';
 

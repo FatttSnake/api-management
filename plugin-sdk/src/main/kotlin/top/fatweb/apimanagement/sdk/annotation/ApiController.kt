@@ -20,6 +20,15 @@ import org.springframework.web.bind.annotation.RestController
  * sub-path fragment (`path`). Per-interface `name` / `description` come from the
  * method's `@Operation` (`summary` / `description`).
  *
+ * Every mapped method must also carry `@Operation(operationId = "...")` with a non-blank
+ * value. That `operationId` is the endpoint's **persisted identity**. It is
+ * therefore **required** - a mapped method that omits it, whose code exceeds 200 characters,
+ * or whose code duplicates another endpoint's under the same `version` is refused at install -
+ * and it is a **breaking field**: changing it makes the endpoint a different one to the
+ * gateway, so its previous permission entry is removed and any grant of it is lost. The same
+ * `operationId` may be declared once under each version. Keep it stable across versions;
+ * `@Operation.summary` / `description` carry the display name and text and are free to change.
+ *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  * @see RequestMapping

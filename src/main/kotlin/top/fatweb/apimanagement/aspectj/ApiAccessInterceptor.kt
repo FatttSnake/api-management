@@ -80,6 +80,9 @@ class ApiAccessInterceptor(
             return true
         }
         val annotation = handler.beanType.getAnnotation(ApiController::class.java) ?: return true
+        // The same strict derivation the mount validated: a mounted endpoint always yields a code
+        // here, and a blank operationId - which the mount refuses - surfaces as an error rather
+        // than resolving to a method-name code that is not the endpoint's
         val apiCode = ApiPluginServiceImpl.buildCode(annotation = annotation, method = handler.method)
         val apiInterface = apiPluginService.getByCode(apiCode) ?: throw ApiDisabledException()
         val pluginId = apiInterface.pluginId ?: throw ApiDisabledException()
