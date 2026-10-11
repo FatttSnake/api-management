@@ -145,7 +145,9 @@ class ApiPlugin : Serializable {
     var signerKeyId: String? = null
 
     /**
-     * Embedded OpenAPI fragment JSON (from META-INF/plugin-openapi.json)
+     * OpenAPI fragment JSON, generated from the plugin's controllers on every mount and
+     * therefore always describing the interfaces this version actually serves; null when
+     * its generation failed
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0

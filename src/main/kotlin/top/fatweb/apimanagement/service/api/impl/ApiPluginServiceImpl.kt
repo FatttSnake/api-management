@@ -107,6 +107,7 @@ import io.swagger.v3.oas.annotations.Operation as SwaggerOperation
  * @see PluginRegistryCache
  * @see PluginConfigSchemaCache
  * @see PluginSettingReader
+ * @see PluginOpenApiGenerator
  * @see ServiceImpl
  * @see ApiPluginMapper
  * @see ApiPlugin
@@ -136,7 +137,8 @@ class ApiPluginServiceImpl(
     private val pluginRegistryCache: PluginRegistryCache,
     private val pluginConfigSchemaCache: PluginConfigSchemaCache,
     private val pluginInFlightTracker: PluginInFlightTracker,
-    private val pluginSettingReader: PluginSettingReader
+    private val pluginSettingReader: PluginSettingReader,
+    private val pluginOpenApiGenerator: PluginOpenApiGenerator
 ) : ServiceImpl<ApiPluginMapper, ApiPlugin>(), IApiPluginService,
     ApplicationRunner {
     companion object {
@@ -199,11 +201,6 @@ class ApiPluginServiceImpl(
          * Jar entry path of the plugin descriptor
          */
         private const val DESCRIPTOR_ENTRY = "META-INF/api-plugin.json"
-
-        /**
-         * Jar entry path of the embedded OpenAPI fragment
-         */
-        private const val OPENAPI_ENTRY = "META-INF/plugin-openapi.json"
 
         /**
          * Jar entry path of the declared plugin config schema
@@ -1213,13 +1210,26 @@ class ApiPluginServiceImpl(
                 )
             }
 
+            // Generated from the same scan the endpoints came from, rather than read out of the
+            // jar: a fragment can no longer describe an interface this mount did not find. A
+            // failure here costs the plugin its documentation and nothing else - it still serves,
+            // and the reader already renders a fragment that is absent
+            val openapiJson = runCatching { pluginOpenApiGenerator.generate(endpoints) }
+                .onFailure {
+                    logger.warn(
+                        "Plugin '{}': OpenAPI fragment generation failed, docs will omit it: {}",
+                        descriptor.pluginId, it.message
+                    )
+                }
+                .getOrNull()
+
             return PreparedMount(
                 descriptor = descriptor,
                 fileHash = fileHash,
                 signerKeyId = signerKeyId,
                 jarName = jarName,
                 jarPath = jarPath,
-                openapiJson = readJarEntry(jarPath, OPENAPI_ENTRY),
+                openapiJson = openapiJson,
                 configSchemaJson = configSchemaJson,
                 classLoader = loader,
                 context = childContext,
