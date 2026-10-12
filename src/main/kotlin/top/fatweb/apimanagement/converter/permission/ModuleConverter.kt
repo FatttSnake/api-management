@@ -9,7 +9,6 @@ import top.fatweb.apimanagement.vo.permission.base.ModuleVo
  * @return ModuleVo object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see Module
  * @see ModuleVo
  */
 fun Module.toVo() = ModuleVo(

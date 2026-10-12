@@ -57,7 +57,6 @@ data class SecurityProperties(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see TimeUnit
      */
     val accessTokenTtlUnit: TimeUnit = TimeUnit.HOURS,
 
@@ -98,7 +97,6 @@ data class SecurityProperties(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see TimeUnit
      */
     val refreshTokenTtlUnit: TimeUnit = TimeUnit.DAYS,
 

@@ -11,17 +11,13 @@ import top.fatweb.apimanagement.entity.api.ApiPlugin
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see BaseMapper
- * @see ApiPlugin
  */
 @Mapper
 interface ApiPluginMapper : BaseMapper<ApiPlugin> {
     /**
      * Select one page of the plugins a caller may reach
      *
-     * A plugin qualifies when it is enabled and owns at least one interface the caller may
-     * call. Filtering, ordering and the page slice all happen in the database, so the
-     * reachable set is never read whole to be narrowed down afterwards.
+     * A plugin qualifies when it is enabled and owns at least one interface the caller may call.
      *
      * @param page Pagination
      * @param searchName Plugin name to search for
@@ -30,8 +26,6 @@ interface ApiPluginMapper : BaseMapper<ApiPlugin> {
      * @return ApiPlugin in page, ordered by create time descending
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see IPage
-     * @see ApiPlugin
      */
     fun selectCallablePage(
         page: IPage<ApiPlugin>,

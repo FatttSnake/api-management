@@ -12,8 +12,6 @@ import top.fatweb.apimanagement.vo.permission.UserWithInfoVo
  * @return ApiAccountVo object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ApiAccount
- * @see UserWithInfoVo
  * @see ApiAccountVo
  */
 fun ApiAccount.toVo(resolveUserInfo: ((Long) -> UserWithInfoVo?)? = null) = ApiAccountVo(
@@ -32,9 +30,6 @@ fun ApiAccount.toVo(resolveUserInfo: ((Long) -> UserWithInfoVo?)? = null) = ApiA
  * @return PageVo<ApiAccount> object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IPage
- * @see ApiAccount
- * @see UserWithInfoVo
  * @see PageVo
  */
 fun IPage<ApiAccount>.toVoPage(resolveUserInfo: ((Long) -> UserWithInfoVo?)? = null) = PageVo(

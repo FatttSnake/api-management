@@ -9,7 +9,6 @@ import top.fatweb.apimanagement.vo.permission.PowerSetVo
  * @return PowerSetVo object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see PowerSet
  * @see PowerSetVo
  */
 fun PowerSet.toVo() = PowerSetVo(

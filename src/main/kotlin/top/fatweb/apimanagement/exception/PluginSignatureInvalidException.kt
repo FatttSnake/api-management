@@ -8,6 +8,5 @@ package top.fatweb.apimanagement.exception
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see RuntimeException
  */
 class PluginSignatureInvalidException : RuntimeException("Plugin signature invalid")

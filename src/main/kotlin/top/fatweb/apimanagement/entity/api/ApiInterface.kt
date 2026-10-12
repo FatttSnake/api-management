@@ -9,9 +9,6 @@ import java.time.LocalDateTime
 /**
  * API interface entity
  *
- * One row per registered interface (endpoint) of a plugin. Price and rate limit
- * are nullable: when null, the caller inherits the owning plugin's defaults.
- *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
@@ -33,7 +30,7 @@ class ApiInterface : Serializable {
      * DEFAULT means normal (account/password) users may call the API without an
      * admin grant; RESTRICTED means they must hold the api:* operation code. This
      * only governs the account/JWT path — an AccessKey always needs the code in its
-     * permissions regardless of mode. Null on an interface means inherit the plugin.
+     * permissions regardless of mode.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -128,7 +125,6 @@ class ApiInterface : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see BillingMode
      */
     @TableField("billing_mode")
     var billingMode: BillingMode? = null
@@ -165,7 +161,6 @@ class ApiInterface : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see AccessMode
      */
     @TableField("access_mode")
     var accessMode: AccessMode? = null
@@ -175,7 +170,6 @@ class ApiInterface : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @TableField("create_time", fill = FieldFill.INSERT)
     var createTime: LocalDateTime? = null
@@ -185,7 +179,6 @@ class ApiInterface : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @TableField("update_time", fill = FieldFill.INSERT_UPDATE)
     var updateTime: LocalDateTime? = null

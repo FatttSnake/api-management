@@ -9,8 +9,6 @@ import top.fatweb.apimanagement.entity.system.EventLog
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IService
- * @see EventLog
  */
 interface IEventLogService : IService<EventLog> {
     /**
@@ -23,7 +21,6 @@ interface IEventLogService : IService<EventLog> {
      * @param detail Event detail text
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see EventLogRecord
      */
     fun saveEvent(
         annotation: EventLogRecord,

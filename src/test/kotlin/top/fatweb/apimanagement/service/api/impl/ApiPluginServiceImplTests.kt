@@ -14,9 +14,8 @@ import kotlin.test.assertTrue
 /**
  * Plugin endpoint identity tests
  *
- * Pins the code derivation the mount validates and the request path re-derives, so it cannot
- * start falling back to a method name unnoticed, and the plugin ID bound that keeps an ID the
- * gateway accepts from being one the database cannot store.
+ * Pins the code derivation the mount validates and the request path re-derives, and the plugin
+ * ID bound.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0

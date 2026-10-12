@@ -9,14 +9,8 @@ import top.fatweb.apimanagement.service.system.IStorageBlobService
 /**
  * Plugin storage factory
  *
- * Builds the storage channel of a plugin, keeping its collaborators out of the
- * plugin service constructor.
- *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServerProperties
- * @see FileStorageProvider
- * @see IStorageBlobService
  */
 @Component
 class PluginStorageFactory(
@@ -31,7 +25,6 @@ class PluginStorageFactory(
      * @return Plugin storage
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginStorage
      */
     fun create(pluginId: String): PluginStorage =
         PluginStorageImpl(

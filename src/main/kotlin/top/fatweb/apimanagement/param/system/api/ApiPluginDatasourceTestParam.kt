@@ -8,11 +8,6 @@ import top.fatweb.apimanagement.annotation.ParamProcessor
 /**
  * Test API plugin datasource parameters
  *
- * The connection facts are ordinary config values, so a test submits the ones it wants
- * tried in the same shape the config API takes them. One that is left out, or sent with no
- * value at all, is read from what is stored - so a form can be tried out exactly as it is,
- * before it is saved.
- *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */

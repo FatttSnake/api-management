@@ -11,9 +11,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 @Schema(description = "文件存储信息返回参数")
 data class FileStoreInfoVo(
     /**
-     * Mount point of the File System. The
-     * directory users will normally use to
-     * interface with the file store.
+     * Mount point of the File System.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -31,9 +29,7 @@ data class FileStoreInfoVo(
     val total: Long,
 
     /**
-     * Free space on the drive. This space is
-     * unallocated but may require elevated
-     * permissions to write.
+     * Free space on the drive.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0

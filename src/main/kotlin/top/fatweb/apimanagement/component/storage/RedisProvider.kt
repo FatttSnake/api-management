@@ -26,7 +26,6 @@ class RedisProvider(
      * @return true=success; false=fail
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see TimeUnit
      */
     fun setExpire(key: String, timeout: Long, timeUnit: TimeUnit = TimeUnit.SECONDS): Boolean =
         redisTemplate.expire(key, timeout, timeUnit)
@@ -119,8 +118,7 @@ class RedisProvider(
     /**
      * Set if absent atomically with time to live
      *
-     * Acts as a distributed gate: within a window of [timeout] only the first caller
-     * gets true, all subsequent ones false until the key expires.
+     * Acts as a distributed gate: only the first caller within [timeout] gets true.
      *
      * @param key Cache key
      * @param timeout Timeout
@@ -128,7 +126,6 @@ class RedisProvider(
      * @return true=key was absent and has been set; false=key already exists
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see TimeUnit
      */
     fun setIfAbsent(key: String, timeout: Long, timeUnit: TimeUnit = TimeUnit.SECONDS): Boolean =
         redisTemplate.opsForValue().setIfAbsent(key, 1, timeout, timeUnit) ?: false

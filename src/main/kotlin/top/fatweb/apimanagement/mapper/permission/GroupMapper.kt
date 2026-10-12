@@ -25,7 +25,6 @@ interface GroupMapper : BaseMapper<Group> {
      * @return Group in page
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see IPage
      */
     fun selectPage(
         page: IPage<Long>,
@@ -40,7 +39,6 @@ interface GroupMapper : BaseMapper<Group> {
      * @return Group with role list
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Group
      */
     fun selectListWithRoleByIds(@Param("groupIds") groupIds: List<Long>): List<Group>
 
@@ -51,7 +49,6 @@ interface GroupMapper : BaseMapper<Group> {
      * @return Group object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Group
      */
     fun selectOneById(@Param("id") id: Long): Group?
 }

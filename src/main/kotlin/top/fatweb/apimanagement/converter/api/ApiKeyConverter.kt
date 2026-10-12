@@ -15,7 +15,6 @@ import top.fatweb.apimanagement.vo.api.ApiKeyWithSecretVo
  * @return ApiKeyVo object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ApiKey
  * @see ApiKeyVo
  */
 fun ApiKey.toVo() = ApiKeyVo(
@@ -43,7 +42,6 @@ fun ApiKey.toVo() = ApiKeyVo(
  * @return ApiKeyWithSecretVo object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ApiKey
  * @see ApiKeyWithSecretVo
  */
 fun ApiKey.toVoWithSecret(secretKey: String) = ApiKeyWithSecretVo(
@@ -57,8 +55,6 @@ fun ApiKey.toVoWithSecret(secretKey: String) = ApiKeyWithSecretVo(
  * @return PageVo<ApiKeyVo> object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IPage
- * @see ApiKey
  * @see PageVo
  */
 fun IPage<ApiKey>.toVoPage() = PageVo(
@@ -75,7 +71,6 @@ fun IPage<ApiKey>.toVoPage() = PageVo(
  * @return ApiKey object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ApiKeyAddParam
  * @see ApiKey
  */
 fun ApiKeyAddParam.toEntity() = ApiKey().apply {
@@ -95,7 +90,6 @@ fun ApiKeyAddParam.toEntity() = ApiKey().apply {
  * @return ApiKey object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ApiKeyUpdateParam
  * @see ApiKey
  */
 fun ApiKeyUpdateParam.toEntity() = ApiKey().apply {
@@ -115,7 +109,6 @@ fun ApiKeyUpdateParam.toEntity() = ApiKey().apply {
  * @return ApiKey object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ApiKeyUpdateStatusParam
  * @see ApiKey
  */
 fun ApiKeyUpdateStatusParam.toEntity() = ApiKey().apply {

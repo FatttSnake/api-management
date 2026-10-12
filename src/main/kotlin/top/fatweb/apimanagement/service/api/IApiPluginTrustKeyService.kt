@@ -13,8 +13,6 @@ import top.fatweb.apimanagement.vo.api.ApiPluginTrustKeyVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IService
- * @see ApiPluginTrustKey
  */
 interface IApiPluginTrustKeyService : IService<ApiPluginTrustKey> {
     /**
@@ -24,7 +22,6 @@ interface IApiPluginTrustKeyService : IService<ApiPluginTrustKey> {
      * @return ApiPluginTrustKey object, or null when absent
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginTrustKey
      */
     fun getByKeyId(keyId: String): ApiPluginTrustKey?
 
@@ -35,9 +32,6 @@ interface IApiPluginTrustKeyService : IService<ApiPluginTrustKey> {
      * @return PageVo<ApiPluginTrustKeyVo> object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginTrustKeyGetParam
-     * @see PageVo
-     * @see ApiPluginTrustKeyVo
      */
     fun get(apiPluginTrustKeyGetParam: ApiPluginTrustKeyGetParam?): PageVo<ApiPluginTrustKeyVo>
 
@@ -48,8 +42,6 @@ interface IApiPluginTrustKeyService : IService<ApiPluginTrustKey> {
      * @return Added ApiPluginTrustKeyVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginTrustKeyAddParam
-     * @see ApiPluginTrustKeyVo
      */
     fun add(apiPluginTrustKeyAddParam: ApiPluginTrustKeyAddParam): ApiPluginTrustKeyVo
 
@@ -59,7 +51,6 @@ interface IApiPluginTrustKeyService : IService<ApiPluginTrustKey> {
      * @param apiPluginTrustKeyUpdateStatusParam Update plugin trust key status parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginTrustKeyUpdateStatusParam
      */
     fun status(apiPluginTrustKeyUpdateStatusParam: ApiPluginTrustKeyUpdateStatusParam)
 

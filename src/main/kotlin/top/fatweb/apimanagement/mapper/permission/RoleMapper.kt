@@ -25,7 +25,6 @@ interface RoleMapper : BaseMapper<Role> {
      * @return Role in page
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see IPage
      */
     fun selectPage(
         page: IPage<Long>,
@@ -40,7 +39,6 @@ interface RoleMapper : BaseMapper<Role> {
      * @return Role with power list
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Role
      */
     fun selectListWithPowerByIds(@Param("roleIds") roleIds: List<Long>): List<Role>
 
@@ -51,7 +49,6 @@ interface RoleMapper : BaseMapper<Role> {
      * @return Role object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Role
      */
     fun selectOneById(@Param("id") id: Long): Role?
 }

@@ -5,13 +5,6 @@ import org.gradle.api.provider.Property
 /**
  * The `apiPlugin { }` DSL of the plugin.
  *
- * Sensible defaults exist for most fields: [pluginId] falls back to the Gradle
- * project name, [pluginName] to the plugin id, [versionName] to the project
- * version, and [sdkVersion] to the SDK version the plugin was built against.
- * [versionCode] is deliberately **required** (no default) — it drives the
- * gateway's upgrade check, so an unset value must fail loudly instead of
- * silently shipping versionCode = 1.
- *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
@@ -19,10 +12,6 @@ interface ApiPluginExtension {
     /**
      * Unique plugin ID, `^[a-z][a-z0-9-]{0,63}$` (64 characters, the width of the gateway's
      * `plugin_id` column). Defaults to the Gradle project name.
-     *
-     * This is the plugin's single source of identity: it is written to the descriptor the
-     * gateway reads and namespaces every endpoint under `/api/{plugin}/v{version}/...`.
-     * `@ApiController` does not carry it.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0

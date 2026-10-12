@@ -14,7 +14,6 @@ class PowerSet : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Module
      */
     var moduleList: List<Module>? = null
 
@@ -23,7 +22,6 @@ class PowerSet : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Menu
      */
     var menuList: List<Menu>? = null
 
@@ -32,7 +30,6 @@ class PowerSet : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Scope
      */
     var scopeLists: List<Scope>? = null
 
@@ -41,7 +38,6 @@ class PowerSet : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Operation
      */
     var operationList: List<Operation>? = null
 

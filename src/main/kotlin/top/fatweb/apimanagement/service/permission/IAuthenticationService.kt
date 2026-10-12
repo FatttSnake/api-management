@@ -24,10 +24,6 @@ interface IAuthenticationService {
      * @return RegisterVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see HttpServletRequest
-     * @see HttpServletResponse
-     * @see RegisterParam
-     * @see RegisterVo
      */
     fun register(request: HttpServletRequest, response: HttpServletResponse, registerParam: RegisterParam): RegisterVo
 
@@ -45,7 +41,6 @@ interface IAuthenticationService {
      * @param verifyParam Verify parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see VerifyParam
      */
     fun verify(verifyParam: VerifyParam)
 
@@ -56,8 +51,6 @@ interface IAuthenticationService {
      * @param forgetParam Forget parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see HttpServletRequest
-     * @see ForgetParam
      */
     fun forget(request: HttpServletRequest, forgetParam: ForgetParam)
 
@@ -68,8 +61,6 @@ interface IAuthenticationService {
      * @param retrieveParam Retrieve parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see HttpServletRequest
-     * @see RetrieveParam
      */
     fun retrieve(request: HttpServletRequest, retrieveParam: RetrieveParam)
 
@@ -82,10 +73,6 @@ interface IAuthenticationService {
      * @return LoginVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see HttpServletRequest
-     * @see HttpServletResponse
-     * @see LoginParam
-     * @see LoginVo
      */
     fun login(request: HttpServletRequest, response: HttpServletResponse, loginParam: LoginParam): LoginVo
 
@@ -95,7 +82,6 @@ interface IAuthenticationService {
      * @return Two-factor QR code
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see TwoFactorVo
      */
     fun createTwoFactor(): TwoFactorVo
 
@@ -106,7 +92,6 @@ interface IAuthenticationService {
      * @return Result
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see TwoFactorValidateParam
      */
     fun validateTwoFactor(twoFactorValidateParam: TwoFactorValidateParam): Boolean
 
@@ -117,7 +102,6 @@ interface IAuthenticationService {
      * @return Result
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see TwoFactorRemoveParam
      */
     fun removeTwoFactor(twoFactorRemoveParam: TwoFactorRemoveParam): Boolean
 
@@ -129,8 +113,6 @@ interface IAuthenticationService {
      * @return Logout result
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see HttpServletRequest
-     * @see HttpServletResponse
      */
     fun logout(request: HttpServletRequest, response: HttpServletResponse): Boolean
 
@@ -144,8 +126,6 @@ interface IAuthenticationService {
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      * @see HttpServletRequest
-     * @see HttpServletResponse
-     * @see TokenVo
      */
     fun refreshToken(
         response: HttpServletResponse,

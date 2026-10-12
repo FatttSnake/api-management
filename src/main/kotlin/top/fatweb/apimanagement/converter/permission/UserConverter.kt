@@ -16,7 +16,6 @@ import top.fatweb.avatargenerator.GitHubAvatar
  * @return UserWithPowerInfoVo object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see User
  * @see UserWithPowerInfoVo
  */
 fun User.toVoWithPowerInfo() = UserWithPowerInfoVo(
@@ -47,7 +46,6 @@ fun User.toVoWithPowerInfo() = UserWithPowerInfoVo(
  * @return UserWithRoleInfoVo object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see User
  * @see UserWithRoleInfoVo
  */
 fun User.toVoWithRoleInfo() = UserWithRoleInfoVo(
@@ -76,7 +74,6 @@ fun User.toVoWithRoleInfo() = UserWithRoleInfoVo(
  * @return UserWithInfoVo object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see User
  * @see UserWithInfoVo
  */
 fun User.toVoWithInfo() = UserWithInfoVo(
@@ -103,7 +100,6 @@ fun User.toVoWithInfo() = UserWithInfoVo(
  * @return User object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see UserAddParam
  * @see User
  */
 fun UserAddParam.toEntity() = User().apply {
@@ -129,7 +125,6 @@ fun UserAddParam.toEntity() = User().apply {
  * @return User object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see UserUpdateParam
  * @see User
  */
 fun UserUpdateParam.toEntity() = User().apply {
@@ -154,8 +149,6 @@ fun UserUpdateParam.toEntity() = User().apply {
  * @return PageVo<UserWithRoleInfoVo> object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IPage
- * @see User
  * @see PageVo
  */
 fun IPage<User>.toVoWithRoleInfo() = PageVo(

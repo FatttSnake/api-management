@@ -23,7 +23,6 @@ interface UserMapper : BaseMapper<User> {
      * @return User object with power and information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see User
      */
     fun selectOneWithPowerInfoByAccount(@Param("account") account: String): User?
 
@@ -34,7 +33,6 @@ interface UserMapper : BaseMapper<User> {
      * @return User object with power and information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see User
      */
     fun selectOneWithPowerInfoById(@Param("id") id: Long): User?
 
@@ -45,7 +43,6 @@ interface UserMapper : BaseMapper<User> {
      * @return User object with basic information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see User
      */
     fun selectOneWithBasicInfoByUsername(@Param("username") username: String): User?
 
@@ -56,7 +53,6 @@ interface UserMapper : BaseMapper<User> {
      * @return User object with basic information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see User
      */
     fun selectOneWithBasicInfoById(@Param("id") id: Long): User?
 
@@ -67,7 +63,6 @@ interface UserMapper : BaseMapper<User> {
      * @return User object with basic information in list
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see User
      */
     fun selectOneWithBasicInfoByIds(@Param("ids") ids: List<Long>): List<User>
 
@@ -81,7 +76,6 @@ interface UserMapper : BaseMapper<User> {
      * @return User in page
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see IPage
      */
     fun selectPage(
         page: IPage<Long>,
@@ -97,7 +91,6 @@ interface UserMapper : BaseMapper<User> {
      * @return User with role and information list
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see User
      */
     fun selectListWithRoleInfoByIds(@Param("userIds") userIds: List<Long>): List<User>
 
@@ -108,7 +101,6 @@ interface UserMapper : BaseMapper<User> {
      * @return User object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see User
      */
     fun selectOneWithRoleInfoById(@Param("id") id: Long): User?
 
@@ -118,7 +110,6 @@ interface UserMapper : BaseMapper<User> {
      * @return User with information list
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see User
      */
     fun selectListWithInfo(): List<User>
 

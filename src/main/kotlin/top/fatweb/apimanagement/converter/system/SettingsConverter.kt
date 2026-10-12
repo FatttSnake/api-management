@@ -10,7 +10,6 @@ import top.fatweb.apimanagement.vo.system.SensitiveWordVo
  * @return SensitiveWordVo object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see SensitiveWord
  * @see SensitiveWordVo
  */
 fun SensitiveWord.toVo() = SensitiveWordVo(
@@ -26,7 +25,6 @@ fun SensitiveWord.toVo() = SensitiveWordVo(
  * @return SensitiveWord object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see SensitiveWordAddParam
  * @see SensitiveWord
  */
 fun SensitiveWordAddParam.toEntity() = SensitiveWord().apply {

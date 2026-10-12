@@ -21,15 +21,7 @@ import java.util.jar.JarOutputStream
 /**
  * Plugin signer
  *
- * Ed25519 signing / verification of plugin jars to prevent tampering. The
- * signature is computed over a canonical "plugin manifest": every jar entry
- * `name:SHA256` line plus the embedded public key, excluding the signature entry
- * itself (to avoid a self-referential digest).
- *
- * Jar layout:
- * - `META-INF/api-plugin.json`    descriptor
- * - `META-INF/plugin.pub.pem`     public key (SPKI PEM)
- * - `META-INF/plugin.sig`         raw Ed25519 signature bytes
+ * Ed25519 signing and verification of plugin jars to prevent tampering.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
@@ -134,7 +126,7 @@ object PluginSigner {
     /**
      * Sign a plugin jar in place and embed the signature entry
      *
-     * Called in-process by the Gradle plugin, so a plugin build needs no external tool.
+     * Called in-process by the Gradle plugin.
      *
      * @param jar Plugin jar path (already containing the public key entry)
      * @param privateKeyPem Private key in PKCS8 PEM

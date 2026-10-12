@@ -15,9 +15,6 @@ import top.fatweb.apimanagement.param.PageSortParam
  * @param defaultOrder Default order by
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see Page
- * @see PageSortParam
- * @see OrderItem
  */
 fun <T : Page<*>> setPageSort(pageSortParam: PageSortParam?, page: T, defaultOrder: OrderItem? = null) {
     if (pageSortParam?.sortField != null || pageSortParam?.sortOrder != null) {
@@ -43,7 +40,6 @@ fun <T : Page<*>> setPageSort(pageSortParam: PageSortParam?, page: T, defaultOrd
  * @param func Database exists query operation function
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see RuntimeException
  */
 fun existsOrThrowException(exception: RuntimeException = NoRecordFoundException(), func: () -> Boolean) {
     if (!func()) {
@@ -58,7 +54,6 @@ fun existsOrThrowException(exception: RuntimeException = NoRecordFoundException(
  * @param func Database select operation function
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see RuntimeException
  */
 fun <T> queryOrThrowException(exception: RuntimeException? = null, func: () -> T?): T {
     return func() ?: throw exception ?: NoRecordFoundException()
@@ -71,7 +66,6 @@ fun <T> queryOrThrowException(exception: RuntimeException? = null, func: () -> T
  * @param func Database insert operation function
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see RuntimeException
  */
 fun saveOrThrowException(exception: RuntimeException? = null, func: () -> Boolean) {
     if (!func()) {
@@ -86,7 +80,6 @@ fun saveOrThrowException(exception: RuntimeException? = null, func: () -> Boolea
  * @param func Database update operation function
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see RuntimeException
  */
 fun updateOrThrowException(exception: RuntimeException? = null, func: () -> Boolean) {
     if (!func()) {

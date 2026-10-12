@@ -38,8 +38,7 @@ data class HardwareInfoVo(
     val is64Bit: Boolean,
 
     /**
-     * Number of packages/sockets in the system. A
-     * single package may contain multiple cores.
+     * Number of packages/sockets in the system.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -48,12 +47,7 @@ data class HardwareInfoVo(
     val cpuPhysicalPackageCount: Int,
 
     /**
-     * Number of physical CPUs/cores available for
-     * processing.
-     *
-     * On some operating systems with variable numbers
-     * of physical processors available to the OS, may
-     * return a max value.
+     * Number of physical CPUs/cores available for processing.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -63,11 +57,6 @@ data class HardwareInfoVo(
 
     /**
      * Number of logical CPUs available for processing.
-     * This value may be higher than physical CPUs if
-     * hyperthreading is enabled.
-     *
-     * On some operating systems with variable numbers
-     * of logical processors, may return a max value.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0

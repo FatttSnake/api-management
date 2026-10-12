@@ -9,8 +9,8 @@ import kotlin.test.assertTrue
 /**
  * Storage key util tests
  *
- * A path accepted here becomes a filesystem path below the storage root, so every
- * case that could leave that root has to be rejected rather than escaped.
+ * A path accepted here becomes a filesystem path below the storage root, so every case that
+ * could leave that root has to be rejected rather than escaped.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0

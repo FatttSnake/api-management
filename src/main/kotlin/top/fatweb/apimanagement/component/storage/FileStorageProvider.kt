@@ -5,20 +5,9 @@ import java.time.Duration
 /**
  * File storage provider
  *
- * Two addressing modes are served by the same backend, and they differ in more than
- * their key:
- *
- * - **Content addressing** ([save] / [load] / [exists] / [delete] / [size]) keys an
- *   object by the SHA-256 of its content, so identical content is stored once. These
- *   objects are compressed at rest and can only be read back through [load].
- * - **Location addressing** ([saveAt] / [loadAt] / [existsAt] / [deleteAt] /
- *   [deleteAtPrefix] / [externalUrlAt]) keys an object by a caller-supplied path,
- *   relative to the system-wide location-addressed root, and stores it verbatim.
- *   That is what makes [externalUrlAt] possible.
- *
- * The location family never sees a plugin ID: it receives an already composed key
- * and prefixes only its own physical root, so a backend does not need to know what
- * a plugin is, and the same methods serve any future location-addressed namespace.
+ * Content addressing keys and compresses an object by the SHA-256 of its content and
+ * can only read it back through [load]; location addressing stores it verbatim under a
+ * caller-supplied path, which is what makes [externalUrlAt] possible.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
@@ -31,7 +20,6 @@ interface FileStorageProvider {
      * @return File SHA-256 key
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ByteArray
      */
     fun save(content: ByteArray): String
 
@@ -52,7 +40,6 @@ interface FileStorageProvider {
      * @return File
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ByteArray
      */
     fun load(key: String): ByteArray?
 
@@ -89,14 +76,10 @@ interface FileStorageProvider {
     /**
      * Save raw bytes at a location-addressed key
      *
-     * The bytes are stored verbatim, with no compression, so they can later be
-     * served through [externalUrlAt].
-     *
      * @param key Location key, validated by [StorageKeyUtil.validateLocationKey]
      * @param content File content
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ByteArray
      */
     fun saveAt(key: String, content: ByteArray)
 
@@ -107,7 +90,6 @@ interface FileStorageProvider {
      * @return File content, or null when nothing is stored under [key]
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ByteArray
      */
     fun loadAt(key: String): ByteArray?
 
@@ -144,12 +126,8 @@ interface FileStorageProvider {
     /**
      * Build a login-free external URL for a location-addressed key
      *
-     * The two parameters are not the same string, and each backend uses only one of
-     * them. A backend that serves the object itself (S3) needs the [key] to sign
-     * against; a backend that hands the download back to the gateway (local) needs
-     * the [reference] to route on, and signs that instead. Keeping both explicit
-     * beats deriving one from the other, which would force the backend to parse a
-     * namespace it has no business knowing about.
+     * Each backend signs only one of the two: [key] when it serves the object itself,
+     * [reference] when the download goes back through the gateway.
      *
      * @param key Location key of the object
      * @param reference Public reference to place in a gateway-built URL
@@ -157,7 +135,6 @@ interface FileStorageProvider {
      * @return External URL, or null when the backend cannot build an absolute URL
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Duration
      */
     fun externalUrlAt(key: String, reference: String, ttl: Duration): String?
 }

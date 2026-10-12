@@ -8,15 +8,9 @@ import top.fatweb.apimanagement.properties.ServerProperties
 /**
  * Public base URL resolver
  *
- * Resolves the absolute base a login-free download URL is built from. The
- * configured value wins, because a deployment behind a reverse proxy cannot learn
- * its own public address from the request; otherwise the address of the current
- * request is used, which is correct for a direct deployment.
- *
- * Forwarded headers are deliberately not consulted: trusting them implicitly is
- * how a caller-controlled `Host` or `X-Forwarded-Proto` ends up interpolated into
- * a URL the gateway hands out. Configure the base URL explicitly in production
- * instead.
+ * The configured value wins; otherwise the address of the current request is used.
+ * Forwarded headers are deliberately not consulted, so a caller-controlled `Host`
+ * cannot leak into a generated URL.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0

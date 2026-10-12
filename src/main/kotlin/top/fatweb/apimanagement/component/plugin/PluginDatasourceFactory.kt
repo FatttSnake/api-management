@@ -18,18 +18,11 @@ import javax.sql.DataSource
 /**
  * Plugin datasource factory
  *
- * Builds the isolated datasources a plugin declares, from the config values an
- * administrator owns. Holds every collaborator the build needs, so the plugin service
- * that calls it stays free of them - the same shape as [PluginStorageFactory], which
- * supplies the other resource a plugin is given.
- *
- * The gateway's own datasource is never involved: a plugin gets one of these or none.
+ * Builds the isolated datasources a plugin declares, from the config values an administrator
+ * owns. The gateway's own datasource is never involved.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServerProperties
- * @see PluginSettingReader
- * @see PluginConfigSchemaCache
  */
 @Component
 class PluginDatasourceFactory(
@@ -50,22 +43,11 @@ class PluginDatasourceFactory(
 
         /**
          * How long a borrow of a plugin datasource may wait for a connection
-         *
-         * Hikari's own default is 30 s, which is as long as an administration request is
-         * willing to wait for anything - a server that cannot be reached would be reported as
-         * the request timing out rather than as itself. Kept above
-         * [POOL_CONNECT_TIMEOUT_MILLIS] and above Hikari's 5 s validation timeout, so that one
-         * driver attempt is what decides the answer.
          */
         private const val POOL_CONNECTION_TIMEOUT_MILLIS = 10_000L
 
         /**
          * How long one physical attempt at a connection may take
-         *
-         * The MySQL driver's own default is 0, which is "wait forever": against a host that
-         * drops packets the connect never returns, and the thread making it is held for as long
-         * as the operating system allows. Applied as a default only - a server behind a slow
-         * link is the administrator's to describe, and they describe it by setting this.
          */
         private const val POOL_CONNECT_TIMEOUT_MILLIS = 5_000
     }
@@ -81,13 +63,8 @@ class PluginDatasourceFactory(
     /**
      * Build every datasource a plugin declares
      *
-     * A declared datasource that is not configured is left out rather than reported: a
-     * plugin is installed before its server's details are known, and the plugin is told
-     * about the absence through `PluginContext.datasources` so it can say so clearly
-     * instead of failing to mount.
-     *
-     * Building a pool does not connect, so an unreachable server costs nothing here and
-     * the plugin still mounts.
+     * An unconfigured datasource is left out rather than reported. Building a pool does not
+     * connect, so an unreachable server still mounts.
      *
      * @param pluginId Plugin ID
      * @param schema Schema the plugin declared, or null when it declared none
@@ -95,8 +72,6 @@ class PluginDatasourceFactory(
      * @throws PluginDatasourceException when a configured value cannot describe a connection
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginConfigSchema
-     * @see DataSource
      */
     fun create(pluginId: String, schema: PluginConfigSchema?): Map<String, DataSource> =
         schema?.datasources.orEmpty().mapNotNull { declaration ->
@@ -110,17 +85,7 @@ class PluginDatasourceFactory(
     /**
      * Verify that a datasource can be connected to
      *
-     * Asked for rather than done while saving: a configuration is worth storing before its
-     * server is reachable, and the administrator is the one who decides when the question
-     * is worth asking. Submitted values are used where they were submitted, so a
-     * configuration can be tried out before it is saved.
-     *
-     * A plain driver connection rather than a pool: this answers "is it reachable" in one
-     * round trip and holds nothing afterwards.
-     *
-     * No timeout is set on the JVM: [DriverManager] holds its login timeout in a static
-     * that every other connection in the process shares, so the limit is handed to the
-     * driver per connection instead.
+     * Uses a plain driver connection rather than a pool, and sets no JVM-wide login timeout.
      *
      * @param pluginId Plugin ID
      * @param name Datasource name
@@ -169,9 +134,7 @@ class PluginDatasourceFactory(
     /**
      * Delete everything the gateway keeps for a plugin's datasources
      *
-     * The whole directory rather than the files of the datasources currently declared:
-     * uninstalling with a purge wants a plugin's databases gone, including those of a
-     * declaration that has since changed.
+     * Removes the plugin's whole datasource directory, not only the files currently declared.
      *
      * @param pluginId Plugin ID
      * @author FatttSnake, fatttsnake@gmail.com
@@ -195,8 +158,6 @@ class PluginDatasourceFactory(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResolvedDatasource
-     * @see DataSource
      */
     private fun sourceOf(pluginId: String, resolved: ResolvedDatasource): DataSource = when (resolved) {
         // SQLite creates the file itself but not the directory it goes in
@@ -229,15 +190,8 @@ class PluginDatasourceFactory(
     /**
      * Build one connection pool
      *
-     * Built explicitly rather than through `DataSourceBuilder`, because the settings below are
-     * the point: how many connections a plugin may hold open, that building a pool must not
-     * require the server to be up, and that a server which is not up must be reported in
-     * seconds rather than outlast the request that asked for it.
-     *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Properties
-     * @see DataSource
      */
     private fun pool(
         pluginId: String,
@@ -276,20 +230,14 @@ class PluginDatasourceFactory(
     /**
      * Add a bound to how long one connect attempt may take
      *
-     * Only a default, and only for MySQL: a property the administrator named is kept, because a
-     * server behind a slow link is theirs to describe. The driver's own default is 0, which is
-     * no bound at all, so without this a host that never answers holds a pool thread for as
-     * long as the operating system allows.
-     *
-     * The comparison is case-insensitive because the driver looks its properties up that way,
-     * and a `connectTimeout` set with different capitalisation is still one that was set.
+     * Only a default, and only for MySQL: an administrator's own `connectTimeout`, whatever its
+     * capitalisation, is kept.
      *
      * @param driver Driver class name
      * @param params Validated driver properties
      * @return Properties to hand the driver
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Properties
      */
     private fun driverParams(driver: String, params: Properties): Properties {
         val merged = Properties()
@@ -309,7 +257,6 @@ class PluginDatasourceFactory(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResolvedDatasource
      */
     private fun connect(mysql: ResolvedDatasource.Mysql) {
         val params = Properties()

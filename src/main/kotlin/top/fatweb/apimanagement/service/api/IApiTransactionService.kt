@@ -13,8 +13,6 @@ import java.math.BigDecimal
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IService
- * @see ApiTransaction
  */
 interface IApiTransactionService : IService<ApiTransaction> {
     /**
@@ -25,9 +23,6 @@ interface IApiTransactionService : IService<ApiTransaction> {
      * @return PageVo<ApiTransactionVo> object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiTransactionGetParam
-     * @see PageVo
-     * @see ApiTransactionVo
      */
     fun getPage(managed: Boolean, apiTransactionGetParam: ApiTransactionGetParam?): PageVo<ApiTransactionVo>
 
@@ -38,7 +33,6 @@ interface IApiTransactionService : IService<ApiTransaction> {
      * @return ApiTransaction object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiTransaction
      */
     fun getByOrderNo(orderNo: String): ApiTransaction?
 
@@ -50,7 +44,6 @@ interface IApiTransactionService : IService<ApiTransaction> {
      * @return true if saved or already exists
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiUsage
      */
     fun saveDeduct(apiUsage: ApiUsage, balanceAfter: BigDecimal): Boolean
 }

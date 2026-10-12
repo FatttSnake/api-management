@@ -13,9 +13,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 data class CpuInfoVo(
     /**
-     * Show the percentage of CPU utilization
-     * that occurred while executing at the user
-     * level (application).
+     * Percentage of CPU utilization at the user level (application).
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -24,9 +22,7 @@ data class CpuInfoVo(
     val user: Long,
 
     /**
-     * Show the percentage of CPU utilization
-     * that occurred while executing at the user
-     * level with nice priority.
+     * Percentage of CPU utilization at the user level with nice priority.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -35,11 +31,7 @@ data class CpuInfoVo(
     val nice: Long,
 
     /**
-     * Show the percentage of CPU utilization that
-     * occurred while executing at the system level
-     * (kernel). Note that this does not include time
-     * spent servicing hardware and software
-     * interrupts.
+     * Percentage of CPU utilization at the system level (kernel).
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -48,9 +40,7 @@ data class CpuInfoVo(
     val system: Long,
 
     /**
-     * Show the percentage of time that the
-     * CPU or CPUs were idle and the system did
-     * not have an outstanding disk I/O request.
+     * Percentage of time the CPU was idle without an outstanding disk I/O request.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -59,10 +49,7 @@ data class CpuInfoVo(
     val idle: Long,
 
     /**
-     * Show the percentage of time that the
-     * CPU or CPUs were idle during which the
-     * system had an outstanding disk I/O
-     * request.
+     * Percentage of time the CPU was idle with an outstanding disk I/O request.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -71,9 +58,7 @@ data class CpuInfoVo(
     val iowait: Long,
 
     /**
-     * Show the percentage of time spent by
-     * the CPU or CPUs to service hardware
-     * interrupts.
+     * Percentage of time spent servicing hardware interrupts.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -82,9 +67,7 @@ data class CpuInfoVo(
     val irq: Long,
 
     /**
-     * Show the percentage of time spent by
-     * the CPU or CPUs to service software
-     * interrupts.
+     * Percentage of time spent servicing software interrupts.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -93,10 +76,8 @@ data class CpuInfoVo(
     val softirq: Long,
 
     /**
-     * Show the percentage of time spent in
-     * involuntary wait by the virtual CPU or CPUs
-     * while the hypervisor was servicing another
-     * virtual processor.
+     * Percentage of time spent in involuntary wait by a virtual CPU while the hypervisor was
+     * servicing another virtual processor.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0

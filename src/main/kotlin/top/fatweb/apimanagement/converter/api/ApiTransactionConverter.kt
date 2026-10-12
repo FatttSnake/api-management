@@ -11,7 +11,6 @@ import top.fatweb.apimanagement.vo.api.ApiTransactionVo
  * @return ApiTransactionVo object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ApiTransaction
  * @see ApiTransactionVo
  */
 fun ApiTransaction.toVo() = ApiTransactionVo(
@@ -33,8 +32,6 @@ fun ApiTransaction.toVo() = ApiTransactionVo(
  * @return PageVo<ApiTransactionVo> object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IPage
- * @see ApiTransaction
  * @see PageVo
  */
 fun IPage<ApiTransaction>.toVoPage() = PageVo(

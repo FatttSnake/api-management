@@ -151,8 +151,7 @@ abstract class PreparePluginPubKey : DefaultTask() {
 
 /**
  * Signs the produced jar in place with `keys/private.pem` and embeds the Ed25519
- * signature as `META-INF/plugin.sig`. Runs after every `jar`, mirroring the
- * historical `PluginSigner sign` invocation.
+ * signature as `META-INF/plugin.sig`. Runs after every `jar`.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0

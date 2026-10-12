@@ -13,17 +13,8 @@ import top.fatweb.apimanagement.vo.api.ApiPluginVo
 /**
  * API plugin service interface
  *
- * Manages the plugin registry (one row per plugin) and its per-interface
- * configuration (price / rate limit / billing), plus the hot-pluggable lifecycle:
- * [installPlugin] uploads and mounts a signed jar, [uninstallPlugin] unmounts it and
- * [reloadPlugin] remounts it. Also owns the administrator-facing configuration of a
- * plugin ([getPluginConfig] / [updatePluginConfig]), whose declared schema comes from
- * the plugin's own jar.
- *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IService
- * @see ApiPlugin
  */
 interface IApiPluginService : IService<ApiPlugin> {
     /**
@@ -33,9 +24,6 @@ interface IApiPluginService : IService<ApiPlugin> {
      * @return PageVo<ApiPluginVo> object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginGetParam
-     * @see PageVo
-     * @see ApiPluginVo
      */
     fun getPluginPage(apiPluginGetParam: ApiPluginGetParam?): PageVo<ApiPluginVo>
 
@@ -47,7 +35,6 @@ interface IApiPluginService : IService<ApiPlugin> {
      * @throws NoRecordFoundException when no such plugin is installed
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginVo
      */
     fun getPlugin(pluginId: String): ApiPluginVo
 
@@ -57,7 +44,6 @@ interface IApiPluginService : IService<ApiPlugin> {
      * @param apiPluginUpdateParam Update API plugin parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginUpdateParam
      */
     fun updatePlugin(apiPluginUpdateParam: ApiPluginUpdateParam)
 
@@ -67,7 +53,6 @@ interface IApiPluginService : IService<ApiPlugin> {
      * @param apiPluginUpdateStatusParam Update API plugin enable status parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginUpdateStatusParam
      */
     fun updatePluginStatus(apiPluginUpdateStatusParam: ApiPluginUpdateStatusParam)
 
@@ -78,9 +63,6 @@ interface IApiPluginService : IService<ApiPlugin> {
      * @return PageVo<ApiGroupVo> object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiInterfaceGetParam
-     * @see PageVo
-     * @see ApiGroupVo
      */
     fun getInterfacePage(apiInterfaceGetParam: ApiInterfaceGetParam?): PageVo<ApiGroupVo>
 
@@ -90,7 +72,6 @@ interface IApiPluginService : IService<ApiPlugin> {
      * @param apiInterfaceUpdateParam Update API interface parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiInterfaceUpdateParam
      */
     fun updateInterface(apiInterfaceUpdateParam: ApiInterfaceUpdateParam)
 
@@ -100,7 +81,6 @@ interface IApiPluginService : IService<ApiPlugin> {
      * @param apiInterfaceUpdateStatusParam Update API interface enable status parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiInterfaceUpdateStatusParam
      */
     fun updateInterfaceStatus(apiInterfaceUpdateStatusParam: ApiInterfaceUpdateStatusParam)
 
@@ -111,7 +91,6 @@ interface IApiPluginService : IService<ApiPlugin> {
      * @return ApiPlugin object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPlugin
      */
     fun getByPluginId(pluginId: String): ApiPlugin?
 
@@ -122,7 +101,6 @@ interface IApiPluginService : IService<ApiPlugin> {
      * @return ApiInterface object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiInterface
      */
     fun getByCode(code: String): ApiInterface?
 
@@ -134,7 +112,6 @@ interface IApiPluginService : IService<ApiPlugin> {
      * @return Effective access mode
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiInterface
      * @see ApiInterface.AccessMode
      */
     fun resolveAccessMode(api: ApiInterface): ApiInterface.AccessMode
@@ -142,33 +119,21 @@ interface IApiPluginService : IService<ApiPlugin> {
     /**
      * Install a plugin from an uploaded jar
      *
-     * Verifies the signature and trust, then mounts the plugin: registers its
-     * request mappings, upserts database rows and the permission tree. Upgrades
-     * (same plugin ID) are only allowed when the new version code is higher.
-     *
-     * What the gateway checks of the jar itself - its signature, its trust, its descriptor, its
-     * config schema, its controllers - refuses the install. What the plugin's own startup does
-     * does not: a plugin whose `onStart` throws is installed and registered, serving nothing and
-     * carrying the reason in `loadError`, so that the configuration it failed against can be
-     * corrected and the plugin mounted again.
+     * A plugin whose own `onStart` throws is still installed and registered, serving nothing with
+     * the reason in `loadError`.
      *
      * @param jarBytes Plugin jar content
      * @param jarName Original jar file name
      * @return ApiPluginVo object of the installed plugin
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ByteArray
-     * @see ApiPluginVo
      */
     fun installPlugin(jarBytes: ByteArray, jarName: String): ApiPluginVo
 
     /**
      * Uninstall a plugin by its plugin ID
      *
-     * Unregisters its request mappings, waits for the requests it was serving, closes its class
-     * loader / child context, soft-deletes its database rows and cleans up the permission tree.
-     * A purge also runs the plugin's own `onPurge` while its datasources are still open, which
-     * is where it deletes data the gateway does not keep for it.
+     * A purge runs the plugin's own `onPurge` while its datasources are still open.
      *
      * @param pluginId Plugin ID
      * @param purgeData Whether everything the plugin owns should be deleted with it -
@@ -182,33 +147,18 @@ interface IApiPluginService : IService<ApiPlugin> {
     /**
      * Re-mount an installed plugin from its stored jar
      *
-     * Restarts the plugin's class loader, child context and request mappings without
-     * touching its version, its database rows, its permission tree, its configuration
-     * or its stored files - so a jar that has been replaced under it is picked up
-     * without restarting the gateway.
-     *
-     * A configuration change does not need this: saving one that alters a datasource
-     * remounts the plugin on its own, because the gateway is the one that builds the
-     * datasource from it.
-     *
-     * The replacement is built in full while the running one keeps serving, so a jar that can
-     * no longer be mounted leaves the plugin as it was. An upgrade path is not reused: that one
-     * replaces the registration, which would reset the interface configuration the administrator
-     * has tuned.
+     * The replacement is built in full while the running one keeps serving, so a jar that can no
+     * longer be mounted leaves the plugin as it was.
      *
      * @param pluginId Plugin ID
      * @return ApiPluginVo object of the reloaded plugin
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginVo
      */
     fun reloadPlugin(pluginId: String): ApiPluginVo
 
     /**
      * Verify that a plugin's datasource can be connected to
-     *
-     * Asked for rather than done while saving, so a configuration is worth storing before
-     * its server is reachable and is tried out when the administrator wants it tried.
      *
      * @param pluginId Plugin ID
      * @param name Datasource name
@@ -229,21 +179,18 @@ interface IApiPluginService : IService<ApiPlugin> {
      * @return ApiPluginConfigVo object, whose schema is null when the plugin declares none
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginConfigVo
      */
     fun getPluginConfig(pluginId: String): ApiPluginConfigVo
 
     /**
      * Save the configuration of a plugin
      *
-     * Saved one group at a time, since that is how the console renders it: a submission names
-     * the groups it is deciding about, and the required fields those groups declare are what
-     * it is checked against.
+     * Saved one group at a time; the required fields of the groups a submission names are what it
+     * is checked against.
      *
      * @param apiPluginConfigUpdateParam Update API plugin config parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginConfigUpdateParam
      */
     fun updatePluginConfig(apiPluginConfigUpdateParam: ApiPluginConfigUpdateParam)
 }

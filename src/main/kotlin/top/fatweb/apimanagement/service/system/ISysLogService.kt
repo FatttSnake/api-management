@@ -11,8 +11,6 @@ import top.fatweb.apimanagement.vo.system.SysLogVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IService
- * @see SysLog
  */
 interface ISysLogService : IService<SysLog> {
     /**
@@ -22,9 +20,6 @@ interface ISysLogService : IService<SysLog> {
      * @return IPage<SysLog> object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see SysLogGetParam
-     * @see PageVo
-     * @see SysLogVo
      */
     fun getPage(sysLogGetParam: SysLogGetParam?): PageVo<SysLogVo>
 }

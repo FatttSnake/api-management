@@ -8,7 +8,5 @@ import top.fatweb.apimanagement.entity.permission.Menu
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IService
- * @see Menu
  */
 interface IMenuService : IService<Menu>

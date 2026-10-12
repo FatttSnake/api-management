@@ -62,7 +62,6 @@ data class ConfigVo(
          *
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
-         * @see BaseSettingsVo
          */
         fun fromBaseSettingsVo(baseSettingsVo: BaseSettingsVo) =
             ConfigVo(

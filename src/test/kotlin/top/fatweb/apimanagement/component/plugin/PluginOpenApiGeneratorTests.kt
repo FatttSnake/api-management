@@ -29,9 +29,7 @@ import kotlin.test.assertTrue
  * Plugin OpenAPI generator tests
  *
  * Pins the fragment the user-facing documentation is rendered from: the paths and operation
- * identities the mount produced, and the parameter, body and response shapes read back off
- * the handlers. Endpoints are built directly rather than by mounting a jar, which is what the
- * generator is given anyway.
+ * identities the mount produced, and the parameter, body and response shapes.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0

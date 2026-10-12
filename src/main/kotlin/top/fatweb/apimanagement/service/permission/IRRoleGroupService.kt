@@ -8,7 +8,5 @@ import top.fatweb.apimanagement.entity.permission.RRoleGroup
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IService
- * @see RRoleGroup
  */
 interface IRRoleGroupService : IService<RRoleGroup>

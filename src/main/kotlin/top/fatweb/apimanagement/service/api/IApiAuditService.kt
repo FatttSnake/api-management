@@ -18,9 +18,6 @@ interface IApiAuditService {
      * @return PageVo<ApiAuditVo> object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiAuditGetParam
-     * @see PageVo
-     * @see ApiAuditVo
      */
     fun getPage(apiAuditGetParam: ApiAuditGetParam?): PageVo<ApiAuditVo>
 }

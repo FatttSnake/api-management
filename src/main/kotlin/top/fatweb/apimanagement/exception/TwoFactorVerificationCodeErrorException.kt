@@ -5,6 +5,5 @@ package top.fatweb.apimanagement.exception
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see RuntimeException
  */
 class TwoFactorVerificationCodeErrorException : RuntimeException("Two-factor verification code error")

@@ -80,12 +80,6 @@ import io.swagger.v3.oas.annotations.Operation as SwaggerOperation
 /**
  * API plugin service implement
  *
- * Owns the plugin registry and the hot-pluggable lifecycle: upload → verify
- * signature + trust → load into a child-first class loader and a child Spring
- * context → register request mappings → upsert database rows and the permission
- * tree → refresh the in-memory caches. Plugins are re-mounted from the blob store
- * at startup ([loadUploadedPlugins]).
- *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  * @see JsonMapper
@@ -191,10 +185,7 @@ class ApiPluginServiceImpl(
         /**
          * How long an unmount waits for the plugin's in-flight requests to finish
          *
-         * Bounds the administrator's request that triggered the unmount: a plugin whose request
-         * will not return (a hung external call, a lock) must not hold an install, an uninstall
-         * or a configuration save open forever. What it costs when it expires is that the
-         * plugin's resources are closed under a request that is still running.
+         * When it expires, the plugin's resources are closed under a request that is still running.
          */
         private const val IN_FLIGHT_DRAIN_TIMEOUT_MILLIS = 10_000L
 
@@ -211,31 +202,13 @@ class ApiPluginServiceImpl(
         /**
          * Maximum length of an API scoping code
          *
-         * Must match the width of the columns the code is persisted in - `t_b_api_interface.code`,
-         * `t_s_operation.code` and `t_b_api_usage.api_code` are all `varchar(200)`. The composed
-         * code is `api:` + plugin ID (at most 64, the width of `t_b_api_plugin.plugin_id`) + `:v` +
-         * version + `:` + operation ID, so 200 leaves ample room. Enforced when a plugin is
-         * mounted, so an over-long code is refused with the endpoint named rather than failing the
-         * insert half way through the mount.
+         * Must match the `varchar(200)` columns the code is persisted in.
          */
         private const val MAX_CODE_LENGTH = 200
 
         /**
          * Build the endpoint's persisted identity code from the plugin ID, its API version and
          * the method's `@Operation`
-         *
-         * The code is exactly what the gateway stores as `t_b_api_interface.code` and
-         * `t_s_operation.code` and what a call is authorised by, so the request path reads it back
-         * here unchanged as well as the mount writing it ([mountEndpoints]). There is deliberately
-         * no fallback to the method name: a code that differed between the mount and the request
-         * would authorise against a permission entry that is not the endpoint's.
-         *
-         * The plugin ID is the descriptor's and the version the controller's, and both callers
-         * supply them the same way: the mount from the descriptor it read, the request path from
-         * the URL segment the router already matched against that same plugin ID ([ApiPath]). The
-         * version must come from the controller rather than the URL because the router rolls a
-         * request forward - a request for `v2` is served by a `v1` controller when no `v2`
-         * controller exists - and the code has to name the version the endpoint was mounted under.
          *
          * @param pluginId Plugin ID, from the descriptor or the matched URL
          * @param version API version the controller declares
@@ -249,7 +222,6 @@ class ApiPluginServiceImpl(
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
          * @see ApiController
-         * @see Method
          */
         fun buildCode(pluginId: String, version: Int, method: Method): String {
             val operationId = method.getAnnotation(SwaggerOperation::class.java)?.operationId
@@ -265,11 +237,7 @@ class ApiPluginServiceImpl(
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
     /**
-     * Serializes the mount lifecycle of every plugin. Install, uninstall and reload all
-     * unmount and remount, and an interleaving of two of them can leave request mappings
-     * registered with no runtime left to unregister them - making every request to that
-     * plugin's paths fail as ambiguous. Mounting is a rare administrator operation, so
-     * one coarse lock costs nothing worth measuring.
+     * Serializes the mount lifecycle of every plugin
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -278,11 +246,6 @@ class ApiPluginServiceImpl(
 
     /**
      * Plugin IDs with a remount owed to a committed configuration change
-     *
-     * An ID being here means one is already queued or running, which is what collapses a burst
-     * of saves of one plugin into the single remount that reads the newest committed values
-     * anyway. An ID is removed before its remount runs rather than after, so a change that
-     * lands while that remount is in flight adds it back and gets its own pass.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -293,9 +256,6 @@ class ApiPluginServiceImpl(
 
     /**
      * Whether the gateway is shutting down
-     *
-     * Set before anything is torn down, so a configuration change committed on the way out
-     * cannot queue a remount that lands after the plugin it would mount has been closed.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -320,23 +280,6 @@ class ApiPluginServiceImpl(
 
     /**
      * Stop every plugin as the gateway stops
-     *
-     * A plugin's mount owns a class loader, a child Spring context and the datasource pools it
-     * opened, none of which the main context knows about - the child contexts are parented to
-     * it but not registered with it, so closing the gateway does not close them. Left alone they
-     * are only reclaimed by the JVM exiting, and the plugin's own `onStop` never runs at all,
-     * which is the hook a plugin that buffers anything is told to flush in.
-     *
-     * Each plugin is stopped on its own, so one that will not come down does not keep the rest
-     * up, and the jars are left in place: they are content-addressed and are re-materialised
-     * from the blob store on the next start.
-     *
-     * Runs after [remountExecutor] has already been stopped, not before: Spring stops its
-     * `SmartLifecycle` beans (which is what a `ThreadPoolTaskExecutor` is) before it runs any
-     * `@PreDestroy`, so the pool is down by the time this is called. What that leaves is a drain
-     * that was still running when the pool stopped: it holds [mountLock], so the loop below
-     * waits for it and unmounts whatever it mounted, and the flag makes sure the drain's own
-     * check under that same lock stops it from mounting anything else.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -513,10 +456,6 @@ class ApiPluginServiceImpl(
     /**
      * Read a submission as values by group
      *
-     * The structural mistakes are refused here - a group named twice, a key named twice - since
-     * neither can be anything but the caller's bug, while whether a group or a key is declared
-     * at all is the schema's business and is where `PluginConfigSchemaUtil.validate` reads it.
-     *
      * @param apiPluginConfigUpdateParam Update API plugin config parameters
      * @return Submitted values, by config group and then by config key; a null value is a key
      *         that was left out
@@ -684,7 +623,6 @@ class ApiPluginServiceImpl(
      * @throws NoRecordFoundException when no such plugin is installed
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginConfigSchema
      */
     private fun configSchemaOf(pluginId: String): PluginConfigSchema? {
         if (getByPluginId(pluginId) == null) {
@@ -696,16 +634,6 @@ class ApiPluginServiceImpl(
 
     /**
      * Queue a remount of a plugin whose configuration just committed
-     *
-     * Runs from a transaction's afterCommit, so it must neither block nor throw: it records
-     * the plugin and hands the work to [remountExecutor]. The save request is answered as
-     * soon as this returns, which is what keeps a datasource that cannot be connected to from
-     * holding the request open - the remount is where that shows up, and it shows up in
-     * `load_error` rather than in the response.
-     *
-     * Recording rather than submitting directly is what makes a burst of saves of one plugin
-     * cost one remount: a remount re-reads the values it applies, so an ID already owed a
-     * remount needs no second task - it is the same newest state either way.
      *
      * @param pluginId Plugin ID
      * @author FatttSnake, fatttsnake@gmail.com
@@ -729,10 +657,6 @@ class ApiPluginServiceImpl(
     /**
      * Remount every plugin currently owed one
      *
-     * A weakly consistent walk of the pending set: a plugin added while this runs is either
-     * seen here or picked up by the drain its own submit queued, so no change is lost. Each
-     * plugin is remounted on its own, so one failure does not stop the others.
-     *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
@@ -749,21 +673,8 @@ class ApiPluginServiceImpl(
     /**
      * Remount a plugin whose configuration changed
      *
-     * Runs after the configuration has been committed, and on [remountExecutor] rather than on
-     * the thread that committed it, so it holds no transaction and cannot roll the
-     * administrator's values back: a remount that fails because of them leaves the values
-     * stored and the reason in `load_error`, which is where the administrator can see it and
-     * correct it. Rolling the values back instead would discard the very thing that has to be
-     * edited to fix the problem.
-     *
-     * A plugin whose code the gateway does not own - a built-in one - has no jar to
-     * remount from; its configuration reaches it when the gateway next starts.
-     *
      * Nothing here runs on a request thread, so a plugin's lifecycle hooks see no request
-     * identity: `PluginContext.currentUserId` and `currentAccessKeyId` read the security
-     * context, which is thread-bound and absent here. A hook that has to know who saved the
-     * configuration cannot ask for it this way. Calls the plugin serves are unaffected - those
-     * run on their own request's thread, with that caller's identity.
+     * identity.
      *
      * @param pluginId Plugin ID
      * @author FatttSnake, fatttsnake@gmail.com
@@ -806,20 +717,6 @@ class ApiPluginServiceImpl(
     /**
      * Remount an installed plugin from the jar its row points at
      *
-     * The new mount is built in full while the running one keeps serving, and only then swapped
-     * in, so something wrong with the jar itself - it vanished, it is not a plugin, it no longer
-     * parses - costs nothing but the attempt and leaves the plugin that was serving alone. The
-     * swap is the one part that cannot be made free of a gap: the dispatcher has no way to
-     * replace a mapping atomically, and registering the new one first would make it reject both.
-     *
-     * What the plugin's own `onStart` does is not treated as a reason to refuse the swap. A
-     * reload and a configuration save are both ways of asking for a plugin to come back up on
-     * something new, and a plugin that cannot come up on it has to be *seen* not to: swapping it
-     * out and reporting why in `load_error` is what leaves the administrator something to fix,
-     * whereas declining quietly would leave the plugin serving the configuration it was built
-     * with while the stored configuration said otherwise. A remount and an install therefore
-     * land in exactly the same state when a plugin will not start.
-     *
      * The caller holds [mountLock].
      *
      * @param pluginId Plugin ID
@@ -828,7 +725,6 @@ class ApiPluginServiceImpl(
      * @since 1.0.0
      * @see prepareMount
      * @see activateMount
-     * @see ApiPluginVo
      */
     private fun remount(pluginId: String): ApiPluginVo {
         val plugin = getByPluginIdOrQuery(pluginId)
@@ -872,12 +768,6 @@ class ApiPluginServiceImpl(
 
     /**
      * Tear a plugin down
-     *
-     * What the gateway deletes is only what the gateway keeps: the plugin's settings, the
-     * SQLite databases it created and the files it stored under its own namespace. Data the
-     * plugin put anywhere else - tables in an external MySQL, the content-addressed objects it
-     * saved, anything outside the gateway - is its own to delete, which is what the `onPurge`
-     * hook it is offered before this teardown is for.
      *
      * @param pluginId Plugin ID
      * @param purgeData Whether everything the plugin owns - its settings, its datasource
@@ -988,8 +878,6 @@ class ApiPluginServiceImpl(
      * @return Installed plugin information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Path
-     * @see ApiPluginVo
      * @see prepareMount
      * @see activateMount
      */
@@ -1007,16 +895,6 @@ class ApiPluginServiceImpl(
 
     /**
      * Everything a mount builds before it is allowed to touch the gateway
-     *
-     * The split between building and activating is what keeps a remount from taking a running
-     * plugin down while its replacement is still being prepared: a failure while this is being
-     * built leaves whatever was serving untouched. It is also what lets the plugin's own
-     * `onStart` run before any route of its is registered, so no request can reach a mount that
-     * has not finished coming up.
-     *
-     * The runtime is not a field here because one is created from this on activation, and the
-     * fields that a mount only needs to write its rows with - the file hash and the signer -
-     * stay here rather than moving onto [PluginRuntime], which holds what teardown reads.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -1044,10 +922,6 @@ class ApiPluginServiceImpl(
 
         /**
          * Why the plugin's own `onStart` failed, or null when it came up
-         *
-         * Carried as a value rather than thrown, because it is not a failure of the mount: the
-         * plugin is registered either way and the reason goes into `load_error`, whether this
-         * came from an install, a reload or a configuration save.
          *
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
@@ -1078,12 +952,8 @@ class ApiPluginServiceImpl(
     /**
      * Build a plugin's mount without activating it
      *
-     * Verifies the jar, reads its descriptor, scans its controllers, opens the child-first
-     * class loader and the child Spring context, builds its datasources, computes its endpoints
-     * and runs its `onStart` - and changes nothing the gateway serves: no route is registered,
-     * no row is written and no cache is refreshed. Everything built here is closed again if any
-     * step fails, so a failed call leaves no resource behind and no trace on a plugin that was
-     * already running.
+     * It changes nothing the gateway serves: no route registered, no row written, no cache
+     * refreshed.
      *
      * @param jarPath Local path of the signed plugin jar
      * @param jarName Original jar name
@@ -1095,7 +965,6 @@ class ApiPluginServiceImpl(
      * @return Built mount, ready to activate
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PreparedMount
      * @see activateMount
      */
     private fun prepareMount(
@@ -1299,18 +1168,9 @@ class ApiPluginServiceImpl(
     /**
      * Activate a built mount
      *
-     * Everything the gateway can see changes here and nowhere else: the plugin's routes are
-     * registered, its rows and permission tree are written, its runtime is recorded and the
-     * caches are refreshed once. It expects [prepareMount] to have validated the plugin, and
-     * closes what that built if any part of this fails, so a failed mount never leaves half of
-     * itself behind.
-     *
      * A plugin whose own `onStart` failed is registered without being mounted: its rows, its jar
-     * and its configuration are all stored, no route of its is registered, no runtime is
-     * recorded, and the reason goes into `load_error`. That is what leaves an administrator
-     * something to fix - a plugin refused at install would have no row and no config API to
-     * correct the very value that failed, which is the state a misconfigured datasource would
-     * otherwise be stuck in.
+     * and its configuration are stored, no route is registered, no runtime is recorded, and the
+     * reason goes into `load_error`.
      *
      * @param prepared Built mount
      * @param preserveRegistration Whether the plugin's existing registration must survive a
@@ -1320,9 +1180,7 @@ class ApiPluginServiceImpl(
      * @return Installed plugin information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PreparedMount
      * @see prepareMount
-     * @see ApiPluginVo
      */
     private fun activateMount(prepared: PreparedMount, preserveRegistration: Boolean): ApiPluginVo {
         val pluginId = prepared.descriptor.pluginId
@@ -1460,13 +1318,9 @@ class ApiPluginServiceImpl(
     /**
      * Tear the runtime of a plugin down
      *
-     * Waits for the plugin's in-flight requests first, so the child context, the datasource
-     * pools and the class loader are not closed under code that is still running. The wait is
-     * bounded by [IN_FLIGHT_DRAIN_TIMEOUT_MILLIS]; a request that outlives it is torn down
-     * anyway, because the alternative is an administrator's operation that never returns.
-     *
-     * A request that has not entered yet is refused instead of being waited for, so the wait
-     * covers what was already running and nothing else.
+     * Waits for the plugin's in-flight requests first, bounded by
+     * [IN_FLIGHT_DRAIN_TIMEOUT_MILLIS]; a request that has not entered yet is refused rather than
+     * waited for.
      *
      * @param runtime Runtime to tear down
      * @param deleteJar Whether the local jar file should be deleted with it. A remount
@@ -1477,7 +1331,6 @@ class ApiPluginServiceImpl(
      *        false, so a plugin is never asked to destroy data it is about to need again
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginRuntime
      * @see PluginInFlightTracker
      */
     private fun unmount(runtime: PluginRuntime, deleteJar: Boolean = true, purgeRequested: Boolean = false) {
@@ -1532,14 +1385,9 @@ class ApiPluginServiceImpl(
     /**
      * Release everything a built mount holds
      *
-     * For a mount that is never going to be activated: the child context, the pools and the class
-     * loader are all per-mount, and no runtime is recorded for one that never mounted, so an
-     * unmount will never come along to close them.
-     *
      * @param prepared Built mount
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PreparedMount
      * @see closeDatasources
      */
     private fun closePrepared(prepared: PreparedMount) {
@@ -1643,14 +1491,6 @@ class ApiPluginServiceImpl(
     /**
      * Compute the endpoints of a plugin's controllers
      *
-     * Separate from registering them so a mount can be built - including running the plugin's
-     * own `onStart` - before any of its routes exist for the dispatcher to hand a request to.
-     *
-     * Each mapped method is required to carry a non-blank `@Operation.operationId` whose code fits
-     * [MAX_CODE_LENGTH] and is unique within the plugin's version, and a mount that finds otherwise
-     * is refused here, naming the method - before anything is registered or written, so a bad
-     * plugin leaves nothing behind and a healthy one keeps serving through a failed remount.
-     *
      * @param pluginId Plugin ID from the descriptor, which namespaces every path and every code
      * @param controllers Controller bean instances
      * @return Mounted endpoints, not yet registered
@@ -1660,7 +1500,6 @@ class ApiPluginServiceImpl(
      *         version resolve to the same code, or two of them claim the same path and HTTP method
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see MountedEndpoint
      * @see activateEndpoints
      */
     private fun mountEndpoints(pluginId: String, controllers: List<Any>): List<MountedEndpoint> {
@@ -1780,7 +1619,6 @@ class ApiPluginServiceImpl(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      * @see mountEndpoints
-     * @see MountedEndpoint
      */
     private fun activateEndpoints(endpoints: List<MountedEndpoint>) {
         endpoints.forEach {
@@ -1800,17 +1638,8 @@ class ApiPluginServiceImpl(
     /**
      * The single path a mapping annotation declares
      *
-     * `@GetMapping` and its siblings take an array, but the plugin mount maps exactly one path
-     * per method, so a second entry is refused rather than dropped: an author who wrote two paths
-     * meant two endpoints, and mounting only the first would leave the other silently 404 without
-     * the plugin appearing to declare anything less than it does. (Contrast `produces` /
-     * `consumes`, which are legitimately multi-valued and are carried through as-is.)
-     *
      * `value` is read as a fallback because it is `path`'s alias and Kotlin puts a positional
-     * argument - `@GetMapping("/a")` - into `value`: the raw annotation this reads does not mirror
-     * aliases the way Spring's merged annotations do. Declaring both with different contents never
-     * reaches here - the child context refuses to parse such a class at all, which is where that
-     * is reported (see [createChildContext]).
+     * argument - `@GetMapping("/a")` - into `value`.
      *
      * @param method Endpoint method, named when the declaration is refused
      * @param path `path` attribute as declared
@@ -1904,8 +1733,7 @@ class ApiPluginServiceImpl(
 
         /**
          * Classes carrying a Spring stereotype - `@Component` and the annotations meta-annotated
-         * with it, such as `@Service`. Kept so an author whose component fell outside the scanned
-         * roots can be told, rather than left to discover it through a failed injection
+         * with it, such as `@Service`
          *
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
@@ -1923,11 +1751,6 @@ class ApiPluginServiceImpl(
 
     /**
      * Walk a plugin jar once and load every class in it
-     *
-     * One pass answers all three questions the mount has about the jar's classes - which are
-     * controllers, which are Spring components, which failed to load - so a jar is never walked
-     * twice for them. Inner and anonymous classes (a `$` in the binary name) are skipped: they are
-     * never a controller or a component in their own right.
      *
      * @param loader Plugin class loader
      * @param jarPath Plugin jar path
@@ -1971,11 +1794,6 @@ class ApiPluginServiceImpl(
     /**
      * Refuse the install when a class the plugin owns failed to load
      *
-     * A failure outside the controller root packages is taken to be a bundled-library class the
-     * plugin never exercises, and is only warned about. One inside them is the plugin's own code:
-     * if it cannot be loaded the mount would silently come up short, so the install is refused and
-     * the classes are named.
-     *
      * @param scan Scan result
      * @param jarPath Plugin jar path
      * @throws PluginInstallException when a class under a controller root package did not load
@@ -2003,12 +1821,6 @@ class ApiPluginServiceImpl(
 
     /**
      * Warn about plugin components that fall outside the scanned roots
-     *
-     * The child context scans only the root packages that lead to the plugin's controllers, so a
-     * component living under a different top-level package is never registered. That is by design
-     * - it is also what keeps a fat jar's bundled-library components out - but the boundary is not
-     * visible from the plugin's own code, so every component left outside it is named rather than
-     * left to surface as an unexplained missing bean.
      *
      * @param scan Scan result
      * @param jarPath Plugin jar path
@@ -2206,16 +2018,6 @@ class ApiPluginServiceImpl(
     /**
      * Find the plugin's lifecycle entry point among the beans its context registered
      *
-     * The descriptor's `mainClass` names it; without one, a single [PluginLifecycle] bean is the
-     * only thing the choice could mean and is taken, while two or more are refused rather than
-     * resolved by an arbitrary `first()` - bean order is not a decision the author made, and
-     * picking one of two hooks silently is how a plugin ends up running the wrong one. A
-     * `mainClass` that names nothing is refused for the same reason: the author meant a specific
-     * class, and there is no honest fallback for not finding it.
-     *
-     * The name is compared against the target class, not the bean instance, so a lifecycle bean
-     * that the plugin's own AOP proxied still matches what the descriptor declared.
-     *
      * @param childContext Plugin child context
      * @param descriptor Plugin descriptor
      * @return The lifecycle implementation, or null when the plugin declares none
@@ -2223,7 +2025,6 @@ class ApiPluginServiceImpl(
      *         none is named
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginLifecycle
      */
     private fun findLifecycle(childContext: GenericApplicationContext, descriptor: PluginDescriptor): PluginLifecycle? {
         val lifecycleBeans = childContext.getBeansOfType(PluginLifecycle::class.java).values
@@ -2329,15 +2130,11 @@ class ApiPluginServiceImpl(
     /**
      * Parse a declared config schema, refusing one the gateway cannot honour
      *
-     * A schema that does not parse would leave the administrator editing settings the
-     * plugin never reads, so it fails the install rather than being ignored.
-     *
      * @param json Raw schema JSON read from the jar
      * @return Parsed schema, or null when the plugin declares none
      * @throws PluginInstallException when the declared schema is invalid
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginConfigSchema
      */
     private fun parseConfigSchema(json: String?): PluginConfigSchema? =
         try {
@@ -2349,15 +2146,10 @@ class ApiPluginServiceImpl(
     /**
      * Parse a stored config schema, tolerating one that no longer parses
      *
-     * Used while refreshing the cache, where an unreadable schema must not take down
-     * unrelated administration operations; the plugin then simply has no declared
-     * configuration until it is mounted again.
-     *
      * @param json Stored schema JSON
      * @return Parsed schema, or null when absent or unreadable
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginConfigSchema
      */
     private fun parseConfigSchemaOrNull(json: String?): PluginConfigSchema? =
         runCatching { PluginConfigSchemaUtil.parse(json) }

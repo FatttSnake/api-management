@@ -45,7 +45,6 @@ class ResponseResult<T> private constructor(
          * @param data Response data
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
-         * @see ResponseCode
          */
         fun <T> build(code: ResponseCode, success: Boolean, msg: String, data: T?) =
             build(code.code, success, msg, data)
@@ -58,7 +57,6 @@ class ResponseResult<T> private constructor(
          * @param data Response data
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
-         * @see ResponseCode
          */
         fun <T> success(code: ResponseCode = ResponseCode.SYSTEM_OK, msg: String = "success", data: T? = null) =
             build(code, true, msg, data)
@@ -71,7 +69,6 @@ class ResponseResult<T> private constructor(
          * @param data Response data
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
-         * @see ResponseCode
          */
         fun <T> fail(code: ResponseCode = ResponseCode.SYSTEM_ERROR, msg: String = "fail", data: T? = null) =
             build(code, false, msg, data)
@@ -84,7 +81,6 @@ class ResponseResult<T> private constructor(
          * @param data Response data
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
-         * @see ResponseCode
          */
         fun <T> databaseSuccess(
             code: ResponseCode = ResponseCode.DATABASE_SELECT_SUCCESS, msg: String = "success", data: T? = null
@@ -98,7 +94,6 @@ class ResponseResult<T> private constructor(
          * @param data Response data
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
-         * @see ResponseCode
          */
         fun <T> databaseFail(
             code: ResponseCode = ResponseCode.DATABASE_SELECT_FAILED, msg: String = "fail", data: T? = null

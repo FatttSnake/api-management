@@ -22,7 +22,6 @@ class LoginUser() : UserDetails {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see User
      */
     lateinit var user: User
 

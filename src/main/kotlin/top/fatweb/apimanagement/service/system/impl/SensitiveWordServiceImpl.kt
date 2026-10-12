@@ -24,24 +24,16 @@ import top.fatweb.apimanagement.vo.system.SensitiveWordVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServiceImpl
- * @see SensitiveWordMapper
- * @see SensitiveWord
- * @see ISensitiveWordService
  */
 @Service
 class SensitiveWordServiceImpl : ServiceImpl<SensitiveWordMapper, SensitiveWord>(), ISensitiveWordService {
     /**
      * Enabled words as patterns that are already compiled
      *
-     * Held because the check runs on the request path - registration and profile updates -
-     * where reading the whole word list and compiling it again on every call costs far more
-     * than the match it exists for. Null until first read, then invalidated by every write,
-     * so a word takes effect as soon as the write that added it has committed.
+     * Null until first read, then invalidated by every write once it commits.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Regex
      */
     @Volatile
     private var compiledPatterns: List<Regex>? = null
@@ -91,8 +83,7 @@ class SensitiveWordServiceImpl : ServiceImpl<SensitiveWordMapper, SensitiveWord>
     /**
      * Check whether the string matches an enabled word
      *
-     * Reads no database state of its own: the words are matched against the compiled
-     * snapshot, which a write refreshes once it commits.
+     * Reads no database state of its own; matches against the compiled snapshot.
      *
      * @param str String to check
      * @throws MatchSensitiveWordException when the string matches an enabled word
@@ -113,20 +104,17 @@ class SensitiveWordServiceImpl : ServiceImpl<SensitiveWordMapper, SensitiveWord>
      * @return List of Regex object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Regex
      */
     private fun patterns(): List<Regex> = compiledPatterns ?: loadPatterns().also { compiledPatterns = it }
 
     /**
      * Load and compile the enabled words
      *
-     * A word that is not a usable pattern is dropped rather than failing the check, which is
-     * how a malformed entry behaved when it was compiled per call.
+     * A word that is not a usable pattern is dropped rather than failing the check.
      *
      * @return List of Regex object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Regex
      */
     private fun loadPatterns(): List<Regex> =
         list(

@@ -14,18 +14,9 @@ import javax.sql.DataSource
 /**
  * Plugin class loader manager
  *
- * Creates a child-first [URLClassLoader] for a plugin jar. Well-known prefixes
- * (JDK, Spring, Jackson, Swagger, MyBatis, Kotlin, the gateway and its SDK, and the
- * connection-pool / driver classes the gateway itself hands a plugin) are delegated to the
- * parent class loader so their classes keep identical identity; everything else is loaded
- * from the plugin jar first so a plugin may bundle its own third-party dependencies in
- * isolation.
- *
- * The list is the set of types that must be *shared*, not a permit list: a class under one of
- * these prefixes resolves from the parent or not at all. A plugin that shadowed one of them
- * would get a second copy of an annotation type - so `getAnnotation` would return null - or of
- * an interface, so every `instanceof` against the gateway's copy would fail. A library a plugin
- * wants to bundle has to live under a name that is not one of these.
+ * Creates a child-first [URLClassLoader] for a plugin jar: classes under the well-known
+ * prefixes resolve from the parent so their identity is shared, and everything else is loaded
+ * from the plugin jar first.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
@@ -35,11 +26,6 @@ class PluginClassLoaderManager {
         /**
          * Class name prefixes always resolved from the parent (gateway) class loader, with no
          * fallback to the plugin jar
-         *
-         * The connection-pool and driver entries earn their place because the gateway itself
-         * builds the `javax.sql.DataSource` a plugin is given: `HikariDataSource` and the driver
-         * classes behind it are where a concrete type from a shared library actually crosses the
-         * plugin boundary, and a second copy would be a different type to the code that built it.
          */
         private val PARENT_FIRST_PREFIXES = listOf(
             "java.",
@@ -69,7 +55,6 @@ class PluginClassLoaderManager {
          * @return Class loader
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
-         * @see URLClassLoader
          */
         fun create(jarUrl: URL): URLClassLoader {
             val parent = Thread.currentThread().contextClassLoader
@@ -102,12 +87,6 @@ class PluginClassLoaderManager {
 
         /**
          * Run [block] with the thread context class loader set to [loader], restoring it after
-         *
-         * Everything that runs plugin code has to run under the plugin's own loader: the child
-         * context's scan and bean instantiation, the lifecycle hooks, and every request that
-         * reaches a plugin controller. Otherwise a library the plugin bundles that asks the
-         * thread for its class loader - `ServiceLoader.load(X)` with no explicit loader, a
-         * resource lookup - would be answered by the gateway's loader and find nothing.
          *
          * @param loader Class loader to install
          * @param block Work to run under it
@@ -193,7 +172,6 @@ data class MountedEndpoint(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Method
      */
     val method: Method,
 
@@ -250,7 +228,6 @@ data class MountedEndpoint(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see RequestMappingInfo
      */
     val info: RequestMappingInfo
 )
@@ -275,7 +252,6 @@ data class PluginRuntime(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see URLClassLoader
      */
     val classLoader: URLClassLoader,
 
@@ -284,7 +260,6 @@ data class PluginRuntime(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see GenericApplicationContext
      */
     val context: GenericApplicationContext,
 
@@ -293,19 +268,14 @@ data class PluginRuntime(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginContext
      */
     val pluginContext: PluginContext,
 
     /**
      * Mounted endpoints
      *
-     * The controllers themselves are reached through these, which is why the runtime holds no
-     * second reference to them.
-     *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see MountedEndpoint
      */
     val endpoints: List<MountedEndpoint>,
 
@@ -314,20 +284,14 @@ data class PluginRuntime(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Path
      */
     val tempJarPath: Path,
 
     /**
      * Datasources supplied to the plugin, by declared name
      *
-     * Held on the runtime rather than reached through the plugin-facing context: an
-     * unmount has to close every pool it opened, and that is a fact about what this
-     * mount built, not about what the plugin API happens to expose.
-     *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see DataSource
      */
     val datasources: Map<String, DataSource>,
 
@@ -336,7 +300,6 @@ data class PluginRuntime(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginLifecycle
      */
     val lifecycle: PluginLifecycle?
 )

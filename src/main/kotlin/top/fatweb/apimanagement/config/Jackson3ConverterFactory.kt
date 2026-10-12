@@ -12,14 +12,8 @@ import java.lang.reflect.Type
 /**
  * A Retrofit converter factory backed by a Jackson 3 [JsonMapper].
  *
- * Retrofit's official `converter-jackson` only supports Jackson 2 (`com.fasterxml.jackson`),
- * so Spring Boot 4, which defaults to Jackson 3 (`tools.jackson`), needs a converter
- * of its own.
- *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see JsonMapper
- * @see Converter
  */
 class Jackson3ConverterFactory private constructor(
     private val mapper: JsonMapper

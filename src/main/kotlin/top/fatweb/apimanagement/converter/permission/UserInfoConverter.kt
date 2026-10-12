@@ -9,7 +9,6 @@ import top.fatweb.apimanagement.vo.permission.base.UserInfoVo
  * @return UserInfoVo object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see UserInfo
  * @see UserInfoVo
  */
 fun UserInfo.toVo() = UserInfoVo(

@@ -16,9 +16,7 @@ import java.nio.file.Path
  * Plugin datasource util tests
  *
  * What the gateway makes of a datasource declaration and the config values behind it, and
- * what it refuses those values for. The rules are the gateway's own rather than the
- * plugin's: a field's declared constraints are its author's convenience, and a value that
- * reaches the driver can rewrite a connection in ways a form never shows.
+ * what it refuses those values for.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
@@ -254,7 +252,6 @@ class PluginDatasourceUtilTests {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResolvedDatasource.Mysql
      */
     private fun mysql(
         host: String? = "10.0.0.240",
@@ -281,7 +278,6 @@ class PluginDatasourceUtilTests {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginDatasourceSchema
      */
     private fun mysqlSchema() = PluginDatasourceSchema(
         name = "main",

@@ -49,10 +49,6 @@ class ApiPluginController(
     /**
      * Get one API plugin by its plugin ID
      *
-     * The variable sits after the plugin ID rather than directly under the plugin prefix
-     * because `key` and `install` are literal routes there, and a plugin ID is allowed to
-     * be either of those words.
-     *
      * @param pluginId Plugin ID
      * @return Response object includes API plugin information
      * @author FatttSnake, fatttsnake@gmail.com
@@ -152,14 +148,6 @@ class ApiPluginController(
     /**
      * Reload a plugin by its plugin ID
      *
-     * Remounts the installed plugin from its stored jar, so one that has been replaced
-     * under it takes effect without restarting the gateway. The plugin is briefly
-     * unmounted while the swap happens.
-     *
-     * A configuration change does not need this: saving one that alters a datasource
-     * remounts the plugin on its own, because the gateway is the one that builds the
-     * datasource from it.
-     *
      * @param pluginId Plugin ID
      * @return Response object includes reloaded plugin information
      * @author FatttSnake, fatttsnake@gmail.com
@@ -195,21 +183,8 @@ class ApiPluginController(
     /**
      * Update the configuration of a plugin
      *
-     * Saved a group at a time, and a group is also what the submission answers for: the
-     * required fields of the groups it names have to hold a value once it is written, while a
-     * group left out is one nothing was decided about.
-     *
-     * A value left out keeps the stored one, a blank one clears the key so the declared
-     * default applies again - except for a text field, where a blank is a value it can hold -
-     * and any other value is stored as submitted.
-     *
-     * An ordinary value takes effect on the plugin's next read, so nothing is remounted for
-     * it. A value that describes a datasource is different, because the gateway is what
-     * builds the connection from it: changing one of those remounts the plugin, so the
-     * administrator does not have to know that a remount is what it takes. The response says
-     * nothing about how that went, because the remount happens after this transaction has
-     * committed - a failure is reported in the plugin's `loadError`, where the plugin list
-     * shows it.
+     * Changing a value that describes a datasource remounts the plugin once the transaction
+     * commits; a failure shows up in the plugin's `loadError`, not in the response.
      *
      * @param apiPluginConfigUpdateParam Update API plugin config parameters
      * @return Response object
@@ -229,25 +204,6 @@ class ApiPluginController(
 
     /**
      * Test the connection of a plugin datasource
-     *
-     * A datasource is a sub-resource of the plugin's configuration rather than a resource
-     * of its own: it is declared by the plugin, described entirely by ordinary config
-     * values, and dies with the plugin. Its values are read and written through the config
-     * endpoints above; what this one adds is the answer a form cannot give - whether the
-     * server described is actually reachable.
-     *
-     * Asked for rather than checked while saving, in both directions: a configuration whose
-     * server is not up yet is still worth storing, and a test can be run against values
-     * that have not been saved yet. A `values` entry that is left out, or sent with no value,
-     * is read from what is stored.
-     *
-     * Only a MySQL datasource can be tested: a SQLite one is a file the gateway owns and
-     * supplies itself, so there is no connection of the administrator's to check.
-     *
-     * This makes the gateway open a connection to an address the caller names, which is a
-     * capability worth naming: it is why the endpoint sits behind `modify` rather than
-     * `query`. It is no more than saving a datasource already did, and the caller is an
-     * administrator who could point a plugin anywhere regardless.
      *
      * @param pluginId Plugin ID
      * @param apiPluginDatasourceTestParam Test API plugin datasource parameters

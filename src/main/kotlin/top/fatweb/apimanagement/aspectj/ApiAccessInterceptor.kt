@@ -34,20 +34,8 @@ import java.util.concurrent.Executor
 /**
  * API access interceptor
  *
- * Admits API-key requests (permission subset, rate limit, quota, billing) and records usage.
- * The resolved price / rate limit inherit the plugin defaults when the interface is not
- * configured; the plugin-level enable flag acts as the master switch.
- *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServerProperties
- * @see RedisProvider
- * @see IApiPluginService
- * @see IApiUsageService
- * @see IApiAccountService
- * @see IApiTransactionService
- * @see PluginInFlightTracker
- * @see HandlerInterceptor
  */
 @Component
 class ApiAccessInterceptor(

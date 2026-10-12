@@ -8,7 +8,5 @@ import top.fatweb.apimanagement.entity.permission.RPowerRole
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IService
- * @see RPowerRole
  */
 interface IRPowerRoleService : IService<RPowerRole>

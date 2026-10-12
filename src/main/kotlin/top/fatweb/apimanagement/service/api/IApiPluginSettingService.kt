@@ -8,8 +8,6 @@ import top.fatweb.apimanagement.entity.api.ApiPluginSetting
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IService
- * @see ApiPluginSetting
  */
 interface IApiPluginSettingService : IService<ApiPluginSetting> {
     /**
@@ -26,11 +24,7 @@ interface IApiPluginSettingService : IService<ApiPluginSetting> {
     /**
      * List every setting of a plugin
      *
-     * Values are returned exactly as they are stored, so a key the plugin declared as a
-     * secret comes back as ciphertext. A row whose value is null is left out rather than
-     * reported as an empty one: an empty string is a value in its own right - it is what a
-     * cleared text setting is stored as - while a null, which nothing in the gateway writes,
-     * means the key holds nothing, exactly as a missing row does.
+     * Values are returned exactly as stored, so a secret comes back as ciphertext.
      *
      * @param pluginId Plugin ID
      * @return Settings keyed by setting key; a key with no value is absent
@@ -53,10 +47,7 @@ interface IApiPluginSettingService : IService<ApiPluginSetting> {
     /**
      * Delete one setting of a plugin
      *
-     * How a key is cleared: the row goes, so the plugin reads the declared default again - or
-     * nothing at all, when the key is a secret, which has no default to fall back to. A text
-     * setting is the one kind that is never cleared this way, because a blank one is a value
-     * it can hold.
+     * The row goes, so the plugin reads the declared default again.
      *
      * @param pluginId Plugin ID
      * @param key Setting key

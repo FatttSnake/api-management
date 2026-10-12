@@ -8,7 +8,5 @@ import top.fatweb.apimanagement.entity.permission.RUserGroup
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IService
- * @see RUserGroup
  */
 interface IRUserGroupService : IService<RUserGroup>

@@ -11,31 +11,11 @@ import top.fatweb.apimanagement.vo.api.ApiPluginConfigOptionVo
 /**
  * Convert to a list of ApiPluginConfigGroupVo objects
  *
- * The declared values are folded into the declaration, so what the administrator's
- * console renders is one payload rather than a schema joined against a list of values.
- *
- * A group also names the datasource it describes, which is what says where a console can
- * offer a connection test. A datasource is composed from fields the gateway holds to one
- * group, and a group to one connection, so the two are found in each other whole or not at
- * all; one naming no slot - a SQLITE datasource - is described by no group.
- *
- * What `value` holds depends on the field, because whether an unset field reads as its
- * declared default depends on the type. Every type but a number reports the default as its
- * value, none of them having a blank appearance to render: a text field, where a blank
- * string is a value rather than an absence, and a boolean or an enumeration, which are drawn
- * as a control that always shows one of its states - a switch, a picker - so leaving one
- * blank on screen would show a state rather than none. A number reads as nothing at all: an
- * empty box says "nothing is set" as plainly as anything, and a blank is what clears one
- * back to its default. `hasValue` is what separates a default being read from the
- * administrator's own value, in either case.
- *
  * @param values Stored settings of the plugin, keyed by setting key
  * @param unreadable Keys of stored secrets the gateway can no longer decrypt
  * @return List of ApiPluginConfigGroupVo objects
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see PluginConfigSchema
- * @see ApiPluginConfigGroupVo
  */
 fun PluginConfigSchema.toGroupVo(
     values: Map<String, String>,
@@ -114,7 +94,6 @@ fun PluginConfigSchema.toGroupVo(
  * @return ApiPluginConfigDatasourceVo object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see PluginDatasourceSchema
  * @see ApiPluginConfigDatasourceVo
  */
 fun PluginDatasourceSchema.toVo(configured: Boolean) = ApiPluginConfigDatasourceVo(

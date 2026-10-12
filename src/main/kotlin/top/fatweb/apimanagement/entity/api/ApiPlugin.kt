@@ -8,10 +8,6 @@ import java.time.LocalDateTime
 /**
  * API plugin entity
  *
- * One row per plugin. Holds the plugin's registration metadata plus plugin-level
- * defaults (default price / default rate limit) that interfaces inherit when they
- * are not configured themselves.
- *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
@@ -85,7 +81,6 @@ class ApiPlugin : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiInterface.AccessMode
      */
     @TableField("default_access_mode")
     var defaultAccessMode: ApiInterface.AccessMode? = null
@@ -179,7 +174,6 @@ class ApiPlugin : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @TableField("create_time", fill = FieldFill.INSERT)
     var createTime: LocalDateTime? = null
@@ -189,7 +183,6 @@ class ApiPlugin : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @TableField("update_time", fill = FieldFill.INSERT_UPDATE)
     var updateTime: LocalDateTime? = null

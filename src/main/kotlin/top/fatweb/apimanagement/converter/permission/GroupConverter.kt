@@ -16,7 +16,6 @@ import top.fatweb.apimanagement.vo.permission.base.GroupVo
  * @return GroupVo object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see Group
  * @see GroupVo
  */
 fun Group.toVo() = GroupVo(
@@ -33,7 +32,6 @@ fun Group.toVo() = GroupVo(
  * @return GroupWithRoleVo object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see Group
  * @see GroupWithRoleVo
  */
 fun Group.toVoWithRole() = GroupWithRoleVo(
@@ -51,8 +49,6 @@ fun Group.toVoWithRole() = GroupWithRoleVo(
  * @return PageVo<GroupWithRoleVo> object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IPage
- * @see Group
  * @see PageVo
  */
 fun IPage<Group>.toVoWithRole() = PageVo(
@@ -69,7 +65,6 @@ fun IPage<Group>.toVoWithRole() = PageVo(
  * @return Group object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see GroupAddParam
  * @see Group
  */
 fun GroupAddParam.toEntity() = Group().apply {
@@ -84,7 +79,6 @@ fun GroupAddParam.toEntity() = Group().apply {
  * @return Group object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see GroupUpdateParam
  * @see Group
  */
 fun GroupUpdateParam.toEntity() = Group().apply {
@@ -100,7 +94,6 @@ fun GroupUpdateParam.toEntity() = Group().apply {
  * @return Group object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see GroupUpdateStatusParam
  * @see Group
  */
 fun GroupUpdateStatusParam.toEntity() = Group().apply {

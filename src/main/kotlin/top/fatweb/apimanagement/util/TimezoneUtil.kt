@@ -8,8 +8,7 @@ import java.time.ZoneOffset
 /**
  * Time zone utility
  *
- * Times are stored in UTC, so every calendar day computed by the server has to be shifted by the
- * offset of the client to match the day the console shows
+ * Times are stored in UTC, so calendar days are shifted by the client's offset.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
@@ -30,8 +29,7 @@ object TimezoneUtil {
     /**
      * Get time zone offset of the client currently calling api
      *
-     * The returned value is always clamped into the valid range, never pass the raw header to a
-     * caller so that it stays safe to interpolate into SQL
+     * The value is clamped into the valid range, so it stays safe to interpolate into SQL.
      *
      * @return Offset in minutes, 0 when called outside a request or when the header is missing or invalid
      * @author FatttSnake, fatttsnake@gmail.com

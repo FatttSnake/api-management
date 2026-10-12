@@ -9,8 +9,6 @@ import top.fatweb.apimanagement.vo.permission.PowerSetVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IService
- * @see Power
  */
 interface IPowerService : IService<Power> {
     /**
@@ -19,7 +17,6 @@ interface IPowerService : IService<Power> {
      * @return powerSetVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PowerSetVo
      */
     fun getList(): PowerSetVo
 }

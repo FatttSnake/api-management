@@ -11,7 +11,6 @@ import top.fatweb.apimanagement.vo.api.ApiPluginTrustKeyVo
  * @return ApiPluginTrustKeyVo object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ApiPluginTrustKey
  * @see ApiPluginTrustKeyVo
  */
 fun ApiPluginTrustKey.toVo() = ApiPluginTrustKeyVo(
@@ -28,8 +27,6 @@ fun ApiPluginTrustKey.toVo() = ApiPluginTrustKeyVo(
  * @return PageVo<ApiPluginTrustKey> object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IPage
- * @see ApiPluginTrustKey
  * @see PageVo
  */
 fun IPage<ApiPluginTrustKey>.toVoPage() = PageVo(

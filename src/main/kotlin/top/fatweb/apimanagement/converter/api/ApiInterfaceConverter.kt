@@ -13,7 +13,6 @@ import java.math.BigDecimal
  * @return ApiInterfaceVo object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ApiInterface
  * @see ApiInterfaceVo
  */
 fun ApiInterface.toVo() = ApiInterfaceVo(
@@ -40,21 +39,12 @@ fun ApiInterface.toVo() = ApiInterfaceVo(
  * the gateway enforces at call time, so a caller-facing page needs no knowledge of plugin
  * defaults and never renders an "inherit" placeholder.
  *
- * The rules mirror `ApiAccessInterceptor`: price falls back to the owning plugin's default
- * and then to zero, rateLimit to the plugin's default and then to zero, accessMode to the
- * plugin's default and then to RESTRICTED, and billingMode defaults to SUCCESS_ONLY. The
- * contract this produces is: price is never null and "0" means free; rateLimit is never null
- * and 0 means unlimited; billingMode and accessMode are never null.
- *
- * The administrator's interface page keeps [toVo], which deliberately surfaces the raw
- * inherit-a-plugin-default values instead.
+ * price is never null and "0" means free; rateLimit is never null and 0 means unlimited.
  *
  * @param plugin Owning plugin, or null when it is no longer registered
  * @return Resolved ApiInterfaceVo object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ApiInterface
- * @see ApiPlugin
  * @see ApiInterfaceVo
  */
 fun ApiInterface.toResolvedVo(plugin: ApiPlugin?) = ApiInterfaceVo(
@@ -82,7 +72,6 @@ fun ApiInterface.toResolvedVo(plugin: ApiPlugin?) = ApiInterfaceVo(
  * @return ApiInterface object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ApiInterfaceUpdateParam
  * @see ApiInterface
  */
 fun ApiInterfaceUpdateParam.toEntity() = ApiInterface().apply {
@@ -101,7 +90,6 @@ fun ApiInterfaceUpdateParam.toEntity() = ApiInterface().apply {
  * @return ApiInterface object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ApiInterfaceUpdateStatusParam
  * @see ApiInterface
  */
 fun ApiInterfaceUpdateStatusParam.toEntity() = ApiInterface().apply {

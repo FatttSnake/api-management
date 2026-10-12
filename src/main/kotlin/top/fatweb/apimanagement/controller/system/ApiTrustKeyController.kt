@@ -18,12 +18,10 @@ import top.fatweb.apimanagement.vo.api.ApiPluginTrustKeyVo
 /**
  * API plugin trust key management controller
  *
- * Manages the public keys trusted to sign plugin jars. Only signers whose key is
- * present here and enabled can have their plugins installed.
+ * Only signers whose key is present here and enabled can have their plugins installed.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IApiPluginTrustKeyService
  */
 @BaseController(
     path = ["/system/api/plugin/key"],
@@ -40,10 +38,6 @@ class ApiTrustKeyController(
      * @return Response object includes plugin trust key list
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginTrustKeyGetParam
-     * @see ResponseResult
-     * @see PageVo
-     * @see ApiPluginTrustKeyVo
      */
     @Operation(summary = "获取插件信任密钥列表")
     @GetMapping
@@ -58,9 +52,6 @@ class ApiTrustKeyController(
      * @return Response object includes added plugin trust key information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginTrustKeyAddParam
-     * @see ResponseResult
-     * @see ApiPluginTrustKeyVo
      */
     @Operation(summary = "添加插件信任密钥")
     @PostMapping
@@ -78,8 +69,6 @@ class ApiTrustKeyController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginTrustKeyUpdateStatusParam
-     * @see ResponseResult
      */
     @Operation(summary = "修改插件信任密钥状态")
     @PatchMapping
@@ -97,7 +86,6 @@ class ApiTrustKeyController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
      */
     @Operation(summary = "删除插件信任密钥")
     @DeleteMapping("/{keyId}")

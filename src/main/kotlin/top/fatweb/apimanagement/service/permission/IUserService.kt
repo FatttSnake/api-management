@@ -13,8 +13,6 @@ import top.fatweb.apimanagement.vo.permission.UserWithRoleInfoVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IService
- * @see User
  */
 interface IUserService : IService<User> {
     /**
@@ -32,7 +30,6 @@ interface IUserService : IService<User> {
      * @return User object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see User
      */
     fun getUserWithPowerByAccount(account: String): User?
 
@@ -42,7 +39,6 @@ interface IUserService : IService<User> {
      * @return UserWithPowerInfoVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see UserWithPowerInfoVo
      */
     fun getInfo(): UserWithPowerInfoVo
 
@@ -53,7 +49,6 @@ interface IUserService : IService<User> {
      * @return UserWithInfoVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see UserWithInfoVo
      */
     fun getBasicInfo(username: String): UserWithInfoVo
 
@@ -64,7 +59,6 @@ interface IUserService : IService<User> {
      * @return UserWithInfoVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see UserWithInfoVo
      */
     fun getBasicInfoById(userId: Long): UserWithInfoVo
 
@@ -75,7 +69,6 @@ interface IUserService : IService<User> {
      * @return Map<Long, UserWithInfoVo> object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see UserWithInfoVo
      */
     fun getBasicInfoByIds(userIds: List<Long>): Map<Long, UserWithInfoVo>
 
@@ -85,7 +78,6 @@ interface IUserService : IService<User> {
      * @param userInfoUpdateParam Update user information parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see UserInfoUpdateParam
      */
     fun updateInfo(userInfoUpdateParam: UserInfoUpdateParam)
 
@@ -95,7 +87,6 @@ interface IUserService : IService<User> {
      * @param userChangePasswordParam Change password parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see UserChangePasswordParam
      */
     fun password(userChangePasswordParam: UserChangePasswordParam)
 
@@ -106,7 +97,6 @@ interface IUserService : IService<User> {
      * @return UserWithRoleInfoVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see UserWithRoleInfoVo
      */
     fun getOne(id: Long): UserWithRoleInfoVo
 
@@ -117,9 +107,6 @@ interface IUserService : IService<User> {
      * @return PageVo<UserWithRoleInfoVo> object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see UserGetParam
-     * @see PageVo
-     * @see UserWithRoleInfoVo
      */
     fun getPage(userGetParam: UserGetParam?): PageVo<UserWithRoleInfoVo>
 
@@ -129,7 +116,6 @@ interface IUserService : IService<User> {
      * @return List of UserWithInfoVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see UserWithInfoVo
      */
     fun getList(): List<UserWithInfoVo>
 
@@ -140,8 +126,6 @@ interface IUserService : IService<User> {
      * @return UserWithRoleInfoVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see UserAddParam
-     * @see UserWithRoleInfoVo
      */
     fun add(userAddParam: UserAddParam): UserWithRoleInfoVo
 
@@ -151,7 +135,6 @@ interface IUserService : IService<User> {
      * @param userUpdateParam Update user parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see UserUpdateParam
      */
     fun update(userUpdateParam: UserUpdateParam)
 
@@ -161,7 +144,6 @@ interface IUserService : IService<User> {
      * @param userUpdatePasswordParam Update user password parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see UserUpdatePasswordParam
      */
     fun password(userUpdatePasswordParam: UserUpdatePasswordParam)
 
@@ -180,7 +162,6 @@ interface IUserService : IService<User> {
      * @param userDeleteParam Delete user parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see UserDeleteParam
      */
     fun delete(userDeleteParam: UserDeleteParam)
 

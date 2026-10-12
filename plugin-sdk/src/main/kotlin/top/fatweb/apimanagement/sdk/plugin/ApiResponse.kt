@@ -6,11 +6,6 @@ import java.io.Serializable
 /**
  * Plugin API response
  *
- * User-facing response envelope for plugin endpoints, decoupled from the gateway's
- * internal ResponseResult / ResponseCode.
- * Convention: [CODE_SUCCESS] means success; error codes are plugin-defined, e.g.
- * 1000-1999 client / parameter errors, 2000-2999 business failures, 5000+ server errors.
- *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */

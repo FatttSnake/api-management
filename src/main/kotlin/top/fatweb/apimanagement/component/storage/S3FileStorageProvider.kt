@@ -47,8 +47,7 @@ class S3FileStorageProvider(
         const val FILES_DIR = "files"
 
         /**
-         * Bound on the paginated prefix delete; an unbounded loop on a request
-         * thread is worse than a partial delete plus a log line
+         * Bound on the paginated prefix delete
          */
         const val MAX_PREFIX_DELETE_PAGES = 100
         const val DELETE_BATCH_SIZE = 1000
@@ -94,16 +93,10 @@ class S3FileStorageProvider(
     }
 
     /**
-     * Built lazily so a presign configuration problem cannot fail plugin install.
-     *
-     * It needs its own builder: `S3Presigner.builder().s3Client(...)` would inherit the
-     * client's endpoint and region, and the client's `forcePathStyle` is not carried
-     * over at all - the presigner rewrites a path-style key into a virtual-hosted
-     * subdomain unless told otherwise.
+     * Built lazily so a presign configuration problem cannot fail plugin install
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see S3Presigner
      */
     private val presigner: S3Presigner by lazy {
         S3Presigner

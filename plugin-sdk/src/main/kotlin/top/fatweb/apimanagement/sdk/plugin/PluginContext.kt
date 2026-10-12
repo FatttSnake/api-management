@@ -6,11 +6,8 @@ import javax.sql.DataSource
 /**
  * Plugin context
  *
- * The narrow, gateway-sanctioned data interaction channel for a plugin. A plugin
- * must never access the gateway's own datasource / MyBatis mappers; it reads
- * gateway data only through this interface and writes its own data via
- * [datasources] (isolated, admin-configured databases dedicated to this plugin)
- * and [storage] (a file area isolated to this plugin).
+ * A plugin must never access the gateway's own datasource or MyBatis mappers; it reaches
+ * gateway data only through this interface.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
@@ -27,27 +24,12 @@ interface PluginContext {
     /**
      * The plugin's own isolated datasources, by the name each was declared under
      *
-     * A plugin is never given the gateway's datasource: it only ever gets one because it
-     * declared a `datasources` entry, with a `name` and a `dbType`, in its own
-     * `META-INF/plugin-config.json`. The connection itself is declared as ordinary config
-     * fields, which the gateway reads when it builds the datasource.
-     *
-     * What a declaration means depends on the dialect. A `SQLITE` one is supplied by the
-     * gateway the moment it is declared, because there is nothing an administrator could
-     * decide about it. A `MYSQL` one is configured by an administrator and is **absent**
-     * from this map until they do - as is any datasource whose connection information is
-     * incomplete. A plugin that declares one as `required` still mounts meanwhile: it is
-     * up to the plugin to report the missing database clearly instead of failing at mount
-     * time.
-     *
-     * Each datasource is built while mounting, and saving a change to a datasource's
-     * configuration remounts the plugin on its own, so a plugin only has to expect its
-     * `onStart` and `onStop` to run again - any state it holds in memory is lost with them.
-     * See [PluginLifecycle] for what a mount and an unmount really mean.
+     * A `SQLITE` datasource appears the moment it is declared; a `MYSQL` one only once an
+     * administrator configures it, and is absent until then. A save that changes a datasource's
+     * configuration remounts the plugin.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see DataSource
      */
     val datasources: Map<String, DataSource>
 
@@ -56,7 +38,6 @@ interface PluginContext {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginStorage
      */
     val storage: PluginStorage
 
@@ -96,24 +77,14 @@ interface PluginContext {
      * @return Interface info, or null when not registered
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginInterfaceInfo
      */
     fun getInterfaceInfo(code: String): PluginInterfaceInfo?
 
     /**
      * Read a plugin-scoped setting
      *
-     * Two kinds of key are readable through this one method:
-     *
-     * - A key declared by the plugin's own config schema - see the `PluginConfig`
-     *   section of the plugin development guide - is an administrator-owned
-     *   configuration value. When the administrator has not set one, the schema's
-     *   declared default is returned, so a plugin never repeats its defaults in code.
-     *   A key declared as a secret is returned as plaintext.
-     * - Any other key is the plugin's own runtime state, written through [saveSetting].
-     *
-     * Configuration changes are visible immediately: the value is read per call, so
-     * nothing has to be remounted for a new value to take effect.
+     * A key declared as a secret is returned as plaintext, and a configuration change takes
+     * effect immediately - nothing is remounted for a new value.
      *
      * @param key Setting key
      * @return Setting value, the schema default, or null when neither exists
@@ -126,10 +97,6 @@ interface PluginContext {
 
     /**
      * Persist a plugin-scoped setting
-     *
-     * Only keys the plugin owns can be written. A key declared by the plugin's own
-     * config schema belongs to the administrator, and writing it raises rather than
-     * silently diverging from what the administrator sees and edits.
      *
      * @param key Setting key, at most 100 characters - the same limit administrator-owned
      *        keys are held to, since both are stored in the same column

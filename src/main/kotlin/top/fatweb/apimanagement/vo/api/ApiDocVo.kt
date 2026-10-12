@@ -6,9 +6,7 @@ import tools.jackson.databind.JsonNode
 /**
  * API documentation plugin value object
  *
- * Served to end users at `/user/api/docs` so the frontend can render callable API
- * documentation: plugin summary plus its enabled interfaces and (optionally) the
- * embedded OpenAPI fragment with parameter / schema details.
+ * Served to end users at `/user/api/docs`.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
@@ -74,7 +72,6 @@ data class ApiDocVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiInterfaceVo
      */
     @field:Schema(description = "该插件下的接口列表")
     val interfaces: List<ApiInterfaceVo>,
@@ -84,7 +81,6 @@ data class ApiDocVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see JsonNode
      */
     @field:Schema(description = "内嵌 OpenAPI 片段")
     val openapi: JsonNode?

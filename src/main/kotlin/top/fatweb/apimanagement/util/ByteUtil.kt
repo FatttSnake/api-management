@@ -185,7 +185,6 @@ object ByteUtil {
  * @return A new [ByteArray] containing the SHA-256 hash (32 bytes)
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ByteArray
  */
 fun ByteArray.sha256(): ByteArray =
     MessageDigest.getInstance("SHA-256").digest(this)
@@ -196,7 +195,6 @@ fun ByteArray.sha256(): ByteArray =
  * @return A [String] representing the SHA-256 hash in lowercase hexadecimal format (64 characters)
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ByteArray
  */
 fun ByteArray.sha256HexString(): String =
     sha256().toHexString()
@@ -204,16 +202,10 @@ fun ByteArray.sha256HexString(): String =
 /**
  * Compresses the data in this [ByteArray] using the specified output stream factory
  *
- * The factory function should wrap the given [OutputStream] with a compressing output stream
- * (e.g., [io.airlift.compress.v3.zstd.ZstdOutputStream], [java.util.zip.GZIPOutputStream]). The entire content of this byte array
- * is written to the compressing stream and the compressed result is returned.
- *
  * @param streamFactory A function that wraps an [OutputStream] with compression logic
  * @return A new [ByteArray] containing the compressed data
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ByteArray
- * @see OutputStream
  */
 fun ByteArray.compress(streamFactory: (OutputStream) -> OutputStream): ByteArray {
     ByteArrayOutputStream().use { output ->
@@ -227,16 +219,10 @@ fun ByteArray.compress(streamFactory: (OutputStream) -> OutputStream): ByteArray
 /**
  * Decompresses the data in this [ByteArray] using the specified input stream factory
  *
- * The factory function should wrap the given [InputStream] with a decompressing input stream
- * (e.g., [io.airlift.compress.v3.zstd.ZstdInputStream], [java.util.zip.GZIPInputStream]). The entire content of the decompressing
- * stream is read and returned as a byte array.
- *
  * @param streamFactory A function that wraps an [InputStream] with decompression logic
  * @return A new [ByteArray] containing the decompressed data
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ByteArray
- * @see InputStream
  */
 fun ByteArray.decompress(streamFactory: (InputStream) -> InputStream): ByteArray {
     ByteArrayInputStream(this).use { input ->
@@ -252,13 +238,7 @@ fun ByteArray.decompress(streamFactory: (InputStream) -> InputStream): ByteArray
 /**
  * Saves this [ByteArray] to a file at the specified path, optionally applying compression
  *
- * The file is constructed from the [base] directory and [subpaths] components. The write operation
- * is performed atomically when possible: data is first written to a temporary file, then moved to
- * the target location. If the underlying file system does not support atomic moves, a non-atomic
- * move is used as a fallback.
- *
- * If [compressStreamFactory] is provided, the data is compressed before being written using the
- * specified compression stream factory (e.g., `{ GZIPOutputStream(it) }`).
+ * Written atomically: to a temporary file, then moved.
  *
  * @param base The base directory path
  * @param subpaths Additional path components to append to [base]
@@ -267,8 +247,6 @@ fun ByteArray.decompress(streamFactory: (InputStream) -> InputStream): ByteArray
  * @return The [Path] to the saved file
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ByteArray
- * @see OutputStream
  * @see Path
  */
 fun ByteArray.saveToFile(
@@ -304,9 +282,6 @@ fun ByteArray.saveToFile(
 /**
  * Safely saves this [ByteArray] to a file, wrapping the result in a [Result]
  *
- * This is a safe wrapper around [saveToFile] that catches exceptions and returns them
- * as a [Result.failure] instead of throwing.
- *
  * @param base The base directory path
  * @param subpaths Additional path components to append to [base]
  * @param compressStreamFactory Optional factory for compressing the data before writing.
@@ -315,8 +290,6 @@ fun ByteArray.saveToFile(
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  * @see saveToFile
- * @see ByteArray
- * @see OutputStream
  * @see Result
  * @see Path
  */
@@ -331,16 +304,11 @@ fun ByteArray.saveToFileSafe(
 /**
  * Reads the contents of the file at this [Path] as a [ByteArray], optionally applying decompression
  *
- * If [decompressStreamFactory] is provided, the raw bytes read from the file are decompressed
- * using the specified decompression stream factory (e.g., `{ GZIPInputStream(it) }`).
- *
  * @param decompressStreamFactory Optional factory for decompressing the data after reading.
  *        If `null`, the raw bytes are returned without decompression.
  * @return A [ByteArray] containing the (possibly decompressed) file contents
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see Path
- * @see InputStream
  * @see ByteArray
  */
 fun Path.readFile(
@@ -355,16 +323,11 @@ fun Path.readFile(
 /**
  * Safely reads the contents of the file at this [Path] as a [ByteArray], wrapping the result in a [Result]
  *
- * This is a safe wrapper around [readFile] that catches exceptions and returns them
- * as a [Result.failure] instead of throwing.
- *
  * @param decompressStreamFactory Optional factory for decompressing the data after reading
  * @return A [Result] containing the file contents as a [ByteArray], or a failure if an error occurred
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  * @see readFile
- * @see Path
- * @see InputStream
  * @see Result
  * @see ByteArray
  */

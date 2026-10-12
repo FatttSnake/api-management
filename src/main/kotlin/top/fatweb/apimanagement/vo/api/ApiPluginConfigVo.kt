@@ -6,10 +6,6 @@ import java.math.BigDecimal
 /**
  * Plugin config value object
  *
- * The declared schema with the current values folded into it, so the administrator's
- * console renders a form from one payload instead of joining a declaration against a
- * separate list of values.
- *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
@@ -36,10 +32,6 @@ data class ApiPluginConfigVo(
 
     /**
      * Datasource declarations; empty when the plugin uses no database of its own
-     *
-     * Their connection settings are ordinary declared fields and arrive in [groups] with
-     * every other one, which is the whole point of declaring them: the console renders
-     * them, constrains them and never sees their secrets, without knowing what a datasource is.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -96,15 +88,6 @@ data class ApiPluginConfigGroupVo(
 
     /**
      * Name of the datasource this group describes, or null when it describes none
-     *
-     * A connection is composed from ordinary config fields rather than stored as one, and
-     * the gateway keeps those fields to a single group and that group to a single
-     * connection - so a datasource is edited, saved and tested in one piece, and the group
-     * is what a console can offer a connection test on. Naming it here is what says which
-     * group that is.
-     *
-     * Null for a group that describes none. A SQLITE datasource declares no slot, so it is
-     * described by no group and never appears here.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -165,15 +148,7 @@ data class ApiPluginConfigFieldVo(
     /**
      * Effective value; a secret is never returned
      *
-     * What the field holds, and what a console renders into its form: the administrator's
-     * stored value when there is one, and otherwise the declared default for every type but
-     * a number - a text field, where a blank string is a value rather than an absence, and a
-     * boolean or an enumeration, whose controls have no unset appearance to render. A number
-     * has no blank form and therefore no value until one is submitted, and reads as null.
-     * [hasValue] is what tells the two apart.
-     *
-     * A secret comes back as null however it is stored: [hasValue] says whether one is
-     * there, leaving the key out of a submission is what keeps it, and a blank clears it.
+     * Unset reads as the declared default, except for a number, which reads as null.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -220,11 +195,6 @@ data class ApiPluginConfigFieldVo(
 
     /**
      * Whether the stored secret is one the gateway can no longer read
-     *
-     * Only ever true for a secret that has a value stored: the token secret the gateway
-     * encrypts one under was rotated after it was written, and re-entering the value is the
-     * only thing that fixes it. Reported rather than raised, so the administrator is told
-     * which field to fill in rather than finding out from a plugin that fails to mount.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -337,11 +307,6 @@ data class ApiPluginConfigOptionVo(
 /**
  * Plugin config datasource value object
  *
- * The state of one declared datasource, as opposed to its settings: those are ordinary
- * config fields and are already in the groups. What is here is what cannot be read off
- * the form - which datasources exist, what they are, and whether each is ready to be
- * connected to.
- *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
@@ -359,8 +324,8 @@ data class ApiPluginConfigDatasourceVo(
     /**
      * Whether the plugin cannot run without a datasource
      *
-     * Only ever unsatisfied by a MySQL datasource: a SQLite one is supplied by the
-     * gateway as soon as it is declared
+     * Only ever unsatisfied by a MySQL datasource: a SQLite one is supplied by the gateway as
+     * soon as it is declared.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -371,9 +336,8 @@ data class ApiPluginConfigDatasourceVo(
     /**
      * Database type, which decides what the console shows
      *
-     * A SQLite datasource is supplied by the gateway, so the console presents it as
-     * read-only; a MySQL one is the administrator's to fill in. One byte of payload is
-     * what keeps the console from having to guess that from the connection settings.
+     * A SQLite datasource is supplied by the gateway and shown read-only; a MySQL one is the
+     * administrator's to fill in.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -384,8 +348,8 @@ data class ApiPluginConfigDatasourceVo(
     /**
      * Whether this datasource is ready to be connected to
      *
-     * Answered from the stored configuration rather than by connecting to anything, so
-     * a datasource whose server is down still reports as configured
+     * Answered from the stored configuration rather than by connecting, so a datasource whose
+     * server is down still reports as configured.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -396,9 +360,8 @@ data class ApiPluginConfigDatasourceVo(
     /**
      * Config keys holding this datasource's connection facts
      *
-     * What tells a client which of the declared fields belong to this datasource - so a
-     * connection can be tried with the values currently in the form, before they are
-     * saved, without the client having to know how a slot is named.
+     * The declared fields that belong to this datasource, so a connection can be tried with the
+     * values currently in the form before they are saved.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0

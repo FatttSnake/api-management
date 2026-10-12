@@ -5,9 +5,6 @@ import io.swagger.v3.oas.annotations.media.Schema
 /**
  * Available API interface value object
  *
- * The two fields the key-authorization picker actually reads: [code] is what a key's
- * permissions store and [name] is the option label.
- *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */

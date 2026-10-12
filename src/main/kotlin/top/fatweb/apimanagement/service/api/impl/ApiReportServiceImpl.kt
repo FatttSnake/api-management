@@ -308,7 +308,6 @@ class ApiReportServiceImpl(
      * @return Formatted local time
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     private fun csvLocalTime(time: LocalDateTime?): String =
         time?.plusMinutes(TimezoneUtil.offsetMinutes().toLong())?.format(CSV_TIME_FORMATTER).orEmpty()

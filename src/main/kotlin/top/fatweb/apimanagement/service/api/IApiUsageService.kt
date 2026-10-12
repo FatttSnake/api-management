@@ -11,8 +11,6 @@ import top.fatweb.apimanagement.vo.api.ApiUsageVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IService
- * @see ApiUsage
  */
 interface IApiUsageService : IService<ApiUsage> {
     /**
@@ -23,9 +21,6 @@ interface IApiUsageService : IService<ApiUsage> {
      * @return PageVo<ApiUsageVo> object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiUsageGetParam
-     * @see PageVo
-     * @see ApiUsageVo
      */
     fun getPage(managed: Boolean, apiUsageGetParam: ApiUsageGetParam?): PageVo<ApiUsageVo>
 
@@ -36,7 +31,6 @@ interface IApiUsageService : IService<ApiUsage> {
      * @return ID of saved record
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiUsage
      */
     fun saveUsage(apiUsage: ApiUsage): Long
 }

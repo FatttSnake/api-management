@@ -10,11 +10,8 @@ import javax.crypto.spec.SecretKeySpec
 /**
  * Plugin crypto util
  *
- * AES-256-GCM encryption for plugin secrets before they are stored - the datasource
- * password and every config field the plugin's schema declares as a secret. The key is
- * derived by SHA-256 of the gateway's token secret; the ciphertext is
- * `base64(iv || ciphertext)`, so a fresh IV on every call means the same plaintext
- * never produces the same ciphertext twice.
+ * AES-256-GCM. The key is SHA-256 of the gateway's token secret and the ciphertext is
+ * `base64(iv || ciphertext)` with a fresh IV per call.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0

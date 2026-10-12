@@ -46,7 +46,6 @@ class ExceptionHandler {
      * [ResponseResult] envelope
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Exception
      * @see ResponseResult
      * @see ApiResponse
      */

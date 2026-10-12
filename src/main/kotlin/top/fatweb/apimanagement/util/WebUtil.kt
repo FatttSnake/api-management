@@ -14,7 +14,6 @@ import top.fatweb.apimanagement.properties.ServerProperties
  * @return LoginUser object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see LoginUser
  */
 fun getLoginUser(): LoginUser? =
     if (SecurityContextHolder.getContext().authentication?.principal is String) null
@@ -55,7 +54,6 @@ fun getLoginUsername(): String? = getLoginUser()?.user?.username
  * @return ApiKeyPrincipal object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ApiKeyPrincipal
  */
 fun getApiKeyPrincipal(): ApiKeyPrincipal? =
     SecurityContextHolder.getContext().authentication?.principal as? ApiKeyPrincipal
@@ -68,7 +66,6 @@ fun getApiKeyPrincipal(): ApiKeyPrincipal? =
  * @return Token
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServerProperties
  */
 fun getToken(serverProperties: ServerProperties, tokenWithPrefix: String): String =
     tokenWithPrefix.removePrefix(serverProperties.security.tokenPrefix)
@@ -81,8 +78,6 @@ fun getToken(serverProperties: ServerProperties, tokenWithPrefix: String): Strin
  * @return Token
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServerProperties
- * @see HttpServletRequest
  */
 fun getToken(serverProperties: ServerProperties, request: HttpServletRequest): String =
     getToken(
@@ -98,8 +93,6 @@ fun getToken(serverProperties: ServerProperties, request: HttpServletRequest): S
  * @param userIds List of user IDs
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServerProperties
- * @see RedisProvider
  */
 fun offlineUser(
     serverProperties: ServerProperties,
@@ -122,7 +115,6 @@ fun offlineUser(
  * @return IP address
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see HttpServletRequest
  */
 fun getRequestIp(request: HttpServletRequest): String {
     var ip = request.getHeader("X-Real-IP")

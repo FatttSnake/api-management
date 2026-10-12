@@ -14,8 +14,6 @@ import java.math.BigDecimal
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IService
- * @see ApiAccount
  */
 interface IApiAccountService : IService<ApiAccount> {
     /**
@@ -25,9 +23,6 @@ interface IApiAccountService : IService<ApiAccount> {
      * @return Page<ApiAccountVo> object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiAccountGetParam
-     * @see PageVo
-     * @see ApiAccountVo
      */
     fun get(apiAccountGetParam: ApiAccountGetParam?): PageVo<ApiAccountVo>
 
@@ -39,7 +34,6 @@ interface IApiAccountService : IService<ApiAccount> {
      * @return ApiAccountVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiAccountVo
      */
     fun getOne(managed: Boolean, userId: Long?): ApiAccountVo
 
@@ -61,8 +55,6 @@ interface IApiAccountService : IService<ApiAccount> {
      * @return ApiTransactionVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiTopUpParam
-     * @see ApiTransactionVo
      */
     fun topUp(managed: Boolean, apiTopUpParam: ApiTopUpParam): ApiTransactionVo
 

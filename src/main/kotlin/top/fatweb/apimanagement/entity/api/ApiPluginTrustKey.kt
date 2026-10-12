@@ -7,10 +7,6 @@ import java.time.LocalDateTime
 /**
  * Plugin trust key entity
  *
- * One row per trusted plugin-signer public key. A plugin jar is only installed /
- * mounted when its embedded public key fingerprint ([keyId]) exists here and is
- * enabled, giving administrators control over which developers may publish.
- *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
@@ -75,7 +71,6 @@ class ApiPluginTrustKey : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @TableField("create_time", fill = FieldFill.INSERT)
     var createTime: LocalDateTime? = null
@@ -85,7 +80,6 @@ class ApiPluginTrustKey : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @TableField("update_time", fill = FieldFill.INSERT_UPDATE)
     var updateTime: LocalDateTime? = null

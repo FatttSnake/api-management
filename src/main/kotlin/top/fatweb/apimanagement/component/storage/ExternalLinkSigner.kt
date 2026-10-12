@@ -10,20 +10,9 @@ import javax.crypto.spec.SecretKeySpec
 /**
  * External link signer
  *
- * Mints and verifies the stateless bearer credential carried by a login-free
- * download URL. Nothing is stored server-side, so the same link verifies on every
- * instance without shared state; the price is that a link cannot be revoked before
- * it expires.
- *
- * The signed payload is `"plugin-storage-v1\n{key}\n{expiresAt}"`. The purpose
- * prefix keeps this scheme domain-separated from the JWT that the same secret
- * signs, and the path segment charset forbids control characters, so no key can
- * contain a newline and shift bytes across a field boundary.
- *
- * Only the object identity and the expiry are signed — never the scheme, host or
- * other query parameters — so the same link keeps working whether it is reached
- * through a proxy or directly, and a proxy appending its own query parameter
- * cannot break verification.
+ * Mints and verifies the stateless bearer credential carried by a login-free download
+ * URL: nothing is stored server-side, so a link cannot be revoked before it expires.
+ * The signed payload is `"plugin-storage-v1\n{key}\n{expiresAt}"`.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
@@ -63,9 +52,7 @@ class ExternalLinkSigner(
     /**
      * Verify a signature produced by [sign]
      *
-     * The comparison is constant time. It runs over the decoded bytes rather than
-     * the encoded strings, because a string comparison short-circuits on the first
-     * differing character.
+     * The comparison is constant time.
      *
      * @param key Location key
      * @param expiresAt Expiry as epoch seconds

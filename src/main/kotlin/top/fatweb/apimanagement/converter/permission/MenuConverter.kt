@@ -9,7 +9,6 @@ import top.fatweb.apimanagement.vo.permission.base.MenuVo
  * @return MenuVo object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see Menu
  * @see MenuVo
  */
 fun Menu.toVo() = MenuVo(

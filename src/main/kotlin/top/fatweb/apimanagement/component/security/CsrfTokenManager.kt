@@ -10,13 +10,10 @@ import java.util.*
  * CSRF token manager
  *
  * Stores each CSRF token under `{issuer}_csrf_{userId}_{refreshToken}:{csrfToken}`,
- * following the same pattern as access tokens. Different sessions have different
- * refresh tokens, so multiple sessions for the same user do not interfere.
+ * following the same pattern as access tokens.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see RedisProvider
- * @see ServerProperties
  */
 @Component
 class CsrfTokenManager(
@@ -48,9 +45,6 @@ class CsrfTokenManager(
     /**
      * Validate a CSRF token against Redis
      *
-     * Constructs the key from userId + refreshToken + csrfToken and checks
-     * for existence — the key itself encodes all three values.
-     *
      * @param userId User ID that owns the token
      * @param refreshToken Refresh token this CSRF token is bound to
      * @param token CSRF token to validate
@@ -63,9 +57,6 @@ class CsrfTokenManager(
 
     /**
      * Remove the CSRF token for a specific session
-     *
-     * Cleans up only the CSRF token tied to the given userId and refreshToken,
-     * leaving other sessions of the same user intact.
      *
      * @param userId User ID whose CSRF token to remove
      * @param refreshToken Refresh token of the session to clean up

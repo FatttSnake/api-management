@@ -18,8 +18,6 @@ interface IApiReportService {
      * @return List of ApiReportVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiReportGetParam
-     * @see ApiReportVo
      */
     fun usage(apiReportGetParam: ApiReportGetParam?): List<ApiReportVo>
 
@@ -30,8 +28,6 @@ interface IApiReportService {
      * @return List of ApiReportVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiReportGetParam
-     * @see ApiReportVo
      */
     fun cost(apiReportGetParam: ApiReportGetParam?): List<ApiReportVo>
 
@@ -42,8 +38,6 @@ interface IApiReportService {
      * @return List of ApiTopVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiReportGetParam
-     * @see ApiTopVo
      */
     fun top(apiReportGetParam: ApiReportGetParam?): List<ApiTopVo>
 
@@ -54,7 +48,6 @@ interface IApiReportService {
      * @return Storage file hash
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiReportGetParam
      */
     fun export(apiReportGetParam: ApiReportGetParam?): String
 
@@ -65,7 +58,6 @@ interface IApiReportService {
      * @return Storage file hash
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiReportGetParam
      */
     fun exportDetail(apiReportGetParam: ApiReportGetParam?): String
 }

@@ -142,7 +142,6 @@ object TOTPUtil {
      * @return QR code
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see BitMatrix
      */
     fun generateQRCode(issuer: String, username: String, secretKey: String): BitMatrix {
         val hints = HashMap<EncodeHintType, Any>()

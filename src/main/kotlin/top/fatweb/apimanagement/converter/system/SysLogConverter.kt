@@ -11,8 +11,6 @@ import top.fatweb.apimanagement.vo.system.SysLogVo
  * @return PageVo<SysLogVo> object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IPage
- * @see SysLog
  * @see PageVo
  */
 fun IPage<SysLog>.toVo() = PageVo(

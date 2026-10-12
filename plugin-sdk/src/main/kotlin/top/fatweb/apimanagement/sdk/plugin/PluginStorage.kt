@@ -5,24 +5,9 @@ import java.time.Duration
 /**
  * Plugin storage
  *
- * The narrow, gateway-sanctioned file channel for a plugin, backed by the
- * gateway's configured storage (`app.storage`). Two addressing modes are offered
- * and they are not interchangeable:
- *
- * - **Content addressing** ([saveContent] / [loadContent] / [existsContent] /
- *   [deleteContent]) stores bytes under their SHA-256 key, so identical content is
- *   stored once and shared between every writer. The gateway compresses these
- *   objects transparently, which is why they can only be read back through
- *   [loadContent] and can never be handed to a browser as a plain URL.
- * - **Location addressing** ([saveFile] / [loadFile] / [existsFile] / [deleteFile]
- *   / [fileExternalUrl]) stores bytes under a path chosen by the plugin. The
- *   gateway stores these bytes verbatim, which is what makes [fileExternalUrl]
- *   possible.
- *
- * A [PluginStorage] instance is bound to a single plugin. Every path is resolved
- * underneath that plugin's own namespace, and no call can address a file belonging
- * to another plugin, to the gateway, or to the content-addressed object store. A
- * path that tries to is rejected rather than silently escaped.
+ * Content-addressed objects are compressed and can only be read back through [loadContent];
+ * location-addressed files are stored verbatim, which is what makes [fileExternalUrl]
+ * possible. Every path is confined to this plugin's namespace, and an escape is rejected.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
@@ -32,16 +17,13 @@ interface PluginStorage {
     /**
      * Save content to storage
      *
-     * Content is stored once per distinct byte sequence and shared between every
-     * writer, so storing the same bytes twice reuses the same object and raises the
-     * gateway's reference count. Call [deleteContent] exactly once per successful
-     * [saveContent] of the same key.
+     * Stored once per distinct byte sequence and reference-counted, so call [deleteContent]
+     * exactly once per successful save.
      *
      * @param content File content
      * @return File SHA-256 key
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ByteArray
      */
     fun saveContent(content: ByteArray): String
 
@@ -52,7 +34,6 @@ interface PluginStorage {
      * @return File content, or null when nothing is stored under [key]
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ByteArray
      */
     fun loadContent(key: String): ByteArray?
 
@@ -69,9 +50,8 @@ interface PluginStorage {
     /**
      * Delete content from storage
      *
-     * Only the gateway's reference count is decremented; the bytes are retained
-     * until the gateway reclaims unreferenced objects. Deleting a key that was never
-     * stored is a no-op.
+     * Only the reference count is decremented - the bytes are retained until the gateway
+     * reclaims them - and deleting a key that was never stored is a no-op.
      *
      * @param key File SHA-256 key returned by [saveContent]
      * @author FatttSnake, fatttsnake@gmail.com
@@ -82,20 +62,13 @@ interface PluginStorage {
     /**
      * Save file to storage
      *
-     * The bytes are stored verbatim, so the file can later be handed to a browser
-     * through [fileExternalUrl]. Writing to a path that already exists overwrites it.
-     *
-     * [path] is a relative, '/'-separated path of URL-safe segments, e.g.
-     * `avatar/123.png`. It must not be empty, must not start or end with '/', must
-     * not contain a '.' or '..' segment, a backslash or a colon, and must not try to
-     * address another plugin's namespace or the content-addressed object store;
-     * such paths are rejected with [IllegalArgumentException].
+     * Writing to a path that already exists overwrites it, and a path that tries to escape
+     * this plugin's namespace is rejected with [IllegalArgumentException].
      *
      * @param path Relative path inside this plugin's namespace
      * @param content File content
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ByteArray
      */
     fun saveFile(path: String, content: ByteArray)
 
@@ -106,7 +79,6 @@ interface PluginStorage {
      * @return File content, or null when nothing is stored at [path]
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ByteArray
      */
     fun loadFile(path: String): ByteArray?
 
@@ -134,13 +106,8 @@ interface PluginStorage {
     /**
      * Build a login-free external URL for the file stored at [path]
      *
-     * The returned URL can be handed to an unauthenticated caller (a browser, a
-     * third-party service) and stays valid for [ttl]. It is a bearer credential:
-     * whoever holds it can read the file until it expires, and it cannot be revoked
-     * before then.
-     *
-     * The URL is only a promise — the file need not exist yet, and deleting it later
-     * makes the URL fail.
+     * It is a bearer credential - valid until [ttl] and not revocable before then - and the
+     * file need not exist yet.
      *
      * @param path Relative path inside this plugin's namespace
      * @param ttl How long the URL stays valid, or null for the gateway's configured
@@ -151,7 +118,6 @@ interface PluginStorage {
      *         (called outside a request while no public base URL is configured)
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Duration
      */
     fun fileExternalUrl(path: String, ttl: Duration? = null): String?
 }

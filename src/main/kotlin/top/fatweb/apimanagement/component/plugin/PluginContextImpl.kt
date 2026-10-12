@@ -14,27 +14,12 @@ import javax.sql.DataSource
 /**
  * Plugin context implement
  *
- * Bridges a plugin to the gateway through the narrow, sanctioned data interaction
- * channel. The plugin never sees the gateway's own datasource / MyBatis mappers;
- * it reads gateway data only through these methods and writes its own data via
- * [datasources] and [storage].
- *
- * Settings come in two flavours that share one read method but not one owner. A key
- * declared by the plugin's own config schema is administrator-owned: the value is
- * resolved from the settings table, falls back to the schema default, and never comes
- * from the plugin itself. Any other key is the plugin's own runtime state, written
- * through [saveSetting] exactly as before.
+ * Bridges a plugin to the gateway through the narrow, sanctioned data interaction channel. A
+ * setting key declared by the plugin's own config schema is administrator-owned and cannot be
+ * written by the plugin; any other key is the plugin's own runtime state.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see DataSource
- * @see PluginStorage
- * @see IApiAccountService
- * @see IApiPluginSettingService
- * @see PluginConfigSchemaCache
- * @see PluginSettingReader
- * @see ApiInterface
- * @see PluginContext
  */
 class PluginContextImpl(
     override val pluginId: String,

@@ -12,8 +12,6 @@ import top.fatweb.apimanagement.vo.permission.base.GroupVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IService
- * @see Group
  */
 interface IGroupService : IService<Group> {
     /**
@@ -23,7 +21,6 @@ interface IGroupService : IService<Group> {
      * @return GroupWithRoleVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see GroupWithRoleVo
      */
     fun getOne(id: Long): GroupWithRoleVo
 
@@ -34,9 +31,6 @@ interface IGroupService : IService<Group> {
      * @return PageVo<GroupWithRoleVo> object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see GroupGetParam
-     * @see PageVo
-     * @see GroupWithRoleVo
      */
     fun getPage(groupGetParam: GroupGetParam?): PageVo<GroupWithRoleVo>
 
@@ -46,7 +40,6 @@ interface IGroupService : IService<Group> {
      * @return List of GroupVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see GroupVo
      */
     fun getList(): List<GroupVo>
 
@@ -57,8 +50,6 @@ interface IGroupService : IService<Group> {
      * @return GroupVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see GroupAddParam
-     * @see GroupVo
      */
     fun add(groupAddParam: GroupAddParam): GroupVo
 
@@ -68,7 +59,6 @@ interface IGroupService : IService<Group> {
      * @param groupUpdateParam Update group parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see GroupUpdateParam
      */
     fun update(groupUpdateParam: GroupUpdateParam)
 
@@ -78,7 +68,6 @@ interface IGroupService : IService<Group> {
      * @param groupUpdateStatusParam Update status of group parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see GroupUpdateStatusParam
      */
     fun status(groupUpdateStatusParam: GroupUpdateStatusParam)
 
@@ -97,7 +86,6 @@ interface IGroupService : IService<Group> {
      * @param groupDeleteParam Delete group parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see GroupDeleteParam
      */
     fun delete(groupDeleteParam: GroupDeleteParam)
 }

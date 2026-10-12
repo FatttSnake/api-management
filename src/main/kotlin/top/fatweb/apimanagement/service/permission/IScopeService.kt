@@ -8,7 +8,5 @@ import top.fatweb.apimanagement.entity.permission.Scope
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IService
- * @see Scope
  */
 interface IScopeService : IService<Scope>

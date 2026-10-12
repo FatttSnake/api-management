@@ -15,12 +15,8 @@ import top.fatweb.apimanagement.vo.api.ApiDocVo
 /**
  * User-facing API documentation controller
  *
- * Serves callable API documentation to end users (list + per-plugin detail with the
- * embedded OpenAPI fragment) so the frontend can render it directly.
- *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IApiDocService
  */
 @BaseController(path = ["/user/api/docs"], name = "用户 API 文档", description = "用户可调用 API 文档")
 class UserApiDocController(
@@ -33,10 +29,6 @@ class UserApiDocController(
      * @return Response object includes plugin documentation paging information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiDocGetParam
-     * @see ResponseResult
-     * @see PageVo
-     * @see ApiDocVo
      */
     @Operation(summary = "获取用户 API 文档列表")
     @GetMapping
@@ -50,8 +42,6 @@ class UserApiDocController(
      * @return Response object includes plugin documentation detail
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see ApiDocVo
      */
     @Operation(summary = "获取插件 API 文档详情")
     @GetMapping("/{pluginId}")

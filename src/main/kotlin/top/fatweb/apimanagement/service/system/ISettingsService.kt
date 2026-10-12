@@ -19,7 +19,6 @@ interface ISettingsService {
      * @return BaseSettingsVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see BaseSettingsVo
      */
     fun getBase(): BaseSettingsVo
 
@@ -29,7 +28,6 @@ interface ISettingsService {
      * @param baseSettingsParam Base settings parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see BaseSettingsParam
      */
     fun updateBase(baseSettingsParam: BaseSettingsParam)
 
@@ -39,7 +37,6 @@ interface ISettingsService {
      * @return MailSettingsVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see MailSettingsVo
      */
     fun getMail(): MailSettingsVo
 
@@ -49,7 +46,6 @@ interface ISettingsService {
      * @param mailSettingsParam Mail settings parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see MailSettingsParam
      */
     fun updateMail(mailSettingsParam: MailSettingsParam)
 
@@ -59,7 +55,6 @@ interface ISettingsService {
      * @param mailSendParam Send mail parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see MailSendParam
      */
     fun sendMail(mailSendParam: MailSendParam)
 
@@ -69,7 +64,6 @@ interface ISettingsService {
      * @return TwoFactorSettingsVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see TwoFactorSettingsVo
      */
     fun getTwoFactor(): TwoFactorSettingsVo
 
@@ -79,7 +73,6 @@ interface ISettingsService {
      * @param twoFactorSettingsParam Two-factor settings parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see TwoFactorSettingsParam
      */
     fun updateTwoFactor(twoFactorSettingsParam: TwoFactorSettingsParam)
 
@@ -89,7 +82,6 @@ interface ISettingsService {
      * @return ApiSettingsVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiSettingsVo
      */
     fun getApi(): ApiSettingsVo
 
@@ -99,7 +91,6 @@ interface ISettingsService {
      * @param apiSettingsParam API platform settings parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiSettingsParam
      */
     fun updateApi(apiSettingsParam: ApiSettingsParam)
 }

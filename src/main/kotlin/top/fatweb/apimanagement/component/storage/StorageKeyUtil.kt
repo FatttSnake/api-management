@@ -5,14 +5,8 @@ import top.fatweb.apimanagement.sdk.plugin.PluginDescriptor
 /**
  * File storage key util
  *
- * Owns the key formats and every check that keeps a caller-supplied key from
- * escaping the location it was meant for.
- *
- * A content key is exactly one lowercase SHA-256 hex digest. A location key is a
- * relative, '/'-separated path below the system-wide location-addressed root, and
- * is validated generically: the validator knows nothing about who owns a key, so
- * every namespace check lives with the code that composes the key ([pluginKey] for
- * plugins).
+ * A content key is one lowercase SHA-256 hex digest; a location key is a relative,
+ * '/'-separated path below the location-addressed root, validated generically.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
@@ -59,9 +53,6 @@ object StorageKeyUtil {
     /**
      * Compose the location key of a plugin file
      *
-     * The plugin ID is composed in from the caller's own identity, never taken as
-     * an argument, so the result is always confined to that plugin's namespace.
-     *
      * @param pluginId Plugin ID
      * @param path Relative path inside the plugin's namespace
      * @return Location key
@@ -76,10 +67,6 @@ object StorageKeyUtil {
 
     /**
      * Compose the public reference of a plugin file
-     *
-     * The reference is what an external download URL carries and what its signature
-     * covers. It is deliberately not the location key: the storage layout stays an
-     * internal detail, so changing it cannot invalidate links already handed out.
      *
      * @param pluginId Plugin ID
      * @param path Relative path inside the plugin's namespace
@@ -96,9 +83,6 @@ object StorageKeyUtil {
     /**
      * Compose the location key every file of a plugin lives under
      *
-     * Used as the prefix when the plugin's files are purged, so a future sibling
-     * namespace under the same plugin is not destroyed along with them.
-     *
      * @param pluginId Plugin ID
      * @return Location key prefix
      * @author FatttSnake, fatttsnake@gmail.com
@@ -112,10 +96,6 @@ object StorageKeyUtil {
 
     /**
      * Validate a location key
-     *
-     * Generic on purpose: a location key is a relative path below the
-     * location-addressed root and nothing more. Who is allowed to write where is
-     * decided by whoever composes the key, not by this check.
      *
      * @param key Location key
      * @throws IllegalArgumentException when the key is malformed or could resolve
@@ -154,9 +134,8 @@ object StorageKeyUtil {
     /**
      * Validate one path segment
      *
-     * The charset restriction is what makes this safe on Windows as well as Linux:
-     * banning the backslash means `..\..\x` cannot be silently reinterpreted as
-     * three segments by `Path.resolve`.
+     * Banning the backslash keeps `..\..\x` from being reinterpreted as three segments
+     * by `Path.resolve` on Windows.
      *
      * @param segment Path segment
      * @throws IllegalArgumentException when the segment is malformed or reserved

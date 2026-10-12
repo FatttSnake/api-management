@@ -9,7 +9,6 @@ import top.fatweb.apimanagement.vo.permission.base.OperationVo
  * @return OperationVo object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see Operation
  * @see OperationVo
  */
 fun Operation.toVo() = OperationVo(

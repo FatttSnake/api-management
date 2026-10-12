@@ -5,12 +5,7 @@ import jakarta.servlet.http.HttpServletRequest
 /**
  * Parsing of the gateway's API URL shape
  *
- * Every plugin endpoint lives under `/api/{plugin}/v{version}/...`. Both the router condition
- * that matches a request and the access interceptor that authorises it need to read the plugin
- * and version back out of the URL, so the parse lives in one place - and, being one place, it is
- * also where the servlet context path comes off: a gateway served under a context path carries
- * it in `requestURI`, and matching against that text without removing it would make every plugin
- * route fail to match.
+ * Every plugin endpoint lives under `/api/{plugin}/v{version}/...`.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
@@ -47,10 +42,6 @@ internal object ApiPath {
 
     /**
      * Parse the plugin and version a request addresses
-     *
-     * A version that does not fit an [Int] is treated as "not an API URL" rather than allowed to
-     * throw out of the router's condition evaluation: it can only fail to match either way, and
-     * a request must not be answered with a 500 for having a long number in its path.
      *
      * @param request Request being routed or authorised
      * @return Plugin and version, or null when the URI is not an API URL

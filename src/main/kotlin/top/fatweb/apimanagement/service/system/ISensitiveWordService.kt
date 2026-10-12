@@ -11,8 +11,6 @@ import top.fatweb.apimanagement.vo.system.SensitiveWordVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IService
- * @see SensitiveWord
  */
 interface ISensitiveWordService : IService<SensitiveWord> {
     /**
@@ -20,7 +18,6 @@ interface ISensitiveWordService : IService<SensitiveWord> {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see SensitiveWordVo
      */
     fun get(): List<SensitiveWordVo>
 
@@ -29,7 +26,6 @@ interface ISensitiveWordService : IService<SensitiveWord> {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see SensitiveWordAddParam
      */
     fun add(sensitiveWordAddParam: SensitiveWordAddParam)
 
@@ -38,7 +34,6 @@ interface ISensitiveWordService : IService<SensitiveWord> {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see SensitiveWordUpdateParam
      */
     fun update(sensitiveWordUpdateParam: SensitiveWordUpdateParam)
 

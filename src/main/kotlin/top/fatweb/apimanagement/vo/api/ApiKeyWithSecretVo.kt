@@ -18,7 +18,6 @@ data class ApiKeyWithSecretVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiKeyVo
      */
     val apiKey: ApiKeyVo,
 

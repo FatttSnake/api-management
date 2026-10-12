@@ -12,8 +12,6 @@ import top.fatweb.apimanagement.vo.permission.base.RoleVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IService
- * @see Role
  */
 interface IRoleService : IService<Role> {
     /**
@@ -23,7 +21,6 @@ interface IRoleService : IService<Role> {
      * @return RoleWithPowerVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see RoleWithPowerVo
      */
     fun getOne(id: Long): RoleWithPowerVo
 
@@ -34,9 +31,6 @@ interface IRoleService : IService<Role> {
      * @return PageVo<RoleWithPowerVo> object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see RoleGetParam
-     * @see PageVo
-     * @see RoleWithPowerVo
      */
     fun getPage(roleGetParam: RoleGetParam?): PageVo<RoleWithPowerVo>
 
@@ -46,7 +40,6 @@ interface IRoleService : IService<Role> {
      * @return List of RoleVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see RoleVo
      */
     fun getList(): List<RoleVo>
 
@@ -57,8 +50,6 @@ interface IRoleService : IService<Role> {
      * @return RoleVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see RoleAddParam
-     * @see RoleVo
      */
     fun add(roleAddParam: RoleAddParam): RoleVo
 
@@ -68,7 +59,6 @@ interface IRoleService : IService<Role> {
      * @param roleUpdateParam Update role parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see RoleUpdateParam
      */
     fun update(roleUpdateParam: RoleUpdateParam)
 
@@ -78,7 +68,6 @@ interface IRoleService : IService<Role> {
      * @param roleUpdateStatusParam Update status of role parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see RoleUpdateStatusParam
      */
     fun status(roleUpdateStatusParam: RoleUpdateStatusParam)
 
@@ -97,7 +86,6 @@ interface IRoleService : IService<Role> {
      * @param roleDeleteParam Delete role parameters
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see RoleDeleteParam
      */
     fun delete(roleDeleteParam: RoleDeleteParam)
 }

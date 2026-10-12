@@ -65,7 +65,6 @@ class JwtProvider(
      * @return JWT token
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see TimeUnit
      */
     private fun generateJwt(
         subject: String,
@@ -87,7 +86,6 @@ class JwtProvider(
      * @return Parsed content
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see DecodedJWT
      */
     fun parseJwt(jwt: String): DecodedJWT = JWT.require(algorithm()).build().verify(jwt)
 }

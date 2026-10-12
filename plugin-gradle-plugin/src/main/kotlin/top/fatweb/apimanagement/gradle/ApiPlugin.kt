@@ -9,30 +9,6 @@ import java.io.File
 /**
  * The `top.fatweb.api-plugin` Gradle plugin.
  *
- * Turns a plain Kotlin/JVM project into an API Management plugin project:
- * - adds the plugin SDK to `implementation` and the needed repositories;
- * - generates `META-INF/api-plugin.json` from the `apiPlugin { }` DSL;
- * - generates the Ed25519 developer key pair (`keys/`) on first build and embeds
- *   `META-INF/plugin.pub.pem` into the jar;
- * - names the jar `<pluginId>-<versionName>.jar`;
- * - signs the jar in place (`signPlugin`, part of `build`) and provides
- *   `verifyPlugin` for self-checks.
- *
- * Requiring only the Kotlin JVM plugin, a project's build script shrinks to:
- *
- * ```kotlin
- * plugins {
- *     kotlin("jvm") version "2.3.21"
- *     id("top.fatweb.api-plugin") version "1.0.0-SNAPSHOT"
- * }
- * version = "1.0.0"
- * apiPlugin {
- *     pluginId = "geo"
- *     pluginName = "Geo 插件"
- *     versionCode = 1
- * }
- * ```
- *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */

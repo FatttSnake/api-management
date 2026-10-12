@@ -30,9 +30,7 @@ interface SysLogMapper : BaseMapper<SysLog> {
      * @return System log in page
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see IPage
      * @see LocalDateTime
-     * @see SysLog
      */
     fun selectPage(
         page: IPage<SysLog>,

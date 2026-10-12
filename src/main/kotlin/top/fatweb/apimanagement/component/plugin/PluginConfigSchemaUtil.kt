@@ -7,15 +7,8 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Plugin config schema util
  *
- * Owns the declared format of `META-INF/plugin-config.json` and every check applied to
- * a value before it is stored. Both halves are deliberately pure: the gateway parses
- * the file while mounting a plugin and the admin API validates submitted values with
- * the same rules, so neither needs Spring to be tested.
- *
- * Parsing is strict on purpose. A schema that cannot be honoured (an unknown type, a
- * duplicate key, a constraint on a type that does not support it) is an authoring
- * mistake that would otherwise surface as a setting the administrator can see but the
- * plugin never reads, so it is rejected instead.
+ * Owns the declared format of `META-INF/plugin-config.json` and every check applied to a value
+ * before it is stored; both halves are pure, so neither needs Spring to test.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
@@ -32,9 +25,6 @@ object PluginConfigSchemaUtil {
     /**
      * Longest setting key, kept in sync with `t_b_api_plugin_setting.setting_key`
      *
-     * A key the plugin writes for its own runtime state lands in the same column, so the
-     * same limit applies to both - see `PluginContextImpl.saveSetting`.
-     *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
@@ -43,11 +33,6 @@ object PluginConfigSchemaUtil {
     /**
      * Longest setting value, in UTF-8 bytes
      *
-     * A backstop rather than a rule: the column is a `text`, so its limit is bytes and a
-     * form pasting something enormous would otherwise reach the driver and come back as a
-     * database error. Characters are what a declared `maxLength` counts, so this only ever
-     * fires on a field that declares no maximum of its own.
-     *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
@@ -55,11 +40,6 @@ object PluginConfigSchemaUtil {
 
     /**
      * Compiled declared patterns, by their source
-     *
-     * Held here rather than on `PluginConfigField`: that is a data class, and a `Regex`
-     * carries no structural equality, so a field holding one would stop comparing equal to
-     * an identical field. A schema holds a handful of patterns at most, so it needs no
-     * eviction.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -101,7 +81,6 @@ object PluginConfigSchemaUtil {
      * @throws IllegalArgumentException when the file cannot be honoured
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginConfigSchema
      */
     fun parse(json: String?): PluginConfigSchema? {
         if (json.isNullOrBlank()) {
@@ -150,21 +129,14 @@ object PluginConfigSchemaUtil {
     /**
      * Read what a submission says about one field
      *
-     * The one definition of the three states a submitted value has, shared by everything
-     * that has to agree on them: validation, the write itself, and the value the plugin
-     * reads once the write is done. Deriving them at each call site is how they drift.
-     *
-     * A blank submission is a value of its own for free text - and only for free text,
-     * since no other type has a blank form to store - so it clears the key there and
-     * nowhere else. Leaving a key out is not a submission at all: a console saving a form
-     * submits the fields it changed and leaves the rest as they were.
+     * A blank submission sets a free-text field but clears any other; a null is a key that was
+     * left out.
      *
      * @param field Field the value belongs to
      * @param submitted Submitted value, or null when the key was left out
      * @return What the submission means
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginConfigValueAction
      */
     fun actionOf(field: PluginConfigField, submitted: String?): PluginConfigValueAction = when {
         submitted == null -> PluginConfigValueAction.KEEP
@@ -175,10 +147,6 @@ object PluginConfigSchemaUtil {
 
     /**
      * Read the value a field holds once a submission is written
-     *
-     * What the plugin reads back, and what the gateway composes a datasource from: a
-     * cleared key falls back to the declared default exactly as a key that was never
-     * stored does, and a kept one is the value already there.
      *
      * @param field Field the value belongs to
      * @param submitted Submitted value, or null when the key was left out
@@ -221,21 +189,9 @@ object PluginConfigSchemaUtil {
     /**
      * Validate a submission against a schema
      *
-     * The stored values are passed in because a required field may already be satisfied by
-     * an earlier save, and because whatever a submission leaves alone is read back out of
-     * them - see [effectiveValues].
-     *
-     * Two scopes, and they are not the same. A value is held to the constraints its own
-     * field declares. A required field is only checked when the group it belongs to is part
-     * of the submission, because a console saves one group at a time: making a save of one
-     * group wait on an unfinished field in another is how a form becomes impossible to fill
-     * in - the same reason a datasource slot is never a required field.
-     *
-     * Only the declared constraints of the fields themselves. A key that describes a
-     * datasource is held to one more set of rules on top of these, because a field's
-     * declared pattern is its author's convenience rather than a guarantee the gateway
-     * can compose a connection from - see `PluginDatasourceUtil.resolve`, which the save
-     * path and the mount both go through.
+     * A required field is checked only when the group it belongs to is part of the submission.
+     * A key that describes a datasource is held to an additional set of rules, in
+     * `PluginDatasourceUtil.resolve`.
      *
      * @param schema Schema the values belong to
      * @param submitted Submitted values, by config group and then by config key; a null
@@ -246,7 +202,6 @@ object PluginConfigSchemaUtil {
      *         invalid, or a required field of a submitted group is left empty
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginConfigSchema
      */
     fun validate(
         schema: PluginConfigSchema,
@@ -298,8 +253,6 @@ object PluginConfigSchemaUtil {
      * @return Datasource declarations
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginConfigFieldGroup
-     * @see PluginDatasourceSchema
      */
     private fun parseDatasources(
         nodes: List<*>,
@@ -341,8 +294,6 @@ object PluginConfigSchemaUtil {
      * @return Datasource declaration
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginConfigField
-     * @see PluginDatasourceSchema
      */
     private fun parseDatasource(
         node: Any?,
@@ -450,17 +401,11 @@ object PluginConfigSchemaUtil {
     /**
      * Check whether a config field can describe a connection slot
      *
-     * The rule that keeps a password a secret and every other slot plain: a secret field
-     * is encrypted at rest and never returned by the API, so it may only be a password,
-     * and a password that is not held as a secret would be stored in the clear.
-     *
      * @param slot Connection fact
      * @param type Declared type of the field the slot points at
      * @return true=the field can hold this slot
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginDatasourceSlot
-     * @see PluginConfigFieldType
      */
     private fun slotAccepts(slot: PluginDatasourceSlot, type: PluginConfigFieldType): Boolean = when (slot) {
         PluginDatasourceSlot.PORT -> type == PluginConfigFieldType.NUMBER
@@ -482,7 +427,6 @@ object PluginConfigSchemaUtil {
      * @return Parsed group
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginConfigFieldGroup
      */
     private fun parseGroup(
         node: Any?,
@@ -522,7 +466,6 @@ object PluginConfigSchemaUtil {
      * @return Parsed field
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginConfigField
      */
     private fun parseField(
         node: Any?,
@@ -606,8 +549,6 @@ object PluginConfigSchemaUtil {
      * @return Parsed options, or null when the field is not an enum
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginConfigFieldType
-     * @see PluginConfigFieldOption
      */
     private fun parseOptions(node: Any?, key: String, type: PluginConfigFieldType): List<PluginConfigFieldOption>? {
         if (type != PluginConfigFieldType.ENUM) {
@@ -642,7 +583,6 @@ object PluginConfigSchemaUtil {
      * @throws IllegalArgumentException when the value is invalid
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginConfigField
      */
     private fun validateValue(field: PluginConfigField, value: String) {
         val key = field.key
@@ -700,9 +640,6 @@ object PluginConfigSchemaUtil {
 
     /**
      * Read a compiled declared pattern
-     *
-     * Compiled once per distinct source rather than per validation: the same field is
-     * checked on every save, and a plugin author's pattern is otherwise re-parsed each time.
      *
      * @param pattern Declared pattern
      * @return Compiled pattern
@@ -792,11 +729,6 @@ object PluginConfigSchemaUtil {
     /**
      * Read a property that may be declared as a string, a boolean or a number
      *
-     * A schema author writing `"default": true` is stating the obvious, so the scalar
-     * is accepted in its natural JSON shape and normalised to the string the setting
-     * table stores. Integral numbers are normalised without a fractional part, so a
-     * whole-number default is not rejected by an integer field's own check.
-     *
      * @param map Declared object
      * @param name Property name
      * @param what Description of the object, for error messages
@@ -860,9 +792,6 @@ enum class PluginConfigValueAction {
 
     /**
      * A value was submitted: it is stored and read back as it is
-     *
-     * A blank submitted for a text field is one of these, since a blank is a value there
-     * rather than the absence of one - see [PluginConfigSchemaUtil.actionOf].
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0

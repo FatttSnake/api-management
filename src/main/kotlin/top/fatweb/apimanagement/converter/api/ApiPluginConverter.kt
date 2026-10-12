@@ -13,7 +13,6 @@ import top.fatweb.apimanagement.vo.api.ApiPluginVo
  * @return ApiPluginVo object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ApiPlugin
  * @see ApiPluginVo
  */
 fun ApiPlugin.toVo() = ApiPluginVo(
@@ -41,8 +40,6 @@ fun ApiPlugin.toVo() = ApiPluginVo(
  * @return PageVo<ApiPluginVo> object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IPage
- * @see ApiPlugin
  * @see PageVo
  */
 fun IPage<ApiPlugin>.toVoPage() = PageVo(
@@ -59,7 +56,6 @@ fun IPage<ApiPlugin>.toVoPage() = PageVo(
  * @return ApiPlugin object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ApiPluginUpdateParam
  * @see ApiPlugin
  */
 fun ApiPluginUpdateParam.toEntity() = ApiPlugin().apply {
@@ -76,7 +72,6 @@ fun ApiPluginUpdateParam.toEntity() = ApiPlugin().apply {
  * @return ApiPlugin object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ApiPluginUpdateStatusParam
  * @see ApiPlugin
  */
 fun ApiPluginUpdateStatusParam.toEntity() = ApiPlugin().apply {

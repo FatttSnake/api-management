@@ -24,9 +24,8 @@ import kotlin.test.assertTrue
 /**
  * Local file storage provider tests
  *
- * A plugin reaches this provider in process, without going through the servlet
- * container, so the checks that keep a key inside the storage root have to hold
- * here rather than depending on the container rejecting a malformed URL.
+ * The checks that keep a key inside the storage root have to hold here, because a plugin
+ * reaches this provider in process rather than through the servlet container.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0

@@ -8,9 +8,8 @@ import kotlin.test.assertNull
 /**
  * API version condition tests
  *
- * Pins how a request is matched against a controller's declared plugin and version - including
- * that the servlet context path comes off before matching, since reading the raw request URI
- * would silently 404 every plugin route on a gateway not deployed at the root.
+ * Pins how a request is matched against a controller's declared plugin and version, including
+ * that the servlet context path is stripped before matching.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0

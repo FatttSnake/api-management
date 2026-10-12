@@ -25,7 +25,6 @@ data class StorageProperties(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see FileStorageMode
      */
     val mode: FileStorageMode = FileStorageMode.Local,
 
@@ -49,9 +48,6 @@ data class StorageProperties(
     /**
      * Directory holding the SQLite databases of the plugins that declare one
      *
-     * Each plugin gets a directory named after its ID and each of its datasources a file
-     * inside it, so nothing an administrator submits ever reaches this path
-     *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
@@ -60,10 +56,7 @@ data class StorageProperties(
     /**
      * Most connections one plugin datasource may hold open
      *
-     * Every datasource a plugin declares is its own pool, so this is what decides how
-     * many connections a plugin can add to the database it points at. Kept next to
-     * [pluginDatasourceDir] because both are settings about the datasources the gateway
-     * supplies, and neither is about where files are stored.
+     * Every datasource a plugin declares is its own pool.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -73,9 +66,8 @@ data class StorageProperties(
     /**
      * Public base URL used to build external storage links
      *
-     * When unset, the URL of the current request is used, which is correct for a
-     * direct deployment but wrong behind a reverse proxy - set it explicitly in
-     * production
+     * When unset, the current request's URL is used, which is wrong behind a reverse
+     * proxy.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -98,7 +90,6 @@ data class StorageProperties(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see TimeUnit
      */
     val externalUrlTtlUnit: TimeUnit = TimeUnit.HOURS,
 
@@ -197,9 +188,6 @@ data class StorageProperties(
         /**
          * Public S3 endpoint used to build presigned URLs, falls back to [endpoint]
          *
-         * Set it when the internal endpoint is not reachable from a browser, e.g. a
-         * container service name or a private network address
-         *
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
          */
@@ -233,9 +221,6 @@ data class StorageProperties(
     /**
      * Check external link ttl properties
      *
-     * A default above the maximum would be clamped on every single call, which is
-     * never what an operator means
-     *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
@@ -249,7 +234,6 @@ data class StorageProperties(
      * @return Default life
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Duration
      */
     fun externalUrlDefaultDuration(): Duration =
         ttlToDuration(externalUrlDefaultTtl)
@@ -260,7 +244,6 @@ data class StorageProperties(
      * @return Maximum life
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Duration
      */
     fun externalUrlMaxDuration(): Duration =
         ttlToDuration(externalUrlMaxTtl)

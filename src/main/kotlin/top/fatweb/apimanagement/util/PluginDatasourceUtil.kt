@@ -14,15 +14,6 @@ import java.util.Properties
 /**
  * Plugin datasource util
  *
- * Owns how the gateway turns a plugin's datasource declaration and the config values
- * behind it into a connection. Deliberately pure and free of Spring, so the rules that
- * keep a submitted value from rewriting the connection it is composed into can be
- * tested without a container.
- *
- * The connection is composed rather than accepted: what the administrator submits is
- * held to the declared field's own constraints first, and to these rules afterwards -
- * a declared pattern is the plugin author's convenience, not a guarantee.
- *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
@@ -72,9 +63,6 @@ object PluginDatasourceUtil {
     /**
      * Accepted IPv6 literal, optionally carrying a zone
      *
-     * The charset alone would admit nonsense, so a match is confirmed by resolving it -
-     * which never reaches the network for a literal containing a colon.
-     *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      * @see Regex
@@ -94,9 +82,6 @@ object PluginDatasourceUtil {
     /**
      * Accepted driver parameters: one or more `key=value` pairs
      *
-     * The value may itself contain `=`, which MySQL properties such as
-     * `sessionVariables` rely on, but nothing that could end the pair.
-     *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
@@ -105,9 +90,6 @@ object PluginDatasourceUtil {
     /**
      * Longest driver property string
      *
-     * The value is stored in `t_b_api_plugin_setting.setting_value`, which is a `text`
-     * column; the limit is here so a form cannot hand the driver something absurd.
-     *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
@@ -115,14 +97,6 @@ object PluginDatasourceUtil {
 
     /**
      * Driver properties the gateway refuses, in lowercase
-     *
-     * Held as connection properties rather than appended to the URL, which removes the
-     * URL-rewriting surface but not this one: a property reaches the driver just as
-     * directly. These are the ways a property string names a class to load, a file to
-     * read or another property set to pull in - so a connection the administrator
-     * describes cannot become one that fetches code. The list is a mitigation and not
-     * a sandbox: the boundary that actually holds is the plugin signature and the trust
-     * store behind it.
      *
      * @see parseParams
      */
@@ -140,11 +114,6 @@ object PluginDatasourceUtil {
     /**
      * Compose the JDBC URL of a MySQL datasource
      *
-     * The gateway appends nothing of its own: the driver's defaults are used as they
-     * are, so it never silently downgrades a transport to make a connection work. What
-     * a server needs beyond its defaults is described by the properties of
-     * [ResolvedDatasource.Mysql], which never reach the URL.
-     *
      * @param host Database host
      * @param port Database port, or null to let the driver's own default apply
      * @param database Database name
@@ -158,8 +127,8 @@ object PluginDatasourceUtil {
     /**
      * Compose the JDBC URL of a SQLite datasource
      *
-     * Forward slashes on every platform: the URL is handed to a JDBC driver, not to the
-     * file system API of the machine it happens to run on.
+     * Forward slashes on every platform, because the value goes to a JDBC driver rather
+     * than the file system API.
      *
      * @param directory Directory the gateway keeps plugin databases in
      * @param pluginId Plugin ID
@@ -174,18 +143,12 @@ object PluginDatasourceUtil {
     /**
      * Resolve the file backing the SQLite datasource of a plugin
      *
-     * Each plugin owns a directory named after it and each datasource a file inside that
-     * directory, so a plugin with several of them cannot collide with itself. Both
-     * segments are checked again here, as the last line of defence before a path is
-     * composed from them.
-     *
      * @param directory Directory the gateway keeps plugin databases in
      * @param pluginId Plugin ID
      * @param name Datasource name
      * @return Database file
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Path
      */
     fun sqliteFile(directory: String, pluginId: String, name: String): Path {
         require(PluginDescriptor.PLUGIN_ID_REGEX.matches(pluginId)) { "Invalid plugin ID: '$pluginId'" }
@@ -197,25 +160,12 @@ object PluginDatasourceUtil {
     /**
      * Resolve a declared datasource from the values behind it
      *
-     * The one entry point for turning a declaration into a connection description, and
-     * therefore the one place the gateway's own rules about those values live: the save
-     * path calls it to reject a configuration it could never connect with, and the mount
-     * calls it to build the pools.
-     *
-     * Returns null rather than throwing when the datasource is simply not configured -
-     * an administrator installing a plugin before they have the server's details is the
-     * normal order, and a datasource the gateway cannot describe is one the plugin does
-     * not get. A value that *is* there and is malformed throws instead: silently
-     * dropping it would hide a broken connection behind a working-looking plugin.
-     *
      * @param datasource Datasource declaration
      * @param valueOf Value of a config key, resolved through its field default
      * @return Connection description, or null when the datasource is not configured
      * @throws PluginDatasourceException when a submitted value cannot describe a connection
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginDatasourceSchema
-     * @see ResolvedDatasource
      */
     fun resolve(datasource: PluginDatasourceSchema, valueOf: (String) -> String?): ResolvedDatasource? {
         // Deriving it is the whole configuration: there is nothing here for anyone to fill in
@@ -243,21 +193,11 @@ object PluginDatasourceUtil {
     /**
      * Check whether a declared datasource is configured
      *
-     * One rule decides it - whether the host resolves to a value - which is what keeps a
-     * half-filled form from being a state of its own: everything else is read only once
-     * there is somewhere to connect to. Blanking the host is therefore how a datasource is
-     * un-configured, and a plugin reading `PluginContext.datasources` simply loses the
-     * entry.
-     *
-     * This never throws, so a read can report the state of a configuration the gateway
-     * would refuse to connect with rather than failing to show it at all.
-     *
      * @param datasource Datasource declaration
      * @param valueOf Value of a config key, resolved through its field default
      * @return true=the datasource is configured
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginDatasourceSchema
      */
     fun isConfigured(datasource: PluginDatasourceSchema, valueOf: (String) -> String?): Boolean =
         when (datasource.dbType) {
@@ -279,8 +219,6 @@ object PluginDatasourceUtil {
      *         value that is there cannot describe a connection
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginConfigSchema
-     * @see ResolvedDatasource
      */
     fun resolve(
         schema: PluginConfigSchema,
@@ -300,7 +238,6 @@ object PluginDatasourceUtil {
      * @return Driver properties, empty when none were submitted
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Properties
      */
     fun parseParams(raw: String?): Properties {
         val params = Properties()
@@ -320,10 +257,7 @@ object PluginDatasourceUtil {
     /**
      * Compose the authority of a URL
      *
-     * A literal has to be bracketed inside a URL while the stored value is unbracketed,
-     * since the brackets are URL syntax rather than part of the address. The port is
-     * omitted rather than defaulted, so the driver's own default is the only thing that
-     * decides it.
+     * A literal is bracketed here although the stored value is unbracketed.
      *
      * @param host Database host
      * @param port Database port, or null when unset
@@ -457,9 +391,6 @@ object PluginDatasourceUtil {
 /**
  * Plugin datasource as the gateway is about to connect with it
  *
- * The result of applying the gateway's own rules to a declaration and the values behind
- * it, and the last thing that happens before a pool is built or a connection tested.
- *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
@@ -477,19 +408,14 @@ sealed interface ResolvedDatasource {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginDatasourceType
      */
     val dbType: PluginDatasourceType
 
     /**
      * A SQLite database the gateway owns
      *
-     * Carries nothing but its name: where the file goes is decided by the gateway's own
-     * configuration rather than by anything an administrator or a plugin submits.
-     *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResolvedDatasource
      */
     data class Sqlite(override val name: String) : ResolvedDatasource {
         override val dbType: PluginDatasourceType get() = PluginDatasourceType.SQLITE
@@ -497,9 +423,6 @@ sealed interface ResolvedDatasource {
 
     /**
      * An external MySQL server
-     *
-     * Every fact here was a config value the administrator owns, read back through the
-     * rules of the field that declared it.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0

@@ -20,7 +20,6 @@ data class ServerProperties(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     val startupTime: LocalDateTime = LocalDateTime.now(ZoneOffset.UTC),
 

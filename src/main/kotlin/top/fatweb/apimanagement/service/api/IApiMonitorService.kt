@@ -15,7 +15,6 @@ interface IApiMonitorService {
      * @return ApiMonitorDashboardVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiMonitorDashboardVo
      */
     fun dashboard(): ApiMonitorDashboardVo
 }

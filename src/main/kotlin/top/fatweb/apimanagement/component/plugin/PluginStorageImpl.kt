@@ -11,17 +11,11 @@ import java.time.Duration
 /**
  * Plugin storage implement
  *
- * Binds the sanctioned storage channel of one plugin. The plugin ID comes from the
- * constructor and from nowhere else, so no method signature exists by which a plugin
- * could name another plugin's namespace; the SDK takes a path relative to the
- * plugin's own namespace and this class composes the fully qualified key.
+ * The plugin ID comes from the constructor only, and SDK file paths are relative to the
+ * plugin's own namespace.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServerProperties
- * @see FileStorageProvider
- * @see IStorageBlobService
- * @see PluginStorage
  */
 class PluginStorageImpl(
     private val pluginId: String,
@@ -67,13 +61,10 @@ class PluginStorageImpl(
     /**
      * Resolve the requested validity against the configured default and maximum
      *
-     * The request is clamped before any time arithmetic, so an over-long value cannot
-     * overflow. A non-positive request is rejected rather than clamped, because a link
-     * that never works is never what a caller means.
+     * A non-positive request is rejected; an over-long one is clamped to the configured maximum.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Duration
      */
     private fun resolveTtl(ttl: Duration?): Duration {
         val requested = ttl ?: serverProperties.storage.externalUrlDefaultDuration()

@@ -17,7 +17,6 @@ interface IStatisticsService {
      * @return SoftwareInfoVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see SoftwareInfoVo
      */
     fun software(): SoftwareInfoVo
 
@@ -27,7 +26,6 @@ interface IStatisticsService {
      * @return HardwareInfoVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see HardwareInfoVo
      */
     fun hardware(): HardwareInfoVo
 
@@ -37,7 +35,6 @@ interface IStatisticsService {
      * @return CpuInfoVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see CpuInfoVo
      */
     fun cpu(): CpuInfoVo
 
@@ -47,7 +44,6 @@ interface IStatisticsService {
      * @return StorageInfoVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see StorageInfoVo
      */
     fun storage(): StorageInfoVo
 
@@ -58,8 +54,6 @@ interface IStatisticsService {
      * @return OnlineInfoVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see OnlineInfoGetParam
-     * @see OnlineInfoVo
      */
     fun online(onlineInfoGetParam: OnlineInfoGetParam?): OnlineInfoVo
 
@@ -70,8 +64,6 @@ interface IStatisticsService {
      * @return ActiveInfoVo object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ActiveInfoGetParam
-     * @see ActiveInfoVo
      */
     fun active(activeInfoGetParam: ActiveInfoGetParam?): ActiveInfoVo
 }

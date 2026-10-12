@@ -7,9 +7,6 @@ import java.time.LocalDateTime
 /**
  * Plugin setting entity
  *
- * Plugin-scoped key-value settings persisted by the gateway on behalf of a plugin
- * (accessed through the SDK's PluginContext). One row per (pluginId, key).
- *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
@@ -56,7 +53,6 @@ class ApiPluginSetting : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @TableField("create_time", fill = FieldFill.INSERT)
     var createTime: LocalDateTime? = null
@@ -66,7 +62,6 @@ class ApiPluginSetting : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @TableField("update_time", fill = FieldFill.INSERT_UPDATE)
     var updateTime: LocalDateTime? = null

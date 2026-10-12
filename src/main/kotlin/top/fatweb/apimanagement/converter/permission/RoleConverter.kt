@@ -15,7 +15,6 @@ import top.fatweb.apimanagement.vo.permission.base.RoleVo
  * @return RoleVo object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see Role
  * @see RoleVo
  */
 fun Role.toVo() = RoleVo(
@@ -32,7 +31,6 @@ fun Role.toVo() = RoleVo(
  * @return RoleWithPowerVo object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see Role
  * @see RoleWithPowerVo
  */
 fun Role.toVoWithPower() = RoleWithPowerVo(
@@ -53,8 +51,6 @@ fun Role.toVoWithPower() = RoleWithPowerVo(
  * @return PageVo<RoleWithPowerVo> object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IPage
- * @see Role
  * @see PageVo
  */
 fun IPage<Role>.toVoWithPower() = PageVo(
@@ -71,7 +67,6 @@ fun IPage<Role>.toVoWithPower() = PageVo(
  * @return Role object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see RoleAddParam
  * @see Role
  */
 fun RoleAddParam.toEntity() = Role().apply {
@@ -86,7 +81,6 @@ fun RoleAddParam.toEntity() = Role().apply {
  * @return Role object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see RoleUpdateParam
  * @see Role
  */
 fun RoleUpdateParam.toEntity() = Role().apply {
@@ -102,7 +96,6 @@ fun RoleUpdateParam.toEntity() = Role().apply {
  * @return Role object
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see RoleUpdateStatusParam
  * @see Role
  */
 fun RoleUpdateStatusParam.toEntity() = Role().apply {

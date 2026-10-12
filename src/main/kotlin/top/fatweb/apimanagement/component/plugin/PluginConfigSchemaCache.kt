@@ -5,19 +5,9 @@ import org.springframework.stereotype.Component
 /**
  * Plugin config schema cache
  *
- * Holds the parsed schema of every installed plugin. The parsed form is what the
- * plugin context needs on every `getSetting` call, so parsing it per call would put a
- * JSON parse on the hot path of every plugin request.
- *
- * It is also what says which of a plugin's keys are secrets, and therefore which stored
- * values are ciphertext: a plugin whose schema is missing here reads its own credentials
- * back as the strings they are stored as. That is why the whole set is replaced at once
- * rather than emptied and refilled - a reader that arrives half way through a refresh would
- * find no schema where one belongs.
- *
- * The cache is filled by the plugin service as a side effect of its own cache refresh
- * rather than read from it lazily, which keeps the dependency one-way: the service
- * knows about this cache, this cache knows nothing about the service.
+ * Holds the parsed schema of every installed plugin, and says which of a plugin's keys are
+ * secrets - and therefore which stored values are ciphertext. The set is replaced whole rather
+ * than emptied and refilled.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
@@ -29,13 +19,10 @@ class PluginConfigSchemaCache {
     /**
      * Parsed schema of every plugin, by plugin ID
      *
-     * A map that is swapped whole, so a reader holds either the set before a refresh or the
-     * set after it and never a mixture of the two. A plugin whose schema is absent declares
-     * nothing - which is a real state, and the reason a refresh may not be visible as one.
+     * A plugin whose schema is absent declares nothing.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginConfigSchema
      */
     @Volatile
     private var schemas: Map<String, PluginConfigSchema> = emptyMap()
@@ -47,26 +34,19 @@ class PluginConfigSchemaCache {
      * @return Parsed schema, or null when the plugin declares none
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginConfigSchema
      */
     fun get(pluginId: String): PluginConfigSchema? = schemas[pluginId]
 
     /**
      * Publish the parsed config schema of one plugin ahead of a full refresh
      *
-     * A mount publishes the schema it just parsed before it runs the plugin's `onStart`, so a
-     * hook that reads a setting through [top.fatweb.apimanagement.sdk.plugin.PluginContext]
-     * sees the declared default. Until the mount completes there is no row carrying the schema
-     * for [replaceAll] to read it back from, so without this the hook would read nothing where
-     * the plugin declared a value.
-     *
-     * The set is copied rather than mutated, so the swap stays whole for a concurrent reader.
+     * A mount publishes the schema before it runs the plugin's `onStart`, so a hook that reads
+     * a setting already sees the declared default.
      *
      * @param pluginId Plugin ID
      * @param schema Parsed schema, or null when the plugin declares no configuration
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginConfigSchema
      */
     fun put(pluginId: String, schema: PluginConfigSchema?) {
         val updated = mutableMapOf<String, PluginConfigSchema>()
@@ -88,7 +68,6 @@ class PluginConfigSchemaCache {
      *        parses both look like
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see PluginConfigSchema
      */
     fun replaceAll(schemas: Map<String, PluginConfigSchema?>) {
         val parsed = mutableMapOf<String, PluginConfigSchema>()

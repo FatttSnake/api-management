@@ -6,11 +6,10 @@ import io.swagger.v3.oas.annotations.media.Schema
  * API group value object
  *
  * Groups API interfaces by owning plugin so the frontend can render a
- * "plugin -> interface list" tree without resolving plugin names client-side.
+ * "plugin -> interface list" tree.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ApiInterfaceVo
  */
 @Schema(description = "API 分组返回参数")
 data class ApiGroupVo(
@@ -46,7 +45,6 @@ data class ApiGroupVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiInterfaceVo
      */
     @Schema(description = "该插件下的接口列表")
     val interfaces: List<ApiInterfaceVo>

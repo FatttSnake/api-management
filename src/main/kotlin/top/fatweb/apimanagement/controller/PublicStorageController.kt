@@ -24,18 +24,8 @@ import java.time.Instant
 /**
  * Public storage controller
  *
- * Serves the file behind a login-free external link signed by [ExternalLinkSigner].
- * The route only exists in local storage mode; in S3 mode the link points straight
- * at the object store and never reaches the gateway.
- *
- * The key is rebuilt from the parsed path variables rather than read out of the
- * request, so a caller cannot present a key the gateway did not itself compose.
- *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServerProperties
- * @see FileStorageProvider
- * @see ExternalLinkSigner
  */
 @ConditionalOnProperty(name = ["app.storage.mode"], havingValue = "local", matchIfMissing = true)
 @HiddenController
@@ -46,10 +36,8 @@ class PublicStorageController(
 ) {
     private companion object {
         /**
-         * Types a browser may render in place. Everything else - notably
-         * `image/svg+xml`, `text/html` and `application/xhtml+xml`, which can run
-         * script - is forced to download, because this route shares an origin with
-         * the admin console.
+         * Types a browser may render in place; everything else is forced to download
+         * because this route shares an origin with the admin console.
          */
         val INLINE_SAFE_TYPES = setOf(
             MediaType.IMAGE_PNG,
@@ -74,8 +62,6 @@ class PublicStorageController(
      * @return File content
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseEntity
-     * @see ByteArray
      */
     @GetMapping("${StorageRoutes.PUBLIC_STORAGE_PATH}/{pluginId}/{*path}")
     fun download(

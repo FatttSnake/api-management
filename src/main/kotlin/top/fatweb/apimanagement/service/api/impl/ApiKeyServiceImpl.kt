@@ -44,14 +44,6 @@ import java.time.ZoneOffset
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServerProperties
- * @see RedisProvider
- * @see UserMapper
- * @see IApiPluginService
- * @see ServiceImpl
- * @see ApiKeyMapper
- * @see ApiKey
- * @see IApiKeyService
  */
 @Service
 @DS("master")
@@ -64,8 +56,7 @@ class ApiKeyServiceImpl(
 ) : ServiceImpl<ApiKeyMapper, ApiKey>(), IApiKeyService {
     private companion object {
         /**
-         * Window in seconds between two consecutive last-used-time writes of the same
-         * key: keeps a hot key down to ~1 UPDATE per window instead of one per request.
+         * Window in seconds between two consecutive last-used-time writes of the same key
          */
         const val TOUCH_WINDOW_SECONDS = 60L
     }
@@ -238,9 +229,8 @@ class ApiKeyServiceImpl(
     }
 
     /**
-     * Get operation codes the owner holds. For the calling user itself the login-time
-     * snapshot is reused so the scope matches what the account-path interceptor enforces
-     * for the current token; any other owner is resolved fresh from the database.
+     * Get operation codes the owner holds. For the calling user the login-time snapshot is
+     * reused; any other owner is resolved fresh from the database.
      *
      * @param ownerId Owner user ID
      * @return Set of operation codes the owner holds, empty when the owner is missing
@@ -258,10 +248,7 @@ class ApiKeyServiceImpl(
     /**
      * Resolve the API interfaces that may be granted to a key owned by the given owner:
      * a super-admin owner (ID 0) may grant every interface, any other owner only the
-     * interfaces its account is authorized for (operation codes) plus the open DEFAULT
-     * ones. Single source of truth shared by [availableApis], [callableApis] and
-     * [resolvePermissions]; the rule is applied by the database, so the narrowing never
-     * costs a read of the interfaces it excludes.
+     * interfaces its account is authorized for (operation codes) plus the open DEFAULT ones.
      *
      * @param ownerId Owner user ID
      * @param pluginIds Narrow to a set of plugins
@@ -269,7 +256,6 @@ class ApiKeyServiceImpl(
      * @return List of API interfaces grantable for the owner
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiInterface
      */
     private fun selectableApis(
         ownerId: Long,
