@@ -15,10 +15,17 @@ import javax.sql.DataSource
  * Plugin class loader manager
  *
  * Creates a child-first [URLClassLoader] for a plugin jar. Well-known prefixes
- * (JDK, Spring, Jackson, Swagger, MyBatis, Kotlin, the gateway and its SDK) are
- * delegated to the parent class loader so their classes keep identical identity;
- * everything else is loaded from the plugin jar first so a plugin may bundle its
- * own third-party dependencies in isolation.
+ * (JDK, Spring, Jackson, Swagger, MyBatis, Kotlin, the gateway and its SDK, and the
+ * connection-pool / driver classes the gateway itself hands a plugin) are delegated to the
+ * parent class loader so their classes keep identical identity; everything else is loaded
+ * from the plugin jar first so a plugin may bundle its own third-party dependencies in
+ * isolation.
+ *
+ * The list is the set of types that must be *shared*, not a permit list: a class under one of
+ * these prefixes resolves from the parent or not at all. A plugin that shadowed one of them
+ * would get a second copy of an annotation type - so `getAnnotation` would return null - or of
+ * an interface, so every `instanceof` against the gateway's copy would fail. A library a plugin
+ * wants to bundle has to live under a name that is not one of these.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
@@ -26,7 +33,13 @@ import javax.sql.DataSource
 class PluginClassLoaderManager {
     companion object {
         /**
-         * Class name prefixes always resolved from the parent (gateway) class loader
+         * Class name prefixes always resolved from the parent (gateway) class loader, with no
+         * fallback to the plugin jar
+         *
+         * The connection-pool and driver entries earn their place because the gateway itself
+         * builds the `javax.sql.DataSource` a plugin is given: `HikariDataSource` and the driver
+         * classes behind it are where a concrete type from a shared library actually crosses the
+         * plugin boundary, and a second copy would be a different type to the code that built it.
          */
         private val PARENT_FIRST_PREFIXES = listOf(
             "java.",
@@ -41,6 +54,9 @@ class PluginClassLoaderManager {
             "io.swagger.",
             "org.springdoc.",
             "com.baomidou.",
+            "com.zaxxer.hikari.",
+            "com.mysql.cj.jdbc.",
+            "org.sqlite.",
             "kotlin.",
             "kotlinx.",
             "top.fatweb.apimanagement."
@@ -65,12 +81,11 @@ class PluginClassLoaderManager {
                             if (resolve) resolveClass(it)
                             return it
                         }
+                        // Shared prefixes come from the parent alone: deliberately no fallback to
+                        // the jar, so a plugin cannot shadow a class the gateway owns. A plugin
+                        // that needs one of these and does not find it has to stop bundling it.
                         val clazz = if (PARENT_FIRST_PREFIXES.any { name.startsWith(it) }) {
-                            try {
-                                parent.loadClass(name)
-                            } catch (_: ClassNotFoundException) {
-                                findClass(name)
-                            }
+                            parent.loadClass(name)
                         } else {
                             try {
                                 findClass(name)
@@ -82,6 +97,32 @@ class PluginClassLoaderManager {
                         return clazz
                     }
                 }
+            }
+        }
+
+        /**
+         * Run [block] with the thread context class loader set to [loader], restoring it after
+         *
+         * Everything that runs plugin code has to run under the plugin's own loader: the child
+         * context's scan and bean instantiation, the lifecycle hooks, and every request that
+         * reaches a plugin controller. Otherwise a library the plugin bundles that asks the
+         * thread for its class loader - `ServiceLoader.load(X)` with no explicit loader, a
+         * resource lookup - would be answered by the gateway's loader and find nothing.
+         *
+         * @param loader Class loader to install
+         * @param block Work to run under it
+         * @return Whatever [block] returned
+         * @author FatttSnake, fatttsnake@gmail.com
+         * @since 1.0.0
+         */
+        fun <T> withPluginClassLoader(loader: ClassLoader, block: () -> T): T {
+            val thread = Thread.currentThread()
+            val previous = thread.contextClassLoader
+            thread.contextClassLoader = loader
+            return try {
+                block()
+            } finally {
+                thread.contextClassLoader = previous
             }
         }
 
@@ -107,6 +148,27 @@ class PluginClassLoaderManager {
             return packages.filter { pkg ->
                 packages.none { other -> other != pkg && pkg.startsWith("$other.") }
             }.toSet()
+        }
+
+        /**
+         * Root packages of a jar that lead to one of its controllers
+         *
+         * The base packages a plugin's child context scans: the plugin's own code lives under
+         * these, while a fat jar's bundled-library components sit under roots of their own and
+         * are left alone. Also what decides which classes count as the plugin's own when one
+         * fails to load, so the install check and the scan agree on the same boundary.
+         *
+         * @param jarPath Plugin jar path
+         * @param controllerClasses Controllers found in the jar
+         * @return Set of root package names, possibly empty
+         * @author FatttSnake, fatttsnake@gmail.com
+         * @since 1.0.0
+         */
+        fun controllerRootPackages(jarPath: Path, controllerClasses: List<Class<*>>): Set<String> {
+            val controllerPackages = controllerClasses.map { it.`package`.name }.toSet()
+            return rootPackages(jarPath)
+                .filter { root -> controllerPackages.any { it == root || it.startsWith("$root.") } }
+                .toSet()
         }
     }
 }

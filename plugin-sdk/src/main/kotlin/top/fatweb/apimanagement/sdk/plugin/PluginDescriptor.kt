@@ -12,7 +12,12 @@ package top.fatweb.apimanagement.sdk.plugin
  */
 data class PluginDescriptor(
     /**
-     * Unique plugin ID, must match the plugin id of every @ApiController in the jar
+     * Unique plugin ID, matching [PLUGIN_ID_REGEX]
+     *
+     * The single source of the plugin's identity: it namespaces every endpoint under
+     * `/api/{plugin}/v{version}/...` and is what every `plugin_id` column in the gateway
+     * references. Controllers do not repeat it - `@ApiController` carries only the API
+     * version and sub-path.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -86,9 +91,15 @@ data class PluginDescriptor(
          * gateway would refuse at install time, and two copies of it that drifted would let a
          * plugin build and then fail to install.
          *
+         * The upper bound of 64 is not cosmetic: it is the width of `t_b_api_plugin.plugin_id`
+         * (and of every `plugin_id` column that references it), so an ID that passed a shorter
+         * pattern would be accepted by the gateway and then be truncated - or refused outright -
+         * by the insert, leaving the row disagreeing with the ID the jar declares. Kept in the
+         * pattern rather than checked separately so both sides cannot drift apart.
+         *
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
          */
-        val PLUGIN_ID_REGEX = Regex("^[a-z][a-z0-9-]*$")
+        val PLUGIN_ID_REGEX = Regex("^[a-z][a-z0-9-]{0,63}$")
     }
 }

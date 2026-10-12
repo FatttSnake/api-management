@@ -263,7 +263,7 @@ class PluginOpenApiGeneratorTests {
         return if (type.isArray) type.values().map { it.asString() } else listOf(type.asString())
     }
 
-    @ApiController(plugin = "test", version = 1)
+    @ApiController(version = 1)
     private class TestController {
         @GetMapping("/items/{id}")
         @Operation(operationId = "getItem", summary = "获取条目", description = "按 ID 获取")

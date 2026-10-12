@@ -7,6 +7,7 @@ import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Component
 import org.springframework.web.method.HandlerMethod
 import org.springframework.web.servlet.HandlerInterceptor
+import top.fatweb.apimanagement.component.api.ApiPath
 import top.fatweb.apimanagement.component.plugin.PluginInFlightTracker
 import top.fatweb.apimanagement.component.storage.RedisProvider
 import top.fatweb.apimanagement.entity.api.ApiInterface
@@ -68,6 +69,7 @@ class ApiAccessInterceptor(
         const val ATTR_BILLING_MODE = "apimanagement.billingMode"
         const val ATTR_ALREADY_DEDUCTED = "apimanagement.alreadyDeducted"
         const val ATTR_START = "apimanagement.startNanos"
+        const val ATTR_TCCL = "apimanagement.pluginContextClassLoader"
         const val METRICS_WINDOW_SECONDS = 120L
     }
 
@@ -80,10 +82,18 @@ class ApiAccessInterceptor(
             return true
         }
         val annotation = handler.beanType.getAnnotation(ApiController::class.java) ?: return true
+        // The plugin ID is read back out of the URL - the same segment the router already matched
+        // against it - rather than from the annotation, which no longer carries one: a plugin's
+        // identity lives in its descriptor. The version does come from the annotation, because the
+        // router rolls a request forward (a v2 URL is served by a v1 controller when no v2
+        // controller exists) and the code has to name the version the endpoint was mounted under.
+        val scoped = ApiPath.parse(request) ?: throw ApiDisabledException()
         // The same strict derivation the mount validated: a mounted endpoint always yields a code
         // here, and a blank operationId - which the mount refuses - surfaces as an error rather
         // than resolving to a method-name code that is not the endpoint's
-        val apiCode = ApiPluginServiceImpl.buildCode(annotation = annotation, method = handler.method)
+        val apiCode = ApiPluginServiceImpl.buildCode(
+            pluginId = scoped.plugin, version = annotation.version, method = handler.method
+        )
         val apiInterface = apiPluginService.getByCode(apiCode) ?: throw ApiDisabledException()
         val pluginId = apiInterface.pluginId ?: throw ApiDisabledException()
         val plugin = apiPluginService.getByPluginId(pluginId) ?: throw ApiDisabledException()
@@ -126,6 +136,14 @@ class ApiAccessInterceptor(
         val handle = pluginInFlightTracker.tryEnter(pluginId) ?: throw ApiDisabledException()
         request.setAttribute(ATTR_INFLIGHT, handle)
 
+        // Set last, after every point above that can still refuse the request: Spring calls
+        // afterCompletion only for a request this method admitted, so a class loader installed
+        // before a throw would have nothing to restore it. handler.beanType is the controller
+        // class - Spring has already unwrapped any proxy - so its loader is the plugin's, and the
+        // handler invocation runs between here and afterCompletion on this same thread
+        request.setAttribute(ATTR_TCCL, Thread.currentThread().contextClassLoader)
+        Thread.currentThread().contextClassLoader = handler.beanType.classLoader
+
         return true
     }
 
@@ -135,6 +153,12 @@ class ApiAccessInterceptor(
         handler: Any,
         ex: Exception?
     ) {
+        // Restored first, before anything else can return early: the thread carries a plugin's
+        // class loader only for the span of its own request, and the pool hands it on afterwards
+        (request.getAttribute(ATTR_TCCL) as? ClassLoader)?.let {
+            Thread.currentThread().contextClassLoader = it
+        }
+
         // Left before anything else can return early: the counter has to come back down on
         // every admitted request, including one that failed before the API attributes were
         // read. ATTR_INFLIGHT rather than ATTR_API marks it, because ATTR_API is set before

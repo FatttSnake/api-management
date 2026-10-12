@@ -17,8 +17,12 @@ import org.gradle.api.provider.Property
  */
 interface ApiPluginExtension {
     /**
-     * Unique plugin ID, `^[a-z][a-z0-9-]*$`; must match `@ApiController.plugin`
-     * Defaults to the Gradle project name.
+     * Unique plugin ID, `^[a-z][a-z0-9-]{0,63}$` (64 characters, the width of the gateway's
+     * `plugin_id` column). Defaults to the Gradle project name.
+     *
+     * This is the plugin's single source of identity: it is written to the descriptor the
+     * gateway reads and namespaces every endpoint under `/api/{plugin}/v{version}/...`.
+     * `@ApiController` does not carry it.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0

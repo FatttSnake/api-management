@@ -10,28 +10,26 @@ import org.springframework.web.servlet.mvc.condition.RequestCondition
  * plugin and version: the plugin ID must match exactly, and the requested
  * version must be >= the declared version (rolling forward compatibility).
  *
+ * The URL is parsed by [ApiPath], which is where the servlet context path comes off - reading
+ * the raw `requestURI` here would tie matching to a gateway deployed at the root.
+ *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  * @see RequestCondition
+ * @see ApiPath
  * @see ApiVersionCondition
  */
 class ApiVersionCondition(
     private val plugin: String,
     private val apiVersion: Int
 ) : RequestCondition<ApiVersionCondition> {
-    private val versionPrefixRegex = Regex("/api/([^/]+)/v(\\d+)(/.*)?$")
 
     override fun combine(other: ApiVersionCondition): ApiVersionCondition =
         ApiVersionCondition(other.plugin, other.apiVersion)
 
     override fun getMatchingCondition(request: HttpServletRequest): ApiVersionCondition? {
-        versionPrefixRegex.matchAt(request.requestURI, 0)?.let {
-            if (it.groupValues[1] == plugin && it.groupValues[2].toInt() >= apiVersion) {
-                return this
-            }
-        }
-
-        return null
+        val scoped = ApiPath.parse(request) ?: return null
+        return if (scoped.plugin == plugin && scoped.apiVersion >= apiVersion) this else null
     }
 
     override fun compareTo(other: ApiVersionCondition, request: HttpServletRequest): Int =

@@ -4,23 +4,28 @@ import io.swagger.v3.oas.annotations.Operation
 import org.springframework.web.bind.annotation.GetMapping
 import top.fatweb.apimanagement.exception.MissingOperationIdException
 import top.fatweb.apimanagement.sdk.annotation.ApiController
+import top.fatweb.apimanagement.sdk.plugin.PluginDescriptor
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * Plugin endpoint identity tests
  *
  * Pins the code derivation the mount validates and the request path re-derives, so it cannot
- * start falling back to a method name unnoticed.
+ * start falling back to a method name unnoticed, and the plugin ID bound that keeps an ID the
+ * gateway accepts from being one the database cannot store.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  * @see ApiPluginServiceImpl
  * @see ApiController
+ * @see PluginDescriptor
  */
 class ApiPluginServiceImplTests {
-    @ApiController(plugin = "echo", version = 1)
+    @ApiController(version = 1)
     private class EchoController {
         @GetMapping
         @Operation(operationId = "ping")
@@ -30,13 +35,11 @@ class ApiPluginServiceImplTests {
         fun unnamed(): String = ""
     }
 
-    private val annotation = EchoController::class.java.getAnnotation(ApiController::class.java)!!
-
     @Test
     fun `an endpoint's operationId is its code`() {
         val ping = EchoController::class.java.getDeclaredMethod("ping")
 
-        assertEquals("api:echo:v1:ping", ApiPluginServiceImpl.buildCode(annotation, ping))
+        assertEquals("api:echo:v1:ping", ApiPluginServiceImpl.buildCode("echo", 1, ping))
     }
 
     @Test
@@ -44,7 +47,13 @@ class ApiPluginServiceImplTests {
         val unnamed = EchoController::class.java.getDeclaredMethod("unnamed")
 
         assertFailsWith<MissingOperationIdException> {
-            ApiPluginServiceImpl.buildCode(annotation, unnamed)
+            ApiPluginServiceImpl.buildCode("echo", 1, unnamed)
         }
+    }
+
+    @Test
+    fun `a plugin ID of 64 characters is accepted and 65 is not`() {
+        assertTrue(PluginDescriptor.PLUGIN_ID_REGEX.matches("a".repeat(64)))
+        assertFalse(PluginDescriptor.PLUGIN_ID_REGEX.matches("a".repeat(65)))
     }
 }

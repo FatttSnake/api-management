@@ -19,6 +19,7 @@ import org.springframework.context.ApplicationContext
 import org.springframework.context.annotation.ClassPathBeanDefinitionScanner
 import org.springframework.context.annotation.Lazy
 import org.springframework.context.support.GenericApplicationContext
+import org.springframework.core.annotation.AnnotatedElementUtils
 import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.env.StandardEnvironment
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
@@ -220,7 +221,8 @@ class ApiPluginServiceImpl(
         private const val MAX_CODE_LENGTH = 200
 
         /**
-         * Build the endpoint's persisted identity code from the annotation and its `@Operation`
+         * Build the endpoint's persisted identity code from the plugin ID, its API version and
+         * the method's `@Operation`
          *
          * The code is exactly what the gateway stores as `t_b_api_interface.code` and
          * `t_s_operation.code` and what a call is authorised by, so the request path reads it back
@@ -228,7 +230,15 @@ class ApiPluginServiceImpl(
          * no fallback to the method name: a code that differed between the mount and the request
          * would authorise against a permission entry that is not the endpoint's.
          *
-         * @param annotation API controller annotation
+         * The plugin ID is the descriptor's and the version the controller's, and both callers
+         * supply them the same way: the mount from the descriptor it read, the request path from
+         * the URL segment the router already matched against that same plugin ID ([ApiPath]). The
+         * version must come from the controller rather than the URL because the router rolls a
+         * request forward - a request for `v2` is served by a `v1` controller when no `v2`
+         * controller exists - and the code has to name the version the endpoint was mounted under.
+         *
+         * @param pluginId Plugin ID, from the descriptor or the matched URL
+         * @param version API version the controller declares
          * @param method Endpoint method
          * @return API scoping code
          * @throws MissingOperationIdException when the method declares no non-blank
@@ -241,14 +251,14 @@ class ApiPluginServiceImpl(
          * @see ApiController
          * @see Method
          */
-        fun buildCode(annotation: ApiController, method: Method): String {
+        fun buildCode(pluginId: String, version: Int, method: Method): String {
             val operationId = method.getAnnotation(SwaggerOperation::class.java)?.operationId
                 ?.takeIf { it.isNotBlank() }
                 ?: throw MissingOperationIdException(
                     "Endpoint ${method.declaringClass.name}#${method.name} declares no non-blank " +
                             "@Operation(operationId = \"...\"), which is its persisted identity"
                 )
-            return "api:${annotation.plugin}:v${annotation.version}:$operationId"
+            return "api:$pluginId:v$version:$operationId"
         }
     }
 
@@ -897,7 +907,13 @@ class ApiPluginServiceImpl(
         plugin.fileHash?.let { runCatching { storageBlobService.removeFile(it) } }
         refreshCache()
 
-        runtime?.lifecycle?.let { runCatching { it.onUninstall(runtime.pluginContext) } }
+        runtime?.lifecycle?.let {
+            runCatching {
+                PluginClassLoaderManager.withPluginClassLoader(runtime.classLoader) {
+                    it.onUninstall(runtime.pluginContext)
+                }
+            }
+        }
 
         // Purged after onUninstall so a plugin flushing state while it tears down still
         // has a namespace to write into, and after the plugin's own onPurge, which ran while
@@ -1123,14 +1139,18 @@ class ApiPluginServiceImpl(
             }
             val loader = PluginClassLoaderManager.create(jarPath.toUri().toURL())
             mountedLoader = loader
-            val controllerClasses = scanControllers(loader, jarPath)
-            if (controllerClasses.isEmpty()) {
-                throw PluginInstallException("No @ApiController class found in jar")
+            val scan = scanJar(loader, jarPath)
+            if (scan.controllers.isEmpty()) {
+                throw PluginInstallException(
+                    "No @ApiController class found in jar" + unloadableNote(scan.failures)
+                )
             }
-            val pluginIds = controllerClasses.mapNotNull { it.getAnnotation(ApiController::class.java)?.plugin }.toSet()
-            if (pluginIds.size != 1 || pluginIds.first() != descriptor.pluginId) {
-                throw PluginInstallException("All controllers must share the plugin id '${descriptor.pluginId}'")
-            }
+            // A class of the plugin's own that failed to load is refused here; one that belongs
+            // to a bundled library is only worth a warning - see verifyLoadFailures
+            verifyLoadFailures(scan, jarPath)
+            // A plugin component outside the scanned roots is left unregistered, which is
+            // invisible to the author until an injection fails with nothing pointing at the cause
+            warnUnscannedComponents(scan, jarPath)
 
             // ---- 3. upgrade rule ----
             val existing = getByPluginIdOrQuery(descriptor.pluginId)
@@ -1169,14 +1189,19 @@ class ApiPluginServiceImpl(
             val datasources = pluginDatasourceFactory.create(descriptor.pluginId, configSchema)
             mountedDatasources = datasources
             val pluginStorage = pluginStorageFactory.create(descriptor.pluginId)
-            val childContext = createChildContext(
-                jarPath, loader, controllerClasses, descriptor.pluginId, datasources, pluginStorage
-            )
+            // Scanned, instantiated and refreshed under the plugin's own loader: everything in
+            // there is the plugin's code, and a library it bundles has to be able to find itself
+            // when it asks the thread for a class loader
+            val childContext = PluginClassLoaderManager.withPluginClassLoader(loader) {
+                createChildContext(
+                    jarPath, loader, scan.controllers, descriptor.pluginId, datasources, pluginStorage
+                )
+            }
             mountedContext = childContext
-            val controllers = controllerClasses.map { childContext.getBean(it) }
+            val controllers = scan.controllers.map { childContext.getBean(it) }
 
             // ---- 6. endpoints, computed but not registered ----
-            val endpoints = mountEndpoints(controllers)
+            val endpoints = mountEndpoints(descriptor.pluginId, controllers)
 
             // ---- 7. plugin context + lifecycle ----
             val pluginContext = PluginContextImpl(
@@ -1203,7 +1228,11 @@ class ApiPluginServiceImpl(
             // to fix it with, since the row and the config API come from the install itself.
             // A failure here still means the plugin does not serve: activation registers it
             // without routes and reports the reason in load_error.
-            val startupError = runCatching { lifecycle?.onStart(pluginContext) }.exceptionOrNull()
+            val startupError = runCatching {
+                lifecycle?.let {
+                    PluginClassLoaderManager.withPluginClassLoader(loader) { it.onStart(pluginContext) }
+                }
+            }.exceptionOrNull()
             if (startupError != null) {
                 logger.warn(
                     "Plugin '{}' was built but did not start: {}", descriptor.pluginId, startupError.message
@@ -1470,9 +1499,21 @@ class ApiPluginServiceImpl(
         // external database cannot be reached once the pools are closed, and a table dropped
         // under a request still using it would fail that request rather than the purge
         if (purgeRequested) {
-            runtime.lifecycle?.let { runCatching { it.onPurge(runtime.pluginContext) } }
+            runtime.lifecycle?.let {
+                runCatching {
+                    PluginClassLoaderManager.withPluginClassLoader(runtime.classLoader) {
+                        it.onPurge(runtime.pluginContext)
+                    }
+                }
+            }
         }
-        runtime.lifecycle?.let { runCatching { it.onStop(runtime.pluginContext) } }
+        runtime.lifecycle?.let {
+            runCatching {
+                PluginClassLoaderManager.withPluginClassLoader(runtime.classLoader) {
+                    it.onStop(runtime.pluginContext)
+                }
+            }
+        }
         runCatching { runtime.context.close() }
         // Closed after the context, so a lifecycle bean shutting down can still use its
         // connection, and before the class loader, because Hikari's housekeeper and
@@ -1539,16 +1580,35 @@ class ApiPluginServiceImpl(
         val scanner = ClassPathBeanDefinitionScanner(ctx, false)
         scanner.setResourceLoader(PathMatchingResourcePatternResolver(loader))
         scanner.addIncludeFilter(AnnotationTypeFilter(Component::class.java))
+        // Controllers come out of this scan too, and need their own filter to: @ApiController is
+        // deliberately not a Spring stereotype - it is not a @RestController, so it is not a
+        // @Component - which is fine only as long as the scanner is told explicitly that a class
+        // carrying it is a bean. Without this filter no controller would match, and the getBean
+        // call that pulls each one out of the context would find nothing.
+        scanner.addIncludeFilter(AnnotationTypeFilter(ApiController::class.java))
         // Scan the root packages that lead to the plugin's controllers so collaborators
         // (e.g. @Service beans) living anywhere under those roots are picked up, while
         // a fat jar's bundled-library components are left alone.
-        val controllerPackages = controllerClasses.map { it.`package`.name }.toSet()
-        val roots = PluginClassLoaderManager.rootPackages(jarPath)
-            .filter { root -> controllerPackages.any { it == root || it.startsWith("$root.") } }
+        val roots = PluginClassLoaderManager.controllerRootPackages(jarPath, controllerClasses)
         if (roots.isEmpty()) {
             throw PluginInstallException("Cannot derive scan packages for plugin $pluginId")
         }
-        scanner.scan(*roots.toTypedArray())
+        // The scanner parses every candidate class's metadata, and Spring validates @AliasFor
+        // declarations while it does: a mapping that declares `value` and `path` differently -
+        // which Spring refuses to mirror - fails right here, before any route exists. Caught so
+        // the cause reaches the administrator instead of surfacing as a bare SYSTEM_ERROR, and so
+        // any other unreadable metadata names the jar it came from.
+        try {
+            scanner.scan(*roots.toTypedArray())
+        } catch (e: Exception) {
+            // The outermost message only names the class being read; the reason is at the bottom
+            // of the chain (e.g. "attribute 'path' and its alias 'value' have different values"),
+            // and that is the part an author can act on
+            val reason = generateSequence<Throwable>(e) { it.cause }.last().message ?: e.toString()
+            throw PluginInstallException(
+                "Cannot read the annotations of plugin jar '${jarPath.fileName}': $reason"
+            )
+        }
 
         ctx.registerBean("pluginContext", PluginContext::class.java, Supplier {
             PluginContextImpl(
@@ -1591,22 +1651,44 @@ class ApiPluginServiceImpl(
      * is refused here, naming the method - before anything is registered or written, so a bad
      * plugin leaves nothing behind and a healthy one keeps serving through a failed remount.
      *
+     * @param pluginId Plugin ID from the descriptor, which namespaces every path and every code
      * @param controllers Controller bean instances
      * @return Mounted endpoints, not yet registered
-     * @throws PluginInstallException when a mapped method declares no usable operation ID, its code
-     *         exceeds [MAX_CODE_LENGTH], or two endpoints under one version resolve to the same code
+     * @throws PluginInstallException when a controller declares an API version below 1 or more than
+     *         one base path, a mapped method declares more than one path, a mapped method declares
+     *         no usable operation ID, its code exceeds [MAX_CODE_LENGTH], two endpoints under one
+     *         version resolve to the same code, or two of them claim the same path and HTTP method
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      * @see MountedEndpoint
      * @see activateEndpoints
      */
-    private fun mountEndpoints(controllers: List<Any>): List<MountedEndpoint> {
+    private fun mountEndpoints(pluginId: String, controllers: List<Any>): List<MountedEndpoint> {
         val endpoints = mutableListOf<MountedEndpoint>()
         val codeOwners = mutableMapOf<String, Method>()
+        val pathOwners = mutableMapOf<String, Method>()
         controllers.forEach { controller ->
             val targetClass = AopUtils.getTargetClass(controller)
             val annotation = targetClass.getAnnotation(ApiController::class.java)
                 ?: throw PluginInstallException("${targetClass.name} is not annotated with @ApiController")
+            // A version below 1 composes a path the router's /v(\d+) never matches: the mount
+            // would succeed, the endpoint would be written to the database, and every request to
+            // it would 404 with nothing pointing at why. versionCode is checked the same way.
+            if (annotation.version < 1) {
+                throw PluginInstallException(
+                    "${targetClass.name} declares @ApiController(version = ${annotation.version}); " +
+                            "the API version must be at least 1"
+                )
+            }
+            // The base path is an array too, and only one is supported: a second entry would be
+            // dropped, leaving endpoints that look reachable under both but are mounted under one
+            if (annotation.path.size > 1) {
+                throw PluginInstallException(
+                    "${targetClass.name} declares @ApiController(path = [...]) with " +
+                            "${annotation.path.size} paths; the plugin mount supports exactly one " +
+                            "base path per controller"
+                )
+            }
             val basePath = annotation.path.firstOrNull()?.trim('/') ?: ""
             targetClass.declaredMethods.forEach { method ->
                 val mapping = resolveMapping(method) ?: return@forEach
@@ -1624,7 +1706,7 @@ class ApiPluginServiceImpl(
                     )
                 }
                 val operationId = operation.operationId
-                val code = buildCode(annotation, method)
+                val code = buildCode(pluginId, annotation.version, method)
                 if (code.length > MAX_CODE_LENGTH) {
                     throw PluginInstallException(
                         "Endpoint ${targetClass.name}#${method.name} produces a ${code.length}-" +
@@ -1644,9 +1726,21 @@ class ApiPluginServiceImpl(
                 }
                 val methodPath = mapping.path.trim('/')
                 val fullPath = buildString {
-                    append("/api/").append(annotation.plugin).append("/v").append(annotation.version)
+                    append("/api/").append(pluginId).append("/v").append(annotation.version)
                     if (basePath.isNotEmpty()) append("/").append(basePath)
                     if (methodPath.isNotEmpty()) append("/").append(methodPath)
+                }
+                // Two endpoints of one plugin claiming the same path and method would register as
+                // an ambiguous mapping and blow up inside registerMapping with a raw Spring
+                // exception - after the rows were written. Refused here instead, naming both
+                // methods, so a bad plugin still leaves nothing behind
+                val pathKey = "${mapping.method.name} $fullPath"
+                pathOwners.put(pathKey, method)?.let { previous ->
+                    throw PluginInstallException(
+                        "${previous.declaringClass.name}#${previous.name} and " +
+                                "${method.declaringClass.name}#${method.name} both map to " +
+                                "$pathKey; a path and HTTP method must be unique within a plugin version"
+                    )
                 }
                 val templatePath = buildString {
                     append("/api/{PLUGIN}/v{API_VERSION}")
@@ -1656,9 +1750,11 @@ class ApiPluginServiceImpl(
                 val info = RequestMappingInfo
                     .paths(templatePath)
                     .methods(mapping.method)
+                    .params(*mapping.params.toTypedArray())
+                    .headers(*mapping.headers.toTypedArray())
                     .produces(*mapping.produces.toTypedArray())
                     .consumes(*mapping.consumes.toTypedArray())
-                    .customCondition(ApiVersionCondition(annotation.plugin, annotation.version))
+                    .customCondition(ApiVersionCondition(pluginId, annotation.version))
                     .build()
 
                 endpoints += MountedEndpoint(
@@ -1695,9 +1791,46 @@ class ApiPluginServiceImpl(
     private data class EndpointMapping(
         val path: String,
         val method: RequestMethod,
+        val params: List<String>,
+        val headers: List<String>,
         val produces: List<String>,
         val consumes: List<String>
     )
+
+    /**
+     * The single path a mapping annotation declares
+     *
+     * `@GetMapping` and its siblings take an array, but the plugin mount maps exactly one path
+     * per method, so a second entry is refused rather than dropped: an author who wrote two paths
+     * meant two endpoints, and mounting only the first would leave the other silently 404 without
+     * the plugin appearing to declare anything less than it does. (Contrast `produces` /
+     * `consumes`, which are legitimately multi-valued and are carried through as-is.)
+     *
+     * `value` is read as a fallback because it is `path`'s alias and Kotlin puts a positional
+     * argument - `@GetMapping("/a")` - into `value`: the raw annotation this reads does not mirror
+     * aliases the way Spring's merged annotations do. Declaring both with different contents never
+     * reaches here - the child context refuses to parse such a class at all, which is where that
+     * is reported (see [createChildContext]).
+     *
+     * @param method Endpoint method, named when the declaration is refused
+     * @param path `path` attribute as declared
+     * @param value `value` attribute as declared
+     * @return The declared path, or "" when the method declares none
+     * @throws PluginInstallException when more than one path is declared
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    private fun singlePath(method: Method, path: Array<String>, value: Array<String>): String {
+        val paths = path.ifEmpty { value }
+        if (paths.size > 1) {
+            throw PluginInstallException(
+                "Endpoint ${method.declaringClass.name}#${method.name} declares ${paths.size} paths " +
+                        "(${paths.joinToString(", ")}); the plugin mount maps exactly one path per " +
+                        "method - declare a method for each path, or map a common prefix"
+            )
+        }
+        return paths.firstOrNull() ?: ""
+    }
 
     private fun resolveMapping(method: Method): EndpointMapping? {
         val get = method.getAnnotation(GetMapping::class.java)
@@ -1708,36 +1841,104 @@ class ApiPluginServiceImpl(
 
         return when {
             get != null -> EndpointMapping(
-                (get.path.ifEmpty { get.value }).firstOrNull() ?: "",
-                RequestMethod.GET, get.produces.toList(), get.consumes.toList()
+                singlePath(method, get.path, get.value),
+                RequestMethod.GET, get.params.toList(), get.headers.toList(),
+                get.produces.toList(), get.consumes.toList()
             )
 
             post != null -> EndpointMapping(
-                (post.path.ifEmpty { post.value }).firstOrNull() ?: "",
-                RequestMethod.POST, post.produces.toList(), post.consumes.toList()
+                singlePath(method, post.path, post.value),
+                RequestMethod.POST, post.params.toList(), post.headers.toList(),
+                post.produces.toList(), post.consumes.toList()
             )
 
             put != null -> EndpointMapping(
-                (put.path.ifEmpty { put.value }).firstOrNull() ?: "",
-                RequestMethod.PUT, put.produces.toList(), put.consumes.toList()
+                singlePath(method, put.path, put.value),
+                RequestMethod.PUT, put.params.toList(), put.headers.toList(),
+                put.produces.toList(), put.consumes.toList()
             )
 
             patch != null -> EndpointMapping(
-                (patch.path.ifEmpty { patch.value }).firstOrNull() ?: "",
-                RequestMethod.PATCH, patch.produces.toList(), patch.consumes.toList()
+                singlePath(method, patch.path, patch.value),
+                RequestMethod.PATCH, patch.params.toList(), patch.headers.toList(),
+                patch.produces.toList(), patch.consumes.toList()
             )
 
             delete != null -> EndpointMapping(
-                (delete.path.ifEmpty { delete.value }).firstOrNull() ?: "",
-                RequestMethod.DELETE, delete.produces.toList(), delete.consumes.toList()
+                singlePath(method, delete.path, delete.value),
+                RequestMethod.DELETE, delete.params.toList(), delete.headers.toList(),
+                delete.produces.toList(), delete.consumes.toList()
             )
+
+            // A method mapped any other way - a bare @RequestMapping, or a composed annotation the
+            // plugin author wrote - is refused rather than skipped: silently mounting fewer
+            // endpoints than the jar declares is exactly what nothing here should do quietly.
+            // hasAnnotation follows meta-annotations, so a composed mapping is caught as well as a
+            // direct @RequestMapping. The five shortcuts above have already returned, so this only
+            // sees methods that carry no supported mapping of their own.
+            AnnotatedElementUtils.hasAnnotation(method, RequestMapping::class.java) ->
+                throw PluginInstallException(
+                    "Endpoint ${method.declaringClass.name}#${method.name} is mapped with " +
+                            "@RequestMapping, which the plugin mount does not support: use " +
+                            "@GetMapping, @PostMapping, @PutMapping, @PatchMapping or @DeleteMapping"
+                )
 
             else -> null
         }
     }
 
-    private fun scanControllers(loader: URLClassLoader, jarPath: Path): List<Class<*>> {
-        val result = mutableListOf<Class<*>>()
+    /**
+     * What one pass over a plugin jar found
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    private data class JarScan(
+        /**
+         * Classes carrying [ApiController]
+         *
+         * @author FatttSnake, fatttsnake@gmail.com
+         * @since 1.0.0
+         */
+        val controllers: List<Class<*>>,
+
+        /**
+         * Classes carrying a Spring stereotype - `@Component` and the annotations meta-annotated
+         * with it, such as `@Service`. Kept so an author whose component fell outside the scanned
+         * roots can be told, rather than left to discover it through a failed injection
+         *
+         * @author FatttSnake, fatttsnake@gmail.com
+         * @since 1.0.0
+         */
+        val components: List<Class<*>>,
+
+        /**
+         * Binary names of classes that could not be loaded
+         *
+         * @author FatttSnake, fatttsnake@gmail.com
+         * @since 1.0.0
+         */
+        val failures: List<String>
+    )
+
+    /**
+     * Walk a plugin jar once and load every class in it
+     *
+     * One pass answers all three questions the mount has about the jar's classes - which are
+     * controllers, which are Spring components, which failed to load - so a jar is never walked
+     * twice for them. Inner and anonymous classes (a `$` in the binary name) are skipped: they are
+     * never a controller or a component in their own right.
+     *
+     * @param loader Plugin class loader
+     * @param jarPath Plugin jar path
+     * @return Scan result
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    private fun scanJar(loader: URLClassLoader, jarPath: Path): JarScan {
+        val controllers = mutableListOf<Class<*>>()
+        val components = mutableListOf<Class<*>>()
+        val failures = mutableListOf<String>()
         JarFile(jarPath.toFile()).use { jarFile ->
             jarFile.entries().asSequence().forEach { entry ->
                 if (entry.isDirectory || !entry.name.endsWith(".class")) return@forEach
@@ -1746,22 +1947,114 @@ class ApiPluginServiceImpl(
                 try {
                     val clazz = loader.loadClass(className)
                     if (clazz.getAnnotation(ApiController::class.java) != null) {
-                        result.add(clazz)
+                        controllers.add(clazz)
+                    }
+                    // hasAnnotation rather than isAnnotationPresent: the latter does not follow
+                    // meta-annotations, so it would miss every @Service
+                    if (AnnotatedElementUtils.hasAnnotation(clazz, Component::class.java)) {
+                        components.add(clazz)
                     }
                 } catch (e: Throwable) {
-                    // Logged rather than swallowed: a class that cannot be loaded is usually an
-                    // optional plugin-internal helper, but one of them being an @ApiController
-                    // would otherwise drop the controller from the mount with nothing to say why -
-                    // the plugin would merely look as though it had declared fewer endpoints
-                    logger.warn(
-                        "Skipping class '{}' from plugin jar '{}': it could not be loaded",
-                        className, jarPath.fileName, e
-                    )
+                    // Recorded rather than logged and dropped: a class that cannot be loaded is
+                    // usually an optional helper the plugin bundled, but one under a controller
+                    // root package is the plugin's own code, and dropping that silently would make
+                    // the plugin come up with fewer endpoints than it declares. Which of the two
+                    // it is - and so whether the install is refused - is decided by
+                    // verifyLoadFailures once the controllers are known
+                    failures.add(className)
                 }
             }
         }
-        return result
+        return JarScan(controllers, components, failures)
     }
+
+    /**
+     * Refuse the install when a class the plugin owns failed to load
+     *
+     * A failure outside the controller root packages is taken to be a bundled-library class the
+     * plugin never exercises, and is only warned about. One inside them is the plugin's own code:
+     * if it cannot be loaded the mount would silently come up short, so the install is refused and
+     * the classes are named.
+     *
+     * @param scan Scan result
+     * @param jarPath Plugin jar path
+     * @throws PluginInstallException when a class under a controller root package did not load
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see scanJar
+     * @see controllerRootPackages
+     */
+    private fun verifyLoadFailures(scan: JarScan, jarPath: Path) {
+        if (scan.failures.isEmpty()) return
+        val roots = PluginClassLoaderManager.controllerRootPackages(jarPath, scan.controllers)
+        val owned = scan.failures.filter { isUnderAnyPackage(it, roots) }
+        if (owned.isNotEmpty()) {
+            throw PluginInstallException(
+                "Class(es) of plugin jar '${jarPath.fileName}' under its controller root packages " +
+                        "could not be loaded: ${owned.joinToString(", ")}. A plugin class that fails " +
+                        "to load would leave the mount short of the endpoints it declares"
+            )
+        }
+        logger.warn(
+            "Skipping {} class(es) of plugin jar '{}' that could not be loaded: {}",
+            scan.failures.size, jarPath.fileName, scan.failures.joinToString(", ")
+        )
+    }
+
+    /**
+     * Warn about plugin components that fall outside the scanned roots
+     *
+     * The child context scans only the root packages that lead to the plugin's controllers, so a
+     * component living under a different top-level package is never registered. That is by design
+     * - it is also what keeps a fat jar's bundled-library components out - but the boundary is not
+     * visible from the plugin's own code, so every component left outside it is named rather than
+     * left to surface as an unexplained missing bean.
+     *
+     * @param scan Scan result
+     * @param jarPath Plugin jar path
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see controllerRootPackages
+     */
+    private fun warnUnscannedComponents(scan: JarScan, jarPath: Path) {
+        if (scan.components.isEmpty()) return
+        val roots = PluginClassLoaderManager.controllerRootPackages(jarPath, scan.controllers)
+        scan.components
+            .filterNot { isUnderAnyPackage(it.name, roots) }
+            .forEach {
+                logger.warn(
+                    "Component '{}' of plugin jar '{}' is outside the scanned root packages {} and " +
+                            "will not be registered as a bean; move it under one of them to have it scanned",
+                    it.name, jarPath.fileName, roots
+                )
+            }
+    }
+
+    /**
+     * Whether a fully-qualified class name sits under one of the given packages
+     *
+     * @param className Fully-qualified class name
+     * @param packages Package names to test against
+     * @return True when the class is in one of them or a sub-package of one
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    private fun isUnderAnyPackage(className: String, packages: Set<String>): Boolean {
+        val pkg = className.substringBeforeLast('.', "")
+        return packages.any { pkg == it || pkg.startsWith("$it.") }
+    }
+
+    /**
+     * Text naming the classes that could not be loaded, or empty when there were none
+     *
+     * @param failures Binary names of classes that could not be loaded
+     * @return Suffix to append to a failure message
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    private fun unloadableNote(failures: List<String>): String =
+        if (failures.isEmpty()) "" else
+            " (${failures.size} class(es) could not be loaded: ${failures.joinToString(", ")})"
 
     private fun readDescriptor(jarPath: Path): PluginDescriptor {
         val json = readJarEntry(jarPath, DESCRIPTOR_ENTRY)
@@ -1910,13 +2203,47 @@ class ApiPluginServiceImpl(
         }
     }
 
+    /**
+     * Find the plugin's lifecycle entry point among the beans its context registered
+     *
+     * The descriptor's `mainClass` names it; without one, a single [PluginLifecycle] bean is the
+     * only thing the choice could mean and is taken, while two or more are refused rather than
+     * resolved by an arbitrary `first()` - bean order is not a decision the author made, and
+     * picking one of two hooks silently is how a plugin ends up running the wrong one. A
+     * `mainClass` that names nothing is refused for the same reason: the author meant a specific
+     * class, and there is no honest fallback for not finding it.
+     *
+     * The name is compared against the target class, not the bean instance, so a lifecycle bean
+     * that the plugin's own AOP proxied still matches what the descriptor declared.
+     *
+     * @param childContext Plugin child context
+     * @param descriptor Plugin descriptor
+     * @return The lifecycle implementation, or null when the plugin declares none
+     * @throws PluginInstallException when `mainClass` names no bean, or several beans exist and
+     *         none is named
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see PluginLifecycle
+     */
     private fun findLifecycle(childContext: GenericApplicationContext, descriptor: PluginDescriptor): PluginLifecycle? {
         val lifecycleBeans = childContext.getBeansOfType(PluginLifecycle::class.java).values
         if (lifecycleBeans.isEmpty()) {
             return null
         }
-        descriptor.mainClass?.let { main ->
-            lifecycleBeans.firstOrNull { it.javaClass.name == main }?.let { return it }
+        val mainClass = descriptor.mainClass
+        if (mainClass != null) {
+            return lifecycleBeans.firstOrNull { AopUtils.getTargetClass(it).name == mainClass }
+                ?: throw PluginInstallException(
+                    "Plugin '${descriptor.pluginId}' declares mainClass '$mainClass' in $DESCRIPTOR_ENTRY, " +
+                            "but its context registered no PluginLifecycle bean of that name"
+                )
+        }
+        if (lifecycleBeans.size > 1) {
+            throw PluginInstallException(
+                "Plugin '${descriptor.pluginId}' registered ${lifecycleBeans.size} PluginLifecycle beans " +
+                        "and declares no mainClass in $DESCRIPTOR_ENTRY: set 'mainClass' to say which one " +
+                        "is the entry point"
+            )
         }
         return lifecycleBeans.first()
     }
