@@ -48,7 +48,8 @@ data class PluginConfigSchema(
     /**
      * Every config key that holds a connection slot of some datasource
      *
-     * A change to one of these is what a remount is needed for.
+     * A change to one of these is what a remount is needed for; a plugin that is down from a
+     * failed mount is remounted on any save instead.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0

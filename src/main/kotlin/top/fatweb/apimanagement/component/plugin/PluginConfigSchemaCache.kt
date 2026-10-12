@@ -40,8 +40,10 @@ class PluginConfigSchemaCache {
     /**
      * Publish the parsed config schema of one plugin ahead of a full refresh
      *
-     * A mount publishes the schema before it runs the plugin's `onStart`, so a hook that reads
-     * a setting already sees the declared default.
+     * A mount publishes the schema before it builds anything out of the plugin's settings -
+     * its datasource pools included, which need to know which stored values are secrets - and
+     * before it runs the plugin's `onStart`, so a hook that reads a setting already sees the
+     * declared default.
      *
      * @param pluginId Plugin ID
      * @param schema Parsed schema, or null when the plugin declares no configuration

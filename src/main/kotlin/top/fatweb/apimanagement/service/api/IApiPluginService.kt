@@ -147,8 +147,12 @@ interface IApiPluginService : IService<ApiPlugin> {
     /**
      * Re-mount an installed plugin from its stored jar
      *
-     * The replacement is built in full while the running one keeps serving, so a jar that can no
-     * longer be mounted leaves the plugin as it was.
+     * The replacement is built in full before the running one is taken down, so a jar that
+     * cannot be built at all - a bad signature, a descriptor that is refused, a class that will
+     * not load - leaves the plugin serving what it was. Once the build succeeds the running
+     * instance is torn down and replaced, so a plugin whose own `onStart` then throws ends up
+     * registered and serving nothing, with the reason in `loadError`, exactly as a fresh
+     * install of it would.
      *
      * @param pluginId Plugin ID
      * @return ApiPluginVo object of the reloaded plugin
@@ -186,7 +190,10 @@ interface IApiPluginService : IService<ApiPlugin> {
      * Save the configuration of a plugin
      *
      * Saved one group at a time; the required fields of the groups a submission names are what it
-     * is checked against.
+     * is checked against. An ordinary value takes effect on the plugin's next read, while a
+     * change to a value a datasource is composed from remounts the plugin once the transaction
+     * commits - and so does any save at all while the plugin is down from a failed mount, since
+     * what stopped it need not be one of those values.
      *
      * @param apiPluginConfigUpdateParam Update API plugin config parameters
      * @author FatttSnake, fatttsnake@gmail.com

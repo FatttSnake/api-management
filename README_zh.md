@@ -194,7 +194,7 @@ knife4j:
 | 接口 | 说明 |
 |---|---|
 | `GET /system/api/plugin/{pluginId}/config` | 配置结构 + 当前值 + 数据源声明。secret 不回值（`hasValue` 表示是否已设置，`unreadable` 表示已存密文解不开）；每个数据源带名称、方言、是否必需与当前状态；每个分组标出它描述的那个数据源（未描述时为 `null`，控制台就在这个分组上给出「测试连接」） |
-| `PUT /system/api/plugin/config` | **按分组保存**：`{pluginId, groups:[{key, values:[{key, value}]}]}`。普通配置项立即生效（插件每次读取都查库）；**改到数据源相关项会重挂载插件**，因为连接是网关按这些值构建的 |
+| `PUT /system/api/plugin/config` | **按分组保存**：`{pluginId, groups:[{key, values:[{key, value}]}]}`。普通配置项立即生效（插件每次读取都查库）；**改到数据源相关项会重挂载插件**，因为连接是网关按这些值构建的；插件因挂载失败而处于未挂载状态时，**任意一次保存都会重挂载它** |
 | `POST /system/api/plugin/{pluginId}/config/datasource/test` | 用**尚未保存**的值试连一次（`name` + 要用的配置项；某项不传或传 `null` 表示用已存值）。仅 MySQL——SQLite 是网关自备的文件，没有管理员的连接可试。失败回 40067 与驱动原文 |
 | `POST /system/api/plugin/{pluginId}/reload` | 用已存储的 jar 原地重挂载，用于**换了 jar**；配置与数据不受影响。改数据源**不需要**它 |
 

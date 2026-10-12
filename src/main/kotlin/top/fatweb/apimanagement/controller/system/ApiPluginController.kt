@@ -184,7 +184,8 @@ class ApiPluginController(
      * Update the configuration of a plugin
      *
      * Changing a value that describes a datasource remounts the plugin once the transaction
-     * commits; a failure shows up in the plugin's `loadError`, not in the response.
+     * commits, and so does any save at all while the plugin is down from a failed mount; a
+     * failure shows up in the plugin's `loadError`, not in the response.
      *
      * @param apiPluginConfigUpdateParam Update API plugin config parameters
      * @return Response object

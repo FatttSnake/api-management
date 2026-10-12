@@ -4,8 +4,11 @@ package top.fatweb.apimanagement.sdk.plugin
  * Plugin lifecycle
  *
  * Optional hooks invoked around a mount and an unmount; all default to no-ops. A plugin is
- * remounted - and unmounted first - on `reload` and on a save that touches one of its
- * datasource values, so it cannot keep what it needs across the gap in memory alone.
+ * remounted on `reload`, on a save that touches one of its datasource values, and on any save
+ * while it is down from a failed mount - so it cannot keep what it needs across the gap in
+ * memory alone. A remount builds the new instance and runs its `onStart` while the instance
+ * being replaced is still serving, and takes that one down only afterwards, so `onStart` may
+ * run alongside a live older instance of the same plugin.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
@@ -16,7 +19,10 @@ interface PluginLifecycle {
      * any of its routes are registered
      *
      * Throwing here does not fail an install: the gateway keeps the plugin installed, serves
-     * nothing on its behalf, and records the reason where the administrator can read it.
+     * nothing on its behalf, and records the reason where the administrator can read it. On a
+     * remount the instance being replaced has already been taken down by the time this throws,
+     * so the plugin stays down until a mount succeeds. That instance is still serving while this
+     * runs, and its `onStop` runs after this returns.
      *
      * @param context Plugin context
      * @author FatttSnake, fatttsnake@gmail.com

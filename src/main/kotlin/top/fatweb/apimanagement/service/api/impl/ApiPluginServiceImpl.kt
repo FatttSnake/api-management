@@ -417,6 +417,13 @@ class ApiPluginServiceImpl(
         val previous = PluginConfigSchemaUtil.effectiveValues(schema, emptyMap(), stored)
         val datasourceChanged = schema.datasourceKeys.any { previous[it] != effective[it] }
 
+        // A plugin that failed to mount reads as a load error on its row, and every save is a
+        // chance that the administrator has just fixed what stopped it. Without this a plugin
+        // left down by an unreachable server, or by anything other than a datasource value,
+        // could only be brought back by reloading it by hand. Read from the cache, where the
+        // row is certain to be - configSchemaOf above resolves through it
+        val down = getByPluginId(pluginId)?.loadError != null
+
         submitted.values.forEach { values ->
             values.forEach { (key, value) ->
                 // validate has already read this schema, so the field is there
@@ -448,7 +455,7 @@ class ApiPluginServiceImpl(
             }
         }
 
-        if (datasourceChanged) {
+        if (datasourceChanged || down) {
             onCommitted { scheduleRemount(pluginId) }
         }
     }
@@ -1050,6 +1057,17 @@ class ApiPluginServiceImpl(
             val configSchemaJson = readJarEntry(jarPath, CONFIG_ENTRY)
             val configSchema = parseConfigSchema(configSchemaJson)
 
+            // Published before anything is built out of the plugin's settings, not merely before
+            // the hook runs: the datasource pools below are built from those settings, and
+            // whether a stored value is a secret - and so has to be decrypted - is known only
+            // from the schema. A gateway start reaches the pools while the cache is still empty,
+            // since refreshCache only runs once every plugin has been re-hydrated, which would
+            // hand a pool its password as ciphertext. The row carrying the schema is written
+            // only at activation, so this is also what lets a hook reading a setting find the
+            // declared default. Taken back out if the build fails - see below
+            pluginConfigSchemaCache.put(descriptor.pluginId, configSchema)
+            publishedSchemaFor = descriptor.pluginId
+
             // ---- 5. child context + beans ----
             // Declaring a datasource is what earns a plugin one: without the declaration
             // there is nothing for the administrator to configure and nothing for the
@@ -1084,12 +1102,6 @@ class ApiPluginServiceImpl(
                 interfaceLookup = { getByCode(it) }
             )
             val lifecycle = findLifecycle(childContext, descriptor)
-
-            // Published before the hook runs: the row carrying the schema is only written at
-            // activation, so without this a hook reading a setting would find nothing where the
-            // plugin declared a default. Taken back out if the build fails - see below
-            pluginConfigSchemaCache.put(descriptor.pluginId, configSchema)
-            publishedSchemaFor = descriptor.pluginId
 
             // The plugin's own startup is caught rather than allowed out: it is where a plugin
             // reaches its datasources, so it is the step an administrator's misconfigured
