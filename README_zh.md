@@ -204,7 +204,7 @@ knife4j:
 
 **升级不清除插件配置与数据**；`DELETE /system/api/plugin/{pluginId}?purgeData=true` 才会清除插件设置、SQLite 数据库目录与文件区（默认 `false` 即保留，便于重装续用）。网关只删自己保管的东西，`purgeData` 是给插件删自己东西的信号：实现 `onPurge` 即可——它在数据源、storage、配置都还开着、且没有任何请求在跑时被调用，这正是插件删掉自己建的表（包括网关从不碰的外部 MySQL 库）、释放 `saveContent` 过的内容寻址对象的地方。只有「真的卸载」才触发它：升级、reload、关闭网关都不触发。插件释放掉的内容寻址对象由网关定期回收。
 
-生命周期钩子见 SDK 的 `PluginLifecycle`：`onStart`（每次挂载、路由注册之前）、`onStop`（每次卸载、正在服务的请求都结束之后）、`onUninstall`（插件已被摘除之后，升级也会走）、`onPurge`（明确要求清除数据的卸载）。
+生命周期钩子见 SDK 的 `PluginLifecycle`：`onStart`（每次挂载、路由注册之前）、`onStop`（每次卸载、先等在途请求结束，有超时上限）、`onUninstall`（插件被摘除之时，升级也会走）、`onPurge`（明确要求清除数据的卸载）。
 
 # 安全
 

@@ -204,7 +204,7 @@ Datasources: only a plugin that declares a `datasources` entry gets anything in 
 
 **An upgrade keeps the plugin's configuration and data**; `DELETE /system/api/plugin/{pluginId}?purgeData=true` is what purges the plugin's settings, its SQLite database directory and its file area (the default, `false`, keeps them so a reinstall continues where it left off). Anything else is the plugin's own to delete, and a purge is what tells it to: its `onPurge` hook runs while its datasources, storage and settings are all still open and nothing is calling into it — where it drops its own tables (including those in an external MySQL the gateway never touches) and releases the content-addressed objects it saved. Only a purge that is really an uninstall runs it: an upgrade, a reload and a shutdown never do. Content-addressed objects those plugins released are swept by the gateway on a schedule.
 
-The lifecycle hooks a plugin may implement are `onStart` (every mount, before its routes are registered), `onStop` (every unmount, after the requests it was serving have finished), `onUninstall` (after it has been taken out of the gateway, which an upgrade also does) and `onPurge` (an uninstall that asked for its data to be deleted). See the SDK's `PluginLifecycle`.
+The lifecycle hooks a plugin may implement are `onStart` (every mount, before its routes are registered), `onStop` (every unmount, after waiting for the requests it was serving, up to a timeout), `onUninstall` (as it is taken out of the gateway, which an upgrade also does) and `onPurge` (an uninstall that asked for its data to be deleted). See the SDK's `PluginLifecycle`.
 
 # Security
 

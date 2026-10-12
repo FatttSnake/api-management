@@ -796,7 +796,7 @@ class ApiPluginServiceImpl(
             KtQueryWrapper(ApiInterface()).eq(ApiInterface::pluginId, pluginId)
         ).mapNotNull { it.code }
 
-        runtime?.let { unmount(it, purgeRequested = purgeData) }
+        runtime?.let { unmount(it, purgeRequested = purgeData, uninstalling = true) }
 
         updateOrThrowException { removeById(plugin.id) }
         apiInterfaceMapper.delete(KtQueryWrapper(ApiInterface()).eq(ApiInterface::pluginId, pluginId))
@@ -804,20 +804,11 @@ class ApiPluginServiceImpl(
         plugin.fileHash?.let { runCatching { storageBlobService.removeFile(it) } }
         refreshCache()
 
-        runtime?.lifecycle?.let {
-            runCatching {
-                PluginClassLoaderManager.withPluginClassLoader(runtime.classLoader) {
-                    it.onUninstall(runtime.pluginContext)
-                }
-            }
-        }
-
-        // Purged after onUninstall so a plugin flushing state while it tears down still
-        // has a namespace to write into, and after the plugin's own onPurge, which ran while
-        // its datasources were still open - see unmount. A failure here is logged rather than
-        // raised: the database rows are already gone, so aborting would only leave a
-        // half-uninstalled plugin behind. Each kind is attempted on its own, so one failure
-        // does not spare the others.
+        // Purged after the plugin's own teardown hooks, which unmount ran: onUninstall while
+        // the class loader was still open, and onPurge while the datasources still were. A
+        // failure here is logged rather than raised: the database rows are already gone, so
+        // aborting would only leave a half-uninstalled plugin behind. Each kind is attempted
+        // on its own, so one failure does not spare the others.
         if (purgeData) {
             runCatching { apiPluginSettingService.deleteByPlugin(pluginId) }.onFailure {
                 logger.warn("Failed to purge the configuration of plugin '{}': {}", pluginId, it.message)
@@ -1341,11 +1332,20 @@ class ApiPluginServiceImpl(
      * @param purgeRequested Whether the plugin's own data is being deleted along with it, which
      *        is what decides whether its `onPurge` hook runs. An upgrade and a remount pass
      *        false, so a plugin is never asked to destroy data it is about to need again
+     * @param uninstalling Whether this plugin is going away for good, which is what decides
+     *        whether its `onUninstall` hook runs. An upgrade passes true as well, since it takes
+     *        the old version down on the way to installing the new one; a `reload`, a remount
+     *        and a shutdown all pass false, since the plugin is coming right back
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      * @see PluginInFlightTracker
      */
-    private fun unmount(runtime: PluginRuntime, deleteJar: Boolean = true, purgeRequested: Boolean = false) {
+    private fun unmount(
+        runtime: PluginRuntime,
+        deleteJar: Boolean = true,
+        purgeRequested: Boolean = false,
+        uninstalling: Boolean = false
+    ) {
         val pluginId = runtime.pluginId
 
         // Refusing new requests comes before the routes go, so a request that resolved its
@@ -1369,6 +1369,8 @@ class ApiPluginServiceImpl(
                     PluginClassLoaderManager.withPluginClassLoader(runtime.classLoader) {
                         it.onPurge(runtime.pluginContext)
                     }
+                }.onFailure {
+                    logger.warn("Plugin '{}' onPurge failed: {}", pluginId, it.message)
                 }
             }
         }
@@ -1377,6 +1379,8 @@ class ApiPluginServiceImpl(
                 PluginClassLoaderManager.withPluginClassLoader(runtime.classLoader) {
                     it.onStop(runtime.pluginContext)
                 }
+            }.onFailure {
+                logger.warn("Plugin '{}' onStop failed: {}", pluginId, it.message)
             }
         }
         runCatching { runtime.context.close() }
@@ -1385,6 +1389,22 @@ class ApiPluginServiceImpl(
         // connection-adder threads reach into the driver classes that loader owns. Hikari's
         // close is idempotent, so a second close from another path stays harmless.
         closeDatasources(runtime.datasources)
+        // The last hook, and the reason it runs here rather than after this method returns:
+        // it is plugin code, and a class it has not loaded yet still has to resolve out of the
+        // jar, which a closed loader no longer does. Its datasources are closed by now, which
+        // is deliberate - an upgrade runs this hook too, and a hook that could still reach them
+        // would be a place to destroy data the upgrade needs back
+        if (uninstalling) {
+            runtime.lifecycle?.let {
+                runCatching {
+                    PluginClassLoaderManager.withPluginClassLoader(runtime.classLoader) {
+                        it.onUninstall(runtime.pluginContext)
+                    }
+                }.onFailure {
+                    logger.warn("Plugin '{}' onUninstall failed: {}", pluginId, it.message)
+                }
+            }
+        }
         runCatching { runtime.classLoader.close() }
         // Forgotten after the resources, so a straggler that outlived the drain decrements the
         // state nothing waits on any more rather than the next mount's

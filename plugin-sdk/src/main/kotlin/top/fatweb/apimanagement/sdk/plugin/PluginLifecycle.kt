@@ -8,7 +8,9 @@ package top.fatweb.apimanagement.sdk.plugin
  * while it is down from a failed mount - so it cannot keep what it needs across the gap in
  * memory alone. A remount builds the new instance and runs its `onStart` while the instance
  * being replaced is still serving, and takes that one down only afterwards, so `onStart` may
- * run alongside a live older instance of the same plugin.
+ * run alongside a live older instance of the same plugin. A remount driven by a configuration
+ * change runs on a background thread, where there is no request to read an identity from and
+ * `currentUserId()` is null.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
@@ -20,9 +22,9 @@ interface PluginLifecycle {
      *
      * Throwing here does not fail an install: the gateway keeps the plugin installed, serves
      * nothing on its behalf, and records the reason where the administrator can read it. On a
-     * remount the instance being replaced has already been taken down by the time this throws,
-     * so the plugin stays down until a mount succeeds. That instance is still serving while this
-     * runs, and its `onStop` runs after this returns.
+     * remount the instance being replaced is still serving while this runs, and its `onStop`
+     * runs only after this returns - so this is what takes the plugin down, a moment after the
+     * plugin was serving normally.
      *
      * @param context Plugin context
      * @author FatttSnake, fatttsnake@gmail.com
@@ -33,8 +35,9 @@ interface PluginLifecycle {
     /**
      * Called before the plugin is unmounted, for every unmount
      *
-     * No request is still running by the time it is called, and the injected datasource and
-     * class loader are closed after it returns.
+     * The requests it was serving are waited for first, up to a fixed timeout, after which it is
+     * called anyway and the rest of the teardown closes the datasource and the class loader
+     * under whatever is still running.
      *
      * @param context Plugin context
      * @author FatttSnake, fatttsnake@gmail.com
@@ -43,10 +46,13 @@ interface PluginLifecycle {
     fun onStop(context: PluginContext) {}
 
     /**
-     * Called after the plugin has been taken out of the gateway
+     * Called as the plugin is taken out of the gateway
      *
-     * An upgrade uninstalls the old version before installing the new one, so this runs on an
-     * upgrade too, and the plugin's datasources are already closed by then.
+     * An upgrade takes the old version down on the way to installing the new one, so this runs on
+     * an upgrade too - it says this version is going away, never that the plugin is. Its routes are
+     * gone and its requests have finished, and its datasources are closed by then, which is what
+     * keeps it from being a place to destroy data an upgrade would need back. Its class loader is
+     * still open, so its own classes still load.
      *
      * @param context Plugin context
      * @author FatttSnake, fatttsnake@gmail.com
