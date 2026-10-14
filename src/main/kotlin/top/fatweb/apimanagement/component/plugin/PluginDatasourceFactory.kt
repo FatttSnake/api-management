@@ -63,8 +63,9 @@ class PluginDatasourceFactory(
     /**
      * Build every datasource a plugin declares
      *
-     * An unconfigured datasource is left out rather than reported. Building a pool does not
-     * connect, so an unreachable server still mounts.
+     * An unconfigured datasource is left out rather than reported, and one whose form is only
+     * half filled counts as unconfigured - see PluginDatasourceUtil.isConfigured. Building a
+     * pool does not connect, so an unreachable server still mounts.
      *
      * @param pluginId Plugin ID
      * @param schema Schema the plugin declared, or null when it declared none

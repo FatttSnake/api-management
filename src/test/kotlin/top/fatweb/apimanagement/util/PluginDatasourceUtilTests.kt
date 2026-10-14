@@ -63,7 +63,30 @@ class PluginDatasourceUtilTests {
         assertNull(mysql(host = "   "))
 
         assertFalse(PluginDatasourceUtil.isConfigured(mysqlSchema()) { null })
-        assertTrue(PluginDatasourceUtil.isConfigured(mysqlSchema()) { "10.0.0.240" })
+        assertTrue(
+            PluginDatasourceUtil.isConfigured(mysqlSchema()) {
+                mapOf("db.host" to "10.0.0.240", "db.name" to "filebox")[it]
+            }
+        )
+    }
+
+    @Test
+    fun `a datasource is not configured until it says which database to connect to`() {
+        // The host alone is a form half filled in, and the gateway still has nothing to connect
+        // with: a fresh install, where a defaulted host is all there is, is exactly this state
+        // rather than one an administrator has to get past to get their plugin mounted
+        assertNull(mysql(database = null))
+        assertNull(mysql(database = ""))
+        assertNull(mysql(database = "   "))
+
+        assertFalse(
+            PluginDatasourceUtil.isConfigured(mysqlSchema()) { mapOf("db.host" to "10.0.0.240")[it] }
+        )
+        assertTrue(
+            PluginDatasourceUtil.isConfigured(mysqlSchema()) {
+                mapOf("db.host" to "10.0.0.240", "db.name" to "filebox")[it]
+            }
+        )
     }
 
     @Test
@@ -128,13 +151,14 @@ class PluginDatasourceUtilTests {
 
     @Test
     fun `a database cannot rewrite the url it goes into`() {
-        listOf("", "file box", "filebox/other", "filebox?x=1", "filebox;drop").forEach {
+        // A blank one is not in here: it is a datasource that is not configured, not a name
+        // that is wrong - see the test above
+        listOf("file box", "filebox/other", "filebox?x=1", "filebox;drop").forEach {
             assertFailsWith<PluginDatasourceException>("'$it' should have been refused") {
                 mysql(database = it)
             }
         }
 
-        assertFailsWith<PluginDatasourceException> { mysql(database = null) }
         assertEquals("filebox", mysql(database = "filebox")?.database)
         assertEquals("plugin_db\$1", mysql(database = "plugin_db\$1")?.database)
     }

@@ -139,7 +139,7 @@
         "maxLength": {
           "type": "integer",
           "minimum": 0,
-          "description": "Highest accepted length of a string, text or secret field, in characters. Note that a host declaring minLength or pattern refuses the blank that would un-configure its datasource."
+          "description": "Highest accepted length of a string, text or secret field, in characters. Note that a host or database field declaring minLength or pattern refuses the blank that would un-configure its datasource."
         },
         "pattern": {
           "type": "string",
@@ -327,7 +327,7 @@
               "$ref": "#/$defs/key"
             }
           ],
-          "description": "mysql only: the config key holding the host. A datasource counts as configured once its host has a value, so blanking that host is how it is un-configured and the plugin simply stops being given it. The field it points at must be a string or text one, and must exist in the schema."
+          "description": "mysql only: the config key holding the host. The gateway has nothing to connect with until this and `database` both have a value, so blanking either is how the datasource is un-configured and the plugin simply stops being given it - a fresh install, or a form filled in only half way, is not an error. The field it points at must be a string or text one, and must exist in the schema."
         },
         "port": {
           "allOf": [
@@ -343,7 +343,7 @@
               "$ref": "#/$defs/key"
             }
           ],
-          "description": "mysql only: the config key holding the database name. The field it points at must be a string or text one."
+          "description": "mysql only: the config key holding the database name. Blanking it un-configures the datasource just as blanking `host` does, so a form filled in only half way is a datasource the plugin is not given. The field it points at must be a string or text one."
         },
         "username": {
           "allOf": [

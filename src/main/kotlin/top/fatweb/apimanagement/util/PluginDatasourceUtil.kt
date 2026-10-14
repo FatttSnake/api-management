@@ -162,7 +162,8 @@ object PluginDatasourceUtil {
      *
      * @param datasource Datasource declaration
      * @param valueOf Value of a config key, resolved through its field default
-     * @return Connection description, or null when the datasource is not configured
+     * @return Connection description, or null when a required slot is blank and there is
+     *         nothing to connect with
      * @throws PluginDatasourceException when a submitted value cannot describe a connection
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -193,6 +194,10 @@ object PluginDatasourceUtil {
     /**
      * Check whether a declared datasource is configured
      *
+     * A SQLite one is configured from the moment it is declared; a MySQL one once both the host
+     * and the database it connects to are there. A required slot left blank is what
+     * un-configures it - and an un-configured datasource is simply absent, never an error.
+     *
      * @param datasource Datasource declaration
      * @param valueOf Value of a config key, resolved through its field default
      * @return true=the datasource is configured
@@ -204,8 +209,12 @@ object PluginDatasourceUtil {
             // Supplied the moment it is declared, so there is nothing to be missing
             PluginDatasourceType.SQLITE -> true
 
+            // Not the host alone: a form the administrator has only begun filling in is one the
+            // gateway still has nothing to connect with, and reading it as configured is what
+            // turns a fresh install, or a half-filled save, into an error with no way past
             PluginDatasourceType.MYSQL ->
-                !datasource.slots[PluginDatasourceSlot.HOST]?.let(valueOf).isNullOrBlank()
+                !datasource.slots[PluginDatasourceSlot.HOST]?.let(valueOf).isNullOrBlank() &&
+                    !datasource.slots[PluginDatasourceSlot.DATABASE]?.let(valueOf).isNullOrBlank()
         }
 
     /**
@@ -274,17 +283,17 @@ object PluginDatasourceUtil {
     /**
      * Resolve the host to connect to
      *
+     * Reached only once [isConfigured] says there is one, which is why a blank is left out
+     * here rather than refused.
+     *
      * @param raw Submitted host
      * @return Normalised host
-     * @throws PluginDatasourceException when the host is missing or malformed
+     * @throws PluginDatasourceException when the host cannot be one
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
     private fun requireHost(raw: String?): String {
         val submitted = raw?.trim().orEmpty()
-        if (submitted.isEmpty()) {
-            throw PluginDatasourceException("Database host can not be blank")
-        }
 
         val host = submitted.removeSurrounding("[", "]")
         val accepted = if (host.contains(':')) {
@@ -331,17 +340,17 @@ object PluginDatasourceUtil {
     /**
      * Resolve the database name to connect to
      *
+     * Reached only once [isConfigured] says there is one, which is why a blank is left out
+     * here rather than refused.
+     *
      * @param raw Submitted database name
      * @return Validated database name
-     * @throws PluginDatasourceException when the name is missing or malformed
+     * @throws PluginDatasourceException when the name cannot be one
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
     private fun requireDatabase(raw: String?): String {
         val database = raw?.trim().orEmpty()
-        if (database.isEmpty()) {
-            throw PluginDatasourceException("Database name can not be blank")
-        }
         if (!DATABASE_REGEX.matches(database)) {
             throw PluginDatasourceException("Database name must match ${DATABASE_REGEX.pattern}, got '$database'")
         }
