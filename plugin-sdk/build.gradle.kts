@@ -28,12 +28,18 @@ dependencies {
     // transitively expose spring-context's org.springframework.stereotype package).
     api("org.springframework:spring-context")
     api(libs.swagger.annotations.jakarta)
+
+    testImplementation(libs.kotlin.test.junit5)
 }
 
 kotlin {
     compilerOptions {
         freeCompilerArgs.addAll("-Xjsr305=strict", "-Xannotation-default-target=param-property")
     }
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
 }
 
 publishing {

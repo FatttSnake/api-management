@@ -66,7 +66,7 @@ class ApiPlugin : Plugin<Project> {
 
         val genKeysTask = project.tasks.register("genPluginKeys", GenPluginKeys::class.java) { task ->
             task.group = "api plugin"
-            task.description = "Generates the Ed25519 developer key pair under keys/ (skips when present)"
+            task.description = "Generates the Ed25519 developer key pair under keys/ (reuses an existing pair)"
             task.keysDir.set(keysDir)
         }
 

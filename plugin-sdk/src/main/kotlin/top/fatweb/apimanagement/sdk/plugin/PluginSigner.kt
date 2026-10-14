@@ -1,5 +1,6 @@
 package top.fatweb.apimanagement.sdk.plugin
 
+import java.math.BigInteger
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -10,6 +11,7 @@ import java.security.MessageDigest
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.Signature
+import java.security.interfaces.EdECPrivateKey
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 import java.util.Base64
@@ -71,6 +73,17 @@ object PluginSigner {
      * @since 1.0.0
      */
     fun privateKeyPem(privateKey: PrivateKey): String = pem(privateKey.encoded, "PRIVATE KEY")
+
+    /**
+     * Derive the SPKI PEM public key from a PKCS8 PEM private key
+     *
+     * @param privateKeyPem Private key in PKCS8 PEM
+     * @return Public key in SPKI PEM
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    fun publicKeyPemFromPrivate(privateKeyPem: String): String =
+        pem(ed25519PublicKeySpki(ed25519Seed(privateKeyPem)), "PUBLIC KEY")
 
     /**
      * Sign the plugin jar and return the signature bytes (to be written to
@@ -210,6 +223,66 @@ object PluginSigner {
     private fun parsePrivateKey(pem: String): PrivateKey =
         KeyFactory.getInstance("Ed25519")
             .generatePrivate(PKCS8EncodedKeySpec(decodePem(pem, "PRIVATE KEY")))
+
+    private fun ed25519Seed(privateKeyPem: String): ByteArray {
+        val key = KeyFactory.getInstance("Ed25519")
+            .generatePrivate(PKCS8EncodedKeySpec(decodePem(privateKeyPem, "PRIVATE KEY")))
+        val edKey = key as? EdECPrivateKey
+            ?: error("Unsupported Ed25519 private key: ${key.javaClass.name}")
+        return edKey.bytes.orElse(null)
+            ?: error("Ed25519 private key does not expose its seed")
+    }
+
+    private fun ed25519PublicKeySpki(seed: ByteArray): ByteArray {
+        val scalar = ed25519Scalar(seed)
+        var point = Point(BigInteger.ZERO, BigInteger.ONE)
+        for (bit in scalar.bitLength() - 1 downTo 0) {
+            point = ed25519Add(point, point)
+            if (scalar.testBit(bit)) point = ed25519Add(point, ED25519_BASE_POINT)
+        }
+
+        val encoded = ByteArray(32) { index ->
+            point.y.shiftRight(index * 8).and(BYTE_MASK).toInt().toByte()
+        }
+        if (point.x.testBit(0)) encoded[31] = (encoded[31].toInt() or 0x80).toByte()
+        return ED25519_SPKI_PREFIX + encoded
+    }
+
+    private fun ed25519Scalar(seed: ByteArray): BigInteger {
+        val half = MessageDigest.getInstance("SHA-512").digest(seed).copyOf(32)
+        half[0] = (half[0].toInt() and 248).toByte()
+        half[31] = ((half[31].toInt() and 127) or 64).toByte()
+        return BigInteger(1, half.reversedArray())
+    }
+
+    private data class Point(val x: BigInteger, val y: BigInteger)
+
+    private fun ed25519Add(p: Point, q: Point): Point {
+        val k = ED25519_D.multiply(p.x).multiply(q.x).multiply(p.y).multiply(q.y).mod(ED25519_P)
+        val x = p.x.multiply(q.y).add(q.x.multiply(p.y)).mod(ED25519_P)
+            .multiply(BigInteger.ONE.add(k).mod(ED25519_P).modInverse(ED25519_P)).mod(ED25519_P)
+        val y = p.y.multiply(q.y).add(p.x.multiply(q.x)).mod(ED25519_P)
+            .multiply(BigInteger.ONE.subtract(k).mod(ED25519_P).modInverse(ED25519_P)).mod(ED25519_P)
+        return Point(x, y)
+    }
+
+    private val BYTE_MASK: BigInteger = BigInteger.valueOf(0xff)
+
+    private val ED25519_P: BigInteger = BigInteger.TWO.pow(255).subtract(BigInteger.valueOf(19))
+
+    private val ED25519_D: BigInteger = BigInteger.valueOf(-121665)
+        .multiply(BigInteger.valueOf(121666).modInverse(ED25519_P))
+        .mod(ED25519_P)
+
+    private val ED25519_BASE_POINT: Point =
+        Point(
+            BigInteger("15112221349535400772501151409588531511454012693041857206046113283949847762202"),
+            BigInteger("46316835694926478169428394003475163141307993866256225615783033603165251855960")
+        )
+
+    private val ED25519_SPKI_PREFIX: ByteArray = byteArrayOf(
+        0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00
+    )
 
     private fun decodePem(pem: String, type: String): ByteArray {
         val body = pem

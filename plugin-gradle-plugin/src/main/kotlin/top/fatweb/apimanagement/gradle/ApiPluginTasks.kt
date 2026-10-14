@@ -96,8 +96,8 @@ abstract class GeneratePluginDescriptor : DefaultTask() {
 
 /**
  * Generates the Ed25519 developer key pair into `keys/` (private.pem + public.pem).
- * Skips silently when `keys/private.pem` already exists — delete it to mint a new
- * identity.
+ * Reuses an existing pair, derives a missing `public.pem` from `private.pem`, and
+ * refuses to overwrite an existing `public.pem` whose `private.pem` is gone.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
@@ -111,15 +111,28 @@ abstract class GenPluginKeys : DefaultTask() {
         val dir = keysDir.get().asFile
         val privateFile = File(dir, "private.pem")
         val publicFile = File(dir, "public.pem")
-        if (privateFile.exists()) {
-            logger.lifecycle("Keys already exist in {} — reusing them (delete private.pem to regenerate)", dir)
-            return
+        when {
+            privateFile.exists() && publicFile.exists() ->
+                logger.lifecycle("Keys already exist in {} — reusing them (delete private.pem to regenerate)", dir)
+
+            privateFile.exists() -> {
+                publicFile.writeText(PluginSigner.publicKeyPemFromPrivate(privateFile.readText()))
+                logger.lifecycle("Derived missing public.pem from private.pem in {}", dir)
+            }
+
+            publicFile.exists() -> throw GradleException(
+                "keys/public.pem exists but keys/private.pem is missing — refusing to overwrite the " +
+                    "public key. Restore private.pem, or delete public.pem to mint a new identity."
+            )
+
+            else -> {
+                dir.mkdirs()
+                val pair = PluginSigner.generateKeyPair()
+                privateFile.writeText(PluginSigner.privateKeyPem(pair.private))
+                publicFile.writeText(PluginSigner.publicKeyPem(pair.public))
+                logger.lifecycle("Generated Ed25519 keys in {}", dir)
+            }
         }
-        dir.mkdirs()
-        val pair = PluginSigner.generateKeyPair()
-        privateFile.writeText(PluginSigner.privateKeyPem(pair.private))
-        publicFile.writeText(PluginSigner.publicKeyPem(pair.public))
-        logger.lifecycle("Generated Ed25519 keys in {}", dir)
     }
 }
 
