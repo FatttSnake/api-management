@@ -91,7 +91,8 @@ enum class ResponseCode(val code: Int) {
     API_PLATFORM_PLUGIN_NOT_TRUSTED(BusinessCode.API_PLATFORM, 64),
     API_PLATFORM_PLUGIN_SIGNATURE_INVALID(BusinessCode.API_PLATFORM, 65),
     API_PLATFORM_PLUGIN_VERSION_CONFLICT(BusinessCode.API_PLATFORM, 66),
-    API_PLATFORM_PLUGIN_DATASOURCE_INVALID(BusinessCode.API_PLATFORM, 67);
+    API_PLATFORM_PLUGIN_DATASOURCE_INVALID(BusinessCode.API_PLATFORM, 67),
+    API_PLATFORM_PLUGIN_PURGE_FAILED(BusinessCode.API_PLATFORM, 68);
 
     constructor(businessCode: BusinessCode, code: Int) : this(businessCode.code * 100 + code)
 }

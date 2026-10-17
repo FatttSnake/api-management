@@ -337,7 +337,11 @@ class ApiPluginServiceImpl(
         doInstall(jarPath, jarName, persistBlob = true, checkVersion = true)
     }
 
-    override fun updatePlugin(apiPluginUpdateParam: ApiPluginUpdateParam) {
+    override fun updatePlugin(apiPluginUpdateParam: ApiPluginUpdateParam) = synchronized(mountLock) {
+        val existing = apiPluginUpdateParam.id?.let { getById(it) } ?: throw NoRecordFoundException()
+        val pluginId = existing.pluginId ?: throw NoRecordFoundException()
+        val wasEnabled = existing.enable == 1
+
         updateOrThrowException {
             update(
                 KtUpdateWrapper(ApiPlugin()).apply {
@@ -350,11 +354,66 @@ class ApiPluginServiceImpl(
             )
         }
         refreshCache()
+
+        // The enable flag rides along with the defaults on this endpoint, so the runtime follows
+        // it only when the update actually moved it
+        val nowEnabled = apiPluginUpdateParam.enable ?: return@synchronized
+        if (nowEnabled != wasEnabled) {
+            syncEnable(pluginId, nowEnabled)
+        }
     }
 
-    override fun updatePluginStatus(apiPluginUpdateStatusParam: ApiPluginUpdateStatusParam) {
-        updateOrThrowException { updateById(apiPluginUpdateStatusParam.toEntity()) }
-        refreshCache()
+    override fun updatePluginStatus(apiPluginUpdateStatusParam: ApiPluginUpdateStatusParam) =
+        synchronized(mountLock) {
+            val existing = apiPluginUpdateStatusParam.id?.let { getById(it) } ?: throw NoRecordFoundException()
+            val pluginId = existing.pluginId ?: throw NoRecordFoundException()
+            val wasEnabled = existing.enable == 1
+            val nowEnabled = apiPluginUpdateStatusParam.enable == true
+
+            updateOrThrowException { updateById(apiPluginUpdateStatusParam.toEntity()) }
+            refreshCache()
+
+            if (nowEnabled != wasEnabled) {
+                syncEnable(pluginId, nowEnabled)
+            }
+        }
+
+    /**
+     * Bring a plugin's runtime in line with the enable flag that was just written
+     *
+     * The caller holds [mountLock], and has already written the row and refreshed the cache, so
+     * that a request arriving while this runs reads the new intent rather than the old one:
+     * switched off is refused, never served from a runtime that is on its way out.
+     *
+     * Disabling takes the runtime down and nothing else - the plugin's settings, its file area,
+     * its datasource configuration and its grants all stay exactly where they are, and switching
+     * it back on mounts the same jar over the same rows. Enabling is that mount, and a failure in
+     * it is the ordinary failed-mount outcome: the rows survive, `load_error` carries the reason,
+     * and the next attempt retries them.
+     *
+     * @param pluginId Plugin ID
+     * @param enabled Whether the plugin is now enabled
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see remount
+     * @see unmount
+     */
+    private fun syncEnable(pluginId: String, enabled: Boolean) {
+        if (!enabled) {
+            // deleteJar false for the plain reason: the jar is what the row points at, and it is
+            // what switching the plugin back on mounts
+            pluginRuntimes.remove(pluginId)?.let { unmount(it, deleteJar = false, uninstalling = false) }
+
+            return
+        }
+
+        // The flag is the intent and the runtime is the fact: a plugin already up has nothing to
+        // gain from being mounted again
+        if (pluginRuntimes.containsKey(pluginId)) {
+            return
+        }
+
+        remount(pluginId)
     }
 
     override fun getPluginConfig(pluginId: String): ApiPluginConfigVo {
@@ -703,6 +762,19 @@ class ApiPluginServiceImpl(
 
                 return
             }
+            // Saving a configuration is not a reason to bring a plugin back: the remount this
+            // was queued for belongs to a plugin that is meant to be running, and one the
+            // administrator switched off is not. This is also the second of the two conditions
+            // that queue a remount - a plugin left down by a failed mount - so without it a
+            // disabled plugin would be mounted again by the first save that followed
+            if (plugin.enable != 1) {
+                logger.debug(
+                    "Remount after a configuration change skipped for plugin '{}': it is disabled",
+                    pluginId
+                )
+
+                return
+            }
 
             // Read outside the lock because it can throw and is cheap; remount re-reads under
             // it, so an uninstall racing this resolves to "plugin not found" and is caught
@@ -774,16 +846,21 @@ class ApiPluginServiceImpl(
     }
 
     /**
-     * Tear a plugin down
+     * Uninstall a plugin, giving it the chance to take its own data with it
+     *
+     * Replacing a plugin with a newer version does not come through here: that leaves the
+     * registration standing and only swaps the runtime, so nothing the administrator configured
+     * is touched. This is the path where the plugin really goes away.
      *
      * @param pluginId Plugin ID
      * @param purgeData Whether everything the plugin owns - its settings, its datasource
-     *        configuration and data, and the files it stored - should be deleted along
-     *        with it.
-     *        An installation that replaces an older version of the same plugin, or an
-     *        uninstall the administrator asked to keep the data of, must pass false,
-     *        otherwise the plugin's data would not survive its own upgrade and a
-     *        reinstall could never pick up where it left off
+     *        configuration and data, and the files it stored - should be deleted along with it.
+     *        The default an uninstall carries is false, so that a reinstall can pick up where
+     *        the plugin left off and an administrator who wants it gone can still ask for the
+     *        purge afterwards
+     * @throws PluginPurgeFailedException when [purgeData] is set and the plugin could not delete
+     *         its own data. The uninstall is refused rather than half-done: nothing has been
+     *         removed at that point, so running it again once the cause is fixed is all it takes
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      * @see PluginLifecycle
@@ -791,12 +868,30 @@ class ApiPluginServiceImpl(
     private fun removePlugin(pluginId: String, purgeData: Boolean) {
         val plugin = getOne(KtQueryWrapper(ApiPlugin()).eq(ApiPlugin::pluginId, pluginId)) ?: return
 
+        // A plugin that is not running still has to be able to delete its own data, and it
+        // reaches that data - its tables, in a database the gateway never touches - through the
+        // datasources only a mount builds. So a purge of a plugin that is down mounts it first,
+        // for the exit hooks alone
         val runtime = pluginRuntimes.remove(pluginId)
+            ?: if (purgeData) mountForPurge(plugin) else null
         val codes = apiInterfaceMapper.selectList(
             KtQueryWrapper(ApiInterface()).eq(ApiInterface::pluginId, pluginId)
         ).mapNotNull { it.code }
 
-        runtime?.let { unmount(it, purgeRequested = purgeData, uninstalling = true) }
+        try {
+            runtime?.let { unmount(it, purgeRequested = purgeData, uninstalling = true) }
+        } catch (e: PluginPurgeFailedException) {
+            // Refused, and refused at the one point where nothing has been removed yet: the row
+            // this purge would have deleted is still there, its settings and its files are still
+            // there, and running the uninstall again is all it takes once the cause is fixed.
+            // The runtime is gone either way, so the reason goes where the plugin list can read
+            // it
+            logger.error("Uninstall of plugin '{}' refused: {}", pluginId, e.message)
+            setLoadError(pluginId, e.message ?: "Purge failed")
+            refreshCache()
+
+            throw e
+        }
 
         updateOrThrowException { removeById(plugin.id) }
         apiInterfaceMapper.delete(KtQueryWrapper(ApiInterface()).eq(ApiInterface::pluginId, pluginId))
@@ -829,6 +924,55 @@ class ApiPluginServiceImpl(
     }
 
     /**
+     * Mount a plugin that is not running, so that its own teardown hooks have something to run on
+     *
+     * Only a purge asks for this. `onPurge` is where a plugin drops the tables it owns, and it
+     * reaches them through its datasources - which exist only while it is mounted - so a plugin
+     * the administrator switched off has to be brought up once more in order to be taken apart.
+     *
+     * The mount is never registered, never routed and never visible to the request path: it
+     * exists only to hand [unmount] a runtime. The plugin's `onStart` is deliberately not run
+     * with it, since nothing here is starting the plugin.
+     *
+     * @param plugin Installed plugin row
+     * @return Runtime for [unmount] to take down
+     * @throws PluginPurgeFailedException when the plugin cannot be mounted, and so cannot be
+     *         purged
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see removePlugin
+     */
+    private fun mountForPurge(plugin: ApiPlugin): PluginRuntime {
+        val pluginId = plugin.pluginId
+            ?: throw PluginPurgeFailedException("Plugin row ${plugin.id} has no plugin ID to purge")
+
+        return try {
+            val fileHash = plugin.fileHash?.takeIf { it.isNotBlank() }
+                ?: throw PluginInstallException("Plugin has no jar file hash and cannot be purged")
+            val bytes = storageBlobService.loadFile(fileHash)
+                ?: throw PluginInstallException("Plugin jar blob not found for hash $fileHash")
+            val pluginDir = Path.of(serverProperties.storage.pluginDir)
+            Files.createDirectories(pluginDir)
+            val jarPath = pluginDir.resolve("$fileHash.jar")
+            Files.write(jarPath, bytes)
+
+            prepareMount(
+                jarPath = jarPath,
+                jarName = plugin.jarName ?: "$pluginId.jar",
+                persistBlob = false,
+                checkVersion = false,
+                expectedPluginId = pluginId,
+                runStart = false
+            ).toRuntime()
+        } catch (e: Exception) {
+            throw PluginPurgeFailedException(
+                "Plugin '$pluginId' could not be mounted to delete its data: " +
+                        (e.message ?: e::class.simpleName), e
+            )
+        }
+    }
+
+    /**
      * Re-mount every uploaded plugin from the blob store at startup. A failing
      * plugin is skipped and its error recorded; it never blocks gateway startup.
      *
@@ -839,6 +983,13 @@ class ApiPluginServiceImpl(
         val plugins = list(KtQueryWrapper(ApiPlugin()).eq(ApiPlugin::source, "UPLOADED"))
         plugins.forEach { plugin ->
             val pluginId = plugin.pluginId ?: return@forEach
+            // A plugin the administrator switched off is one they asked not to run: it keeps
+            // its registration, its configuration and its data, and stays out of the gateway
+            // until it is switched back on
+            if (plugin.enable != 1) {
+                logger.info("Plugin '{}' is disabled; not loading it", pluginId)
+                return@forEach
+            }
             try {
                 val fileHash = plugin.fileHash ?: throw PluginInstallException("Plugin has no jar file hash")
                 val bytes = storageBlobService.loadFile(fileHash)
@@ -867,12 +1018,13 @@ class ApiPluginServiceImpl(
      * @param jarPath Local path of the signed plugin jar
      * @param jarName Original jar name
      * @param persistBlob Whether the jar should be written to the blob store
-     * @param checkVersion Whether the declared version must beat the installed one
+     * @param checkVersion Whether this is an install: the declared version is held against the
+     *        installed one, and a plugin already there has its runtime replaced
      * @param preserveRegistration Whether the plugin's existing registration must
-     *        survive a failure. A remount of an already-installed plugin passes true:
-     *        its rows existed before this call and are still its only record, so the
-     *        rollback that protects a fresh install would instead destroy a healthy
-     *        plugin
+     *        survive a failure. The mounts that bring a plugin back from its own stored jar
+     *        pass true: their rows existed before this call and are still the only record of
+     *        them, so the rollback that protects a fresh install would instead destroy a
+     *        healthy plugin
      * @return Installed plugin information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -914,9 +1066,36 @@ class ApiPluginServiceImpl(
         val datasources: Map<String, DataSource>,
         val pluginContext: PluginContext,
         val lifecycle: PluginLifecycle?,
-        val previousEnable: Int?,
         val savedFileHash: String?,
-        val replacedPluginId: String?,
+
+        /**
+         * Version code the plugin was installed at before this mount, or null when it was not
+         * installed at all. Non-null means activation is replacing a runtime rather than adding
+         * one, and has to leave the rows that runtime's registration lives in alone
+         *
+         * @author FatttSnake, fatttsnake@gmail.com
+         * @since 1.0.0
+         */
+        val previousVersionCode: Int?,
+
+        /**
+         * Blob the plugin row pointed at before this mount, under the same gate as
+         * [previousVersionCode]. Released once the row points at this mount's jar instead
+         *
+         * @author FatttSnake, fatttsnake@gmail.com
+         * @since 1.0.0
+         */
+        val previousFileHash: String?,
+
+        /**
+         * Enable flag the plugin had before this mount, or null when it was not installed.
+         * Carried under the same gate as [previousVersionCode], and read only to keep a
+         * replacement from starting a plugin the administrator had switched off
+         *
+         * @author FatttSnake, fatttsnake@gmail.com
+         * @since 1.0.0
+         */
+        val previousEnable: Int?,
 
         /**
          * Why the plugin's own `onStart` failed, or null when it came up
@@ -956,10 +1135,16 @@ class ApiPluginServiceImpl(
      * @param jarPath Local path of the signed plugin jar
      * @param jarName Original jar name
      * @param persistBlob Whether the jar should be written to the blob store
-     * @param checkVersion Whether the declared version must beat the installed one
+     * @param checkVersion Whether the declared version is held against the installed one - which
+     *        refuses only a downgrade - and the plugin already being there is read as this mount
+     *        replacing its runtime
      * @param expectedPluginId Plugin ID the jar must declare, or null to take the jar's own.
      *        A remount passes the install it is replacing, so a jar that turns out to belong to
      *        a different plugin is caught while the running one is still serving
+     * @param runStart Whether the plugin's own `onStart` hook is run as part of the mount. Only
+     *        a mount built to be purged passes false: that one exists to run the plugin's
+     *        teardown hooks against the datasources it declares, and starting it on the way to
+     *        taking it apart would be work nobody asked for
      * @return Built mount, ready to activate
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -970,7 +1155,8 @@ class ApiPluginServiceImpl(
         jarName: String,
         persistBlob: Boolean,
         checkVersion: Boolean,
-        expectedPluginId: String?
+        expectedPluginId: String?,
+        runStart: Boolean = true
     ): PreparedMount {
         var mountedLoader: URLClassLoader? = null
         var mountedContext: GenericApplicationContext? = null
@@ -1019,25 +1205,26 @@ class ApiPluginServiceImpl(
             // invisible to the author until an injection fails with nothing pointing at the cause
             warnUnscannedComponents(scan, jarPath)
 
-            // ---- 3. upgrade rule ----
+            // ---- 3. version rule ----
             val existing = getByPluginIdOrQuery(descriptor.pluginId)
-            // An upgrade replaces the old registration at activation, so the administrator's
-            // enable flag has to be carried across by hand - see upsertPluginRow. Reading it
-            // here is the whole point: by activation the old row is gone
-            val previousEnable = existing?.enable
-            val replacedPluginId = if (checkVersion && existing != null) {
-                val currentCode = existing.versionCode ?: 0
-                if (descriptor.versionCode <= currentCode) {
-                    throw PluginVersionConflictException(
-                        "Version code ${descriptor.versionCode} is not greater than current $currentCode"
-                    )
-                }
-                // Only an upgrade reaches here, and only an upgrade may take an existing
-                // registration down: a remount, a reload and a startup re-hydration all mount
-                // over a plugin whose rows have to survive, and pass checkVersion false
-                descriptor.pluginId
-            } else {
-                null
+            // What was installed before this mount, or null when there was nothing - and always
+            // null off the install path, so that only an install replaces a runtime here: a
+            // remount, a reload and a startup re-hydration have already done that themselves,
+            // and would otherwise tear the same plugin down twice
+            val previousVersionCode = if (checkVersion) existing?.versionCode else null
+            // Carried for the same reason and under the same gate as the version code: the blob
+            // the plugin row is about to stop pointing at has to be released once it does
+            val previousFileHash = if (checkVersion) existing?.fileHash else null
+            // Whether the administrator had this plugin switched off, which decides whether
+            // replacing it may start it - a new version is not a reason to overrule them
+            val previousEnable = if (checkVersion) existing?.enable else null
+            // A downgrade is the one version change refused. Re-installing a version that is
+            // already there is not one: it is the same plugin's code being replaced with a
+            // build of it, which is what a development loop does over and over
+            if (previousVersionCode != null && descriptor.versionCode < previousVersionCode) {
+                throw PluginVersionConflictException(
+                    "Version code ${descriptor.versionCode} is older than the installed $previousVersionCode"
+                )
             }
 
             // ---- 4. persist jar into the blob store ----
@@ -1100,11 +1287,20 @@ class ApiPluginServiceImpl(
             // to fix it with, since the row and the config API come from the install itself.
             // A failure here still means the plugin does not serve: activation registers it
             // without routes and reports the reason in load_error.
-            val startupError = runCatching {
-                lifecycle?.let {
-                    PluginClassLoaderManager.withPluginClassLoader(loader) { it.onStart(pluginContext) }
-                }
-            }.exceptionOrNull()
+            // The plugin's own startup is skipped for a mount that will not be activated either
+            // way: the throwaway mount a purge builds, and a mount over a plugin the
+            // administrator has switched off. That second one is the load-bearing case - an
+            // install replaces what is stored for a disabled plugin, and it must not double as
+            // a way to start one, which is exactly what running this hook would be
+            val startupError = if (!runStart || previousEnable == 0) {
+                null
+            } else {
+                runCatching {
+                    lifecycle?.let {
+                        PluginClassLoaderManager.withPluginClassLoader(loader) { it.onStart(pluginContext) }
+                    }
+                }.exceptionOrNull()
+            }
             if (startupError != null) {
                 logger.warn(
                     "Plugin '{}' was built but did not start: {}", descriptor.pluginId, startupError.message
@@ -1138,9 +1334,10 @@ class ApiPluginServiceImpl(
                 datasources = datasources,
                 pluginContext = pluginContext,
                 lifecycle = lifecycle,
-                previousEnable = previousEnable,
                 savedFileHash = savedFileHash,
-                replacedPluginId = replacedPluginId,
+                previousVersionCode = previousVersionCode,
+                previousFileHash = previousFileHash,
+                previousEnable = previousEnable,
                 startupError = startupError
             )
         } catch (e: Exception) {
@@ -1176,8 +1373,15 @@ class ApiPluginServiceImpl(
      * reason goes into `load_error`.
      *
      * @param prepared Built mount
+     * A mount that lands over a plugin already installed replaces its runtime without touching
+     * its registration: the row, the interface rows and the permission nodes are matched rather
+     * than rebuilt, which is what keeps the administrator's pricing, access settings and role
+     * grants across a replacement. Only the runtime is taken down, and only the strict upgrade
+     * among the replacements counts as taking that version out of the gateway.
+     *
      * @param preserveRegistration Whether the plugin's existing registration must survive a
-     *        failure. A remount of an already-installed plugin passes true: its rows existed
+     *        failure even though [PreparedMount.previousVersionCode] is null - true for the
+     *        mounts that bring a plugin back from its own stored jar, where the rows existed
      *        before this call and are still its only record, so the rollback that protects a
      *        fresh install would instead destroy a healthy plugin
      * @return Installed plugin information
@@ -1187,23 +1391,56 @@ class ApiPluginServiceImpl(
      */
     private fun activateMount(prepared: PreparedMount, preserveRegistration: Boolean): ApiPluginVo {
         val pluginId = prepared.descriptor.pluginId
+        // Rows that were already there are the only record of what the administrator configured
+        // and granted: a mount over an existing plugin leaves them standing, both while it runs
+        // and if it fails
+        val rowsExist = preserveRegistration || prepared.previousVersionCode != null
         var activatedEndpoints = false
         var dbRowsCreated = false
         var mountedRuntime: PluginRuntime? = null
         try {
-            // An upgrade is the one mount that replaces a registration the gateway already
-            // holds, and this is the only point in the whole flow where the old one dies
-            prepared.replacedPluginId?.let { removePlugin(it, purgeData = false) }
+            // The old runtime is the only thing a replacement takes down. Its rows, its
+            // interface rows and its permission nodes are deliberately left standing: the
+            // upserts below match them on (path, method) and on code, and that match is what
+            // carries the administrator's pricing, access settings and role grants across a
+            // replacement instead of rebuilding them under fresh ids
+            prepared.previousVersionCode?.let { previousCode ->
+                pluginRuntimes.remove(pluginId)?.let { runtime ->
+                    // A version that moved forward is an upgrade, and an upgrade takes the old
+                    // version out of the gateway. Replacing the version that is already there
+                    // is a reload: nothing is being taken out, and the plugin is coming
+                    // straight back as the new build of the same version
+                    unmount(
+                        runtime,
+                        deleteJar = false,
+                        uninstalling = prepared.descriptor.versionCode > previousCode
+                    )
+                }
+            }
 
             // Registered before the routes, and regardless of whether the plugin came up: the
             // row is what the config API resolves, so it has to exist for the administrator to
             // fix what stopped the plugin from starting
             upsertPluginRow(
                 prepared.descriptor, prepared.fileHash, prepared.jarName, prepared.signerKeyId,
-                prepared.openapiJson, prepared.configSchemaJson,
-                enable = prepared.previousEnable ?: 1
+                prepared.openapiJson, prepared.configSchemaJson
             )
             dbRowsCreated = true
+            // The row points at this mount's jar from here on, so the blob it pointed at before
+            // is owed its release. Unconditional, identical bytes included: the save that
+            // preceded this mount added the very reference this takes back. The materialized
+            // file is a different matter - under identical bytes it is the file this mount just
+            // read, and deleting it would break the plugin it just replaced
+            prepared.previousFileHash?.let { previousHash ->
+                runCatching { storageBlobService.removeFile(previousHash) }
+                if (previousHash != prepared.fileHash) {
+                    runCatching {
+                        Files.deleteIfExists(
+                            Path.of(serverProperties.storage.pluginDir).resolve("$previousHash.jar")
+                        )
+                    }
+                }
+            }
             val pluginMenu = ensureMenu(
                 pluginId, prepared.descriptor.name, API_ROOT_MENU_ID, API_MODULE_ID
             )
@@ -1258,6 +1495,21 @@ class ApiPluginServiceImpl(
                     ?: throw PluginInstallException("Failed to query the installed plugin")
             }
 
+            if (prepared.previousEnable == 0) {
+                // Registered but not brought up, because the administrator has this plugin
+                // switched off: installing a version replaces what is stored for the plugin, it
+                // does not overrule the decision not to run it. The rows are up to date with the
+                // new build, no route is registered and no runtime is recorded - and unlike a
+                // plugin that failed to start, nothing went wrong here, so load_error stays out
+                // of it. Switching it back on mounts exactly this jar
+                closePrepared(prepared)
+                refreshCache()
+
+                return getByPluginIdOrQuery(pluginId)
+                    ?.toVo()
+                    ?: throw PluginInstallException("Failed to query the installed plugin")
+            }
+
             activateEndpoints(prepared.endpoints)
             activatedEndpoints = true
 
@@ -1289,11 +1541,11 @@ class ApiPluginServiceImpl(
             // one
             mountedRuntime?.let { pluginRuntimes.remove(pluginId, it) }
             // Roll back database rows created during the failed install so no orphaned
-            // plugin / interface rows remain. A remount must never run this: the rows it
-            // would delete are the record of a plugin that existed before the call, and
-            // deleting them would turn a failed configuration change into a silent
-            // uninstall.
-            if (dbRowsCreated && !preserveRegistration) {
+            // plugin / interface rows remain. A mount over an existing plugin must never run
+            // this: the rows it would delete are the record of a plugin that existed before
+            // the call, and deleting them would turn a failed configuration change or a
+            // failed upgrade into a silent uninstall.
+            if (dbRowsCreated && !rowsExist) {
                 runCatching {
                     val created = getOne(KtQueryWrapper(ApiPlugin()).eq(ApiPlugin::pluginId, pluginId))
                     created?.let { updateOrThrowException { removeById(it.id) } }
@@ -1304,11 +1556,11 @@ class ApiPluginServiceImpl(
                     cleanupPermissionTree(pluginId, codes)
                 }
             }
-            if (preserveRegistration) {
-                // The rows survive a failed remount, so from here on they claim a plugin is
-                // installed while no route serves it. load_error is the only channel the
-                // gateway has to publish that, and it reaches the administrator through the
-                // plugin list
+            if (rowsExist) {
+                // The rows survive a failed mount over an existing plugin, so from here on they
+                // claim a plugin is installed while no route serves it. load_error is the only
+                // channel the gateway has to publish that, and it reaches the administrator
+                // through the plugin list
                 setLoadError(pluginId, e.message ?: "Unknown error")
             }
             // Refreshed even when nothing was written: a rollback or a load error the cache has
@@ -1326,16 +1578,19 @@ class ApiPluginServiceImpl(
      * waited for.
      *
      * @param runtime Runtime to tear down
-     * @param deleteJar Whether the local jar file should be deleted with it. A remount
-     *        passes false: the jar is content-addressed and is the very file the new
-     *        mount reads from
+     * @param deleteJar Whether the local jar file should be deleted with it. A remount passes
+     *        false, and so does a replacement: the jar is content-addressed, and under
+     *        identical bytes it is the very file the new mount reads from
      * @param purgeRequested Whether the plugin's own data is being deleted along with it, which
      *        is what decides whether its `onPurge` hook runs. An upgrade and a remount pass
-     *        false, so a plugin is never asked to destroy data it is about to need again
+     *        false, so a plugin is never asked to destroy data it is about to need again. A
+     *        failure in the hook is not swallowed: it is raised once the teardown has finished,
+     *        so a purge that did not happen cannot be mistaken for one that did
      * @param uninstalling Whether this plugin is going away for good, which is what decides
      *        whether its `onUninstall` hook runs. An upgrade passes true as well, since it takes
-     *        the old version down on the way to installing the new one; a `reload`, a remount
-     *        and a shutdown all pass false, since the plugin is coming right back
+     *        the old version down on the way to installing the new one. Everything else passes
+     *        false - a `reload`, a remount, replacing the same version and a shutdown all leave
+     *        the plugin coming right back
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      * @see PluginInFlightTracker
@@ -1362,7 +1617,13 @@ class ApiPluginServiceImpl(
 
         // Purged while everything the plugin holds is still open and nothing is running: an
         // external database cannot be reached once the pools are closed, and a table dropped
-        // under a request still using it would fail that request rather than the purge
+        // under a request still using it would fail that request rather than the purge.
+        //
+        // A failure is held rather than thrown from here, and re-raised at the end of the
+        // method: the teardown below is what releases the class loader and its pools, so
+        // abandoning it would leak both - and the caller still has to be told, because a purge
+        // that did not happen must not be mistaken for one that did
+        var purgeFailure: Throwable? = null
         if (purgeRequested) {
             runtime.lifecycle?.let {
                 runCatching {
@@ -1370,7 +1631,10 @@ class ApiPluginServiceImpl(
                         it.onPurge(runtime.pluginContext)
                     }
                 }.onFailure {
-                    logger.warn("Plugin '{}' onPurge failed: {}", pluginId, it.message)
+                    // Logged with the exception, not just its message: the stack is the only
+                    // record of how far into a plugin's own data cleanup it got
+                    logger.error("Plugin '{}' onPurge failed", pluginId, it)
+                    purgeFailure = it
                 }
             }
         }
@@ -1411,6 +1675,14 @@ class ApiPluginServiceImpl(
         pluginInFlightTracker.release(pluginId)
         if (deleteJar) {
             runCatching { Files.deleteIfExists(runtime.tempJarPath) }
+        }
+
+        // Raised here, with the plugin's resources already released: the caller is a purge that
+        // has to be refused, and it cannot be refused by leaving a class loader behind
+        purgeFailure?.let {
+            throw PluginPurgeFailedException(
+                "Plugin '$pluginId' could not delete its data: ${it.message ?: it::class.simpleName}", it
+            )
         }
     }
 
@@ -1945,8 +2217,7 @@ class ApiPluginServiceImpl(
         jarName: String,
         signerKeyId: String,
         openapi: String?,
-        configSchema: String?,
-        enable: Int = 1
+        configSchema: String?
     ) {
         val existing = getOne(KtQueryWrapper(ApiPlugin()).eq(ApiPlugin::pluginId, descriptor.pluginId))
         if (existing == null) {
@@ -1955,7 +2226,11 @@ class ApiPluginServiceImpl(
                     this.pluginId = descriptor.pluginId
                     this.name = descriptor.name
                     this.description = descriptor.description
-                    this.enable = enable
+                    // A plugin is only ever first installed by an administrator asking for it to
+                    // be run, so the only enable a fresh row can have is 1. A plugin that was
+                    // disabled and is then replaced keeps its 0 through the branch below - see
+                    // there
+                    this.enable = 1
                     this.source = "UPLOADED"
                     this.versionName = descriptor.versionName
                     this.versionCode = descriptor.versionCode
@@ -1967,9 +2242,10 @@ class ApiPluginServiceImpl(
                 })
             }
         } else {
-            // enable is deliberately untouched here, so a remount leaves a disabled plugin
-            // disabled. An upgrade arrives through the insert above instead - it removes
-            // the row first - which is why that branch takes the flag as a parameter
+            // What the administrator owns is left exactly as it was: enable, so that a mount
+            // placed over this row - a replacement, a reload, a configuration-driven remount -
+            // neither resurrects a plugin they disabled nor disables a running one, and the
+            // default price, rate limit and access mode, which only the update API writes
             existing.name = descriptor.name
             existing.description = descriptor.description
             existing.source = "UPLOADED"

@@ -30,6 +30,20 @@ class ApiPlugin : Plugin<Project> {
             providers.gradleProperty("apiPlugin.sdkVersion").orElse(providers.provider { DEFAULT_SDK_VERSION })
         )
 
+        // Deploy credentials are a gradle property or an environment variable, never a build
+        // script literal or a file: the access token is a shared, long-lived secret.
+        ext.serverUrl.convention(
+            providers.gradleProperty("apiPlugin.serverUrl")
+                .orElse(providers.environmentVariable("API_PLUGIN_SERVER_URL"))
+        )
+        ext.accessToken.convention(
+            providers.gradleProperty("apiPlugin.accessToken")
+                .orElse(providers.environmentVariable("API_PLUGIN_ACCESS_TOKEN"))
+        )
+        ext.trustSigner.convention(
+            providers.gradleProperty("apiPlugin.trustSigner").map { it.toBoolean() }.orElse(false)
+        )
+
         // versionName falls back to the project `version` when it is unset OR
         // blank, so an empty string behaves exactly like "not set".
         val projectVersion = providers.provider { project.version.toString() }
@@ -102,10 +116,22 @@ class ApiPlugin : Plugin<Project> {
             build.dependsOn(signTask)
         }
 
-        project.tasks.register("verifyPlugin", VerifyPlugin::class.java) { task ->
+        val verifyTask = project.tasks.register("verifyPlugin", VerifyPlugin::class.java) { task ->
             task.group = "api plugin"
             task.description = "Verifies the signature embedded in the plugin jar"
             task.dependsOn(signTask)
+            task.jarFile.set(jarFile)
+        }
+
+        project.tasks.register("deployPlugin", DeployPlugin::class.java) { task ->
+            task.group = "api plugin"
+            task.description = "Uploads the signed plugin jar to a running gateway"
+            // Through verifyTask, this also depends on signTask, so a deploy can never ship a
+            // jar the gateway would reject as tampered with.
+            task.dependsOn(verifyTask)
+            task.serverUrl.set(ext.serverUrl)
+            task.accessToken.set(ext.accessToken)
+            task.trustSigner.set(ext.trustSigner)
             task.jarFile.set(jarFile)
         }
     }

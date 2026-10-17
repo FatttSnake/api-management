@@ -100,6 +100,25 @@ tasks.withType<Test> {
 
 val env = envOrProperty("env").getOrElse("dev")
 
+// A JDWP listener for attaching a debugger, off unless it is asked for: the agent is an
+// unauthenticated way into this JVM, so nothing about it may be on by default. The bound
+// address defaults to the loopback interface for the same reason; the container case is the
+// one that has to override it, since a container's loopback is not what a published port
+// reaches. `suspend=y` holds the gateway at startup until a debugger attaches, which is what
+// it takes to break inside a plugin's onStart.
+if (envOrProperty("debug").orNull?.toBoolean() == true) {
+    val debugPort = envOrProperty("debug.port").getOrElse("5005")
+    val debugAddress = envOrProperty("debug.address").getOrElse("127.0.0.1")
+    val debugSuspend = envOrProperty("debug.suspend").getOrElse("n")
+
+    tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
+        jvmArgs(
+            "-agentlib:jdwp=transport=dt_socket,server=y," +
+                "suspend=$debugSuspend,address=$debugAddress:$debugPort"
+        )
+    }
+}
+
 if (env == "dev" || env == "release") {
     dependencies {
         if (env == "dev") {

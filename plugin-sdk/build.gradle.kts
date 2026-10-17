@@ -27,6 +27,13 @@ dependencies {
     // @Service / @Component / @Autowired for plugin beans (spring-web does not
     // transitively expose spring-context's org.springframework.stereotype package).
     api("org.springframework:spring-context")
+    // Logging: `org.slf4j.` is a parent-first prefix in PluginClassLoaderManager, so at
+    // runtime the plugin gets the gateway's binding and appenders. Exposing the API here
+    // saves every plugin from declaring it just to compile.
+    api("org.slf4j:slf4j-api")
+    // Jackson 3 with the Kotlin module, for `jacksonObjectMapper()` and the `readValue<T>()`
+    // extensions. `tools.jackson.` is a parent-first prefix for the same reason.
+    api(libs.jackson.module.kotlin)
     api(libs.swagger.annotations.jakarta)
 
     testImplementation(libs.kotlin.test.junit5)

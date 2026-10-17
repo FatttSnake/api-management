@@ -44,7 +44,7 @@ API Management 是一个**可自托管的 API 网关与管理平台**。它将�
 ```
 api-management/
 ├── build.gradle.kts / settings.gradle.kts        # Gradle 构建（Java 25 toolchain，含 plugin-sdk 与 plugin-gradle-plugin 子模块）
-├── docs/                                         # 项目文档与素材（logo.svg 等）
+├── docs/                                         # 项目文档与素材（logo.svg、plugin-debugging.md / _zh.md 等）
 ├── plugin-sdk/                                   # 插件 SDK（独立子模块，供插件开发者依赖）
 │   └── src/main/kotlin/top/fatweb/apimanagement/sdk/
 │       ├── annotation/ApiController.kt           # 声明「一个插件 + 一组 API 路由」
@@ -52,7 +52,7 @@ api-management/
 ├── plugin-gradle-plugin/                         # 插件开发者使用的 Gradle 插件 `top.fatweb.api-plugin`
 │   └── src/main/kotlin/top/fatweb/apimanagement/gradle/
 │       ├── ApiPlugin.kt                          # 应用 apiPlugin DSL、自动加入 SDK 依赖与仓库
-│       └── ApiPluginTasks.kt                     # generatePluginDescriptor / genPluginKeys / signPlugin / verifyPlugin
+│       └── ApiPluginTasks.kt                     # generatePluginDescriptor / genPluginKeys / signPlugin / verifyPlugin / deployPlugin
 ├── src/main/kotlin/top/fatweb/apimanagement/
 │   ├── ApiManagementApplication.kt               # 启动入口（校验/创建 data 目录、首次运行生成配置模板）
 │   ├── annotation / aspectj                      # 注解与拦截切面（API 访问拦截、参数处理、操作/事件日志）
@@ -202,9 +202,31 @@ knife4j:
 
 数据源：只有声明了 `datasources` 的插件才会拿到 `context.datasources`，且只含**已配置**的那些；名字不在 map 里，就是网关还没有东西可连。一个插件可以声明多个，两种方言也可以混用。方言由插件声明（`dbType`），不由管理员选——写 SQL/DDL 的是插件作者，他才知道自己在哪个方言上验证过。**SQLite 零配置**，声明即由网关按 `app.storage.plugin-datasource-dir/{pluginId}/{name}.db` 供给。**MySQL 数据源就是几条普通配置项**，因此表单、声明的约束、密钥加密全部复用；JDBC URL 由网关拼装，`params` 以**连接属性**下发给驱动（拒绝 `autoDeserialize`、`allowLoadLocalInfile`、`propertiesTransform` 等越出连接本身的属性——这是缓解而非沙箱，真正的边界仍是插件签名与信任库）。**host 与 database 都有值才算已配置**，清空任意一个即取消配置——只填了一半的表单，网关仍然没有东西可连，于是它只是「不在 map 里」，插件照常挂载、由接口自己报告该数据源不可用，直到管理员补齐；也正因为如此，声明了 `minLength` 或 `pattern` 的 host / database 字段会拒绝那个用于取消配置的空串。这些配置项必须落在同一个分组里，一个分组也只能描述一条连接：分组就是一条连接被填写、保存和测试的单位。
 
-**升级不清除插件配置与数据**；`DELETE /system/api/plugin/{pluginId}?purgeData=true` 才会清除插件设置、SQLite 数据库目录与文件区（默认 `false` 即保留，便于重装续用）。网关只删自己保管的东西，`purgeData` 是给插件删自己东西的信号：实现 `onPurge` 即可——它在数据源、storage、配置都还开着、且没有任何请求在跑时被调用，这正是插件删掉自己建的表（包括网关从不碰的外部 MySQL 库）、释放 `saveContent` 过的内容寻址对象的地方。只有「真的卸载」才触发它：升级、reload、关闭网关都不触发。插件释放掉的内容寻址对象由网关定期回收。
+**升级是原地替换，管理员设过的东西全部保留**：插件行与接口行是**更新**而非重建，因此插件级的默认单价、限流与门禁，每个接口自己的单价、计费模式、是否需要 key、限流、访问模式与启用状态，以及这些接口上的角色授权，全部原样保留；唯一会消失的是新版本不再提供的接口，连同挂在它上面的授权。**重装当前已安装的同一个版本号是允许的**，同样按原地替换处理——调试循环正是反复做这件事，所以不必每改一次就递增 `versionCode`；只有**比已装版本更旧**才会被拒绝（40066）。
 
-生命周期钩子见 SDK 的 `PluginLifecycle`：`onStart`（每次挂载、路由注册之前）、`onStop`（每次卸载、先等在途请求结束，有超时上限）、`onUninstall`（插件被摘除之时，升级也会走）、`onPurge`（明确要求清除数据的卸载）。
+插件可以只被关掉而不被移除：`PATCH /system/api/plugin` 传 `enable=false` 会把它拆下来。**被禁用的插件完全不运行**——网关启动时不加载它、它的路由不注册、请求它的接口会被拒；它的设置、文件区、数据源配置与授权一律不动，重新启用就是把同一个 jar 挂回同一批行上。
+
+`DELETE /system/api/plugin/{pluginId}?purgeData=true` 才会清除插件设置、SQLite 数据库目录与文件区（默认 `false` 即保留，便于重装续用）。网关只删自己保管的东西，`purgeData` 是给插件删自己东西的信号：实现 `onPurge` 即可——它在数据源、storage、配置都还开着、且没有任何请求在跑时被调用，这正是插件删掉自己建的表（包括网关从不碰的外部 MySQL 库）、释放 `saveContent` 过的内容寻址对象的地方。只有「真的卸载」才触发它：升级、reload、被禁用、关闭网关都不触发。没挂载的插件会**先被挂起来**，让它的退出钩子有东西可跑，而**该钩子失败会拒绝这次卸载**（40068），而不是删掉管理员的记录却把插件的数据留在原地——此时什么都还没删，修好原因重跑一次即可。插件释放掉的内容寻址对象由网关定期回收。
+
+生命周期钩子见 SDK 的 `PluginLifecycle`：`onStart`（每次挂载、路由注册之前）、`onStop`（每次卸载、先等在途请求结束，有超时上限）、`onUninstall`（插件被摘除之时，升级也会走——它**不是删数据的地方**，因为它每次发版升级都会跑）、`onPurge`（明确要求清除数据的卸载，也是唯一一个失败会拒绝该次卸载的钩子）。
+
+## 调试插件
+
+插件的 jar 是在**网关自己的 JVM 内**加载的，所以附着到网关的调试器可以直接在插件源码里下断点——用 Agent 启动网关、再从插件工程附着即可：
+
+```shell
+./gradlew bootRun -Pdebug=true
+```
+
+该开关默认关闭、默认绑 `127.0.0.1:5005`，可用 `debug.port`、`debug.address`、`debug.suspend` 调整。容器与远程主机怎么走、插件工程里怎么配、以及哪些改动不用重新部署就能热替换，见 [docs/plugin-debugging_zh.md](docs/plugin-debugging_zh.md)——这份值得一看，因为该 Agent 是进入这个 JVM 的**无鉴权**通道，而里面装着所有管理员的会话。
+
+编辑循环本身是一条命令，它负责构建、签名、验签并把 jar 推到运行中的网关：
+
+```shell
+./gradlew deployPlugin -PapiPlugin.serverUrl=http://localhost:8080 -PapiPlugin.accessToken=<token>
+```
+
+两项配置也都能走环境变量（`API_PLUGIN_SERVER_URL`、`API_PLUGIN_ACCESS_TOKEN`），且都不该写进 `build.gradle.kts`。token 即控制台登录响应里的 `accessToken`，默认有效期 2 小时。
 
 # 安全
 

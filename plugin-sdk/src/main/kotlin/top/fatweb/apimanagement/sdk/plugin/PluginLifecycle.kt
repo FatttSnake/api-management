@@ -49,10 +49,17 @@ interface PluginLifecycle {
      * Called as the plugin is taken out of the gateway
      *
      * An upgrade takes the old version down on the way to installing the new one, so this runs on
-     * an upgrade too - it says this version is going away, never that the plugin is. Its routes are
-     * gone and its requests have finished, and its datasources are closed by then, which is what
-     * keeps it from being a place to destroy data an upgrade would need back. Its class loader is
-     * still open, so its own classes still load.
+     * an upgrade too - it says this version is going away, never that the plugin is. What decides
+     * it is whether the declared version changed: an upgrade changes it and this runs, while a
+     * `reload`, a remount driven by a configuration change, and a shutdown all put the same jar
+     * back up and do not, and neither does replacing a version with another build of itself.
+     *
+     * It is not a place to delete anything. Its routes are gone and its requests have finished,
+     * and its datasources are closed by then, which is what keeps it from being an obvious place
+     * to - but the plugin's storage and its settings are both still reachable from here, and a
+     * plugin that released those would lose them on every release rather than only when an
+     * administrator asked for them to go. Deleting data belongs to `onPurge`, which runs nowhere
+     * near an upgrade. Its class loader is still open, so its own classes still load.
      *
      * @param context Plugin context
      * @author FatttSnake, fatttsnake@gmail.com
@@ -64,7 +71,16 @@ interface PluginLifecycle {
      * Called when the plugin is uninstalled with its data asked to be deleted
      *
      * An upgrade, a `reload`, a remount or a shutdown never triggers it, and it runs while the
-     * plugin's datasources, storage and settings are all still available.
+     * plugin's datasources, storage and settings are all still available. A plugin that is not
+     * mounted is mounted first so that it can run this, with its `onStart` deliberately not run
+     * with it - so this may be the only hook a plugin sees on the way out.
+     *
+     * Throwing here refuses the uninstall. That is the one hook where a failure is not merely
+     * logged, because the alternative is worse than a failed uninstall: the administrator's
+     * record of the plugin would be deleted while the data this hook exists to drop - some of it
+     * in a database the gateway never touches - stays behind with nothing left that could ever
+     * remove it. Nothing is deleted before this returns, so a failure leaves an uninstall that
+     * can simply be run again.
      *
      * @param context Plugin context
      * @author FatttSnake, fatttsnake@gmail.com

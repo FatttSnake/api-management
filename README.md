@@ -44,7 +44,7 @@ The backend is written in **Kotlin + Spring Boot**. The stable API surface neede
 ```
 api-management/
 ├── build.gradle.kts / settings.gradle.kts        # Gradle build (Java 25 toolchain, plugin-sdk & plugin-gradle-plugin submodules)
-├── docs/                                         # Project docs and assets (logo.svg, etc.)
+├── docs/                                         # Project docs and assets (logo.svg, plugin-debugging.md / _zh.md, etc.)
 ├── plugin-sdk/                                   # Plugin SDK (standalone submodule for plugin authors)
 │   └── src/main/kotlin/top/fatweb/apimanagement/sdk/
 │       ├── annotation/ApiController.kt           # Declares "one plugin + a set of API routes"
@@ -52,7 +52,7 @@ api-management/
 ├── plugin-gradle-plugin/                         # Gradle plugin `top.fatweb.api-plugin` for plugin authors
 │   └── src/main/kotlin/top/fatweb/apimanagement/gradle/
 │       ├── ApiPlugin.kt                          # Applies the apiPlugin DSL, adds the SDK dependency & repositories
-│       └── ApiPluginTasks.kt                     # generatePluginDescriptor / genPluginKeys / signPlugin / verifyPlugin
+│       └── ApiPluginTasks.kt                     # generatePluginDescriptor / genPluginKeys / signPlugin / verifyPlugin / deployPlugin
 ├── src/main/kotlin/top/fatweb/apimanagement/
 │   ├── ApiManagementApplication.kt               # Entry point (ensures data dirs, generates config template on first run)
 │   ├── annotation / aspectj                      # Annotations & interceptors (API access, parameter processing, event/sys logs)
@@ -202,9 +202,31 @@ A value is submitted in one of three states: **left out means leave it alone, bl
 
 Datasources: only a plugin that declares a `datasources` entry gets anything in `context.datasources`, and only the ones that are configured — a name that is absent is a datasource the gateway has nothing to connect with yet. One plugin can declare several and mix the two dialects. The dialect is declared by the plugin (`dbType`), never chosen by the administrator: the plugin's own SQL and DDL decide it. **SQLite needs no configuration at all** — declaring it supplies it, from `app.storage.plugin-datasource-dir/{pluginId}/{name}.db`. **A MySQL datasource is described by ordinary config fields**, so it gets a rendered form, the declared constraints and secret encryption for free; the gateway composes the JDBC URL and passes `params` to the driver as connection properties (properties that reach past the connection — `autoDeserialize`, `allowLoadLocalInfile`, `propertiesTransform`, … — are refused; a mitigation rather than a sandbox, since the boundary that holds is the plugin signature and the trust store behind it). **A datasource counts as configured once both its host and its database have a value**, and blanking either is how it is un-configured — a half-filled form is one the gateway still has nothing to connect with, so it is simply left out, and the plugin, which mounts regardless, reports it as unavailable until an administrator fills it in. That is also why a host or database field declaring `minLength` or `pattern` refuses the blank that would un-configure its datasource. **Those fields are held to one group, and a group to one connection**, because a group is the form a connection is filled in, saved and tested as.
 
-**An upgrade keeps the plugin's configuration and data**; `DELETE /system/api/plugin/{pluginId}?purgeData=true` is what purges the plugin's settings, its SQLite database directory and its file area (the default, `false`, keeps them so a reinstall continues where it left off). Anything else is the plugin's own to delete, and a purge is what tells it to: its `onPurge` hook runs while its datasources, storage and settings are all still open and nothing is calling into it — where it drops its own tables (including those in an external MySQL the gateway never touches) and releases the content-addressed objects it saved. Only a purge that is really an uninstall runs it: an upgrade, a reload and a shutdown never do. Content-addressed objects those plugins released are swept by the gateway on a schedule.
+**An upgrade replaces the installed version in place and keeps everything the administrator set up**: the plugin row and its interface rows are updated rather than rebuilt, so the plugin's default price, rate limit and access mode, each interface's own pricing, billing mode, key requirement, rate limit, access mode and enable flag, and every role grant to those interfaces all survive. An interface the new version no longer serves is the only thing that goes, along with the grants attached to it. **Re-installing the version that is already installed is allowed** and replaces the code the same way — which is what a development loop does over and over, so there is no need to bump `versionCode` per iteration; only a version **older** than the installed one is refused (40066).
 
-The lifecycle hooks a plugin may implement are `onStart` (every mount, before its routes are registered), `onStop` (every unmount, after waiting for the requests it was serving, up to a timeout), `onUninstall` (as it is taken out of the gateway, which an upgrade also does) and `onPurge` (an uninstall that asked for its data to be deleted). See the SDK's `PluginLifecycle`.
+A plugin can be switched off without being removed: `PATCH /system/api/plugin` with `enable=false` takes its runtime down. **A disabled plugin does not run at all** — it is not loaded at gateway startup, its routes are not registered, and a request to one of its APIs is refused. Its settings, its file area, its datasource configuration and its grants are all untouched, and switching it back on mounts the same jar over the same rows.
+
+`DELETE /system/api/plugin/{pluginId}?purgeData=true` is what purges the plugin's settings, its SQLite database directory and its file area (the default, `false`, keeps them so a reinstall continues where it left off). Anything else is the plugin's own to delete, and a purge is what tells it to: its `onPurge` hook runs while its datasources, storage and settings are all still open and nothing is calling into it — where it drops its own tables (including those in an external MySQL the gateway never touches) and releases the content-addressed objects it saved. Only a purge that is really an uninstall runs it: an upgrade, a reload, a switch-off and a shutdown never do. A plugin that is not mounted is mounted first so that its exit hooks have something to run on, and **a failure there refuses the uninstall** (40068) instead of deleting the administrator's record of a plugin whose data it failed to remove; nothing has been deleted at that point, so the uninstall can simply be run again. Content-addressed objects those plugins released are swept by the gateway on a schedule.
+
+The lifecycle hooks a plugin may implement are `onStart` (every mount, before its routes are registered), `onStop` (every unmount, after waiting for the requests it was serving, up to a timeout), `onUninstall` (as it is taken out of the gateway — an upgrade runs it too, and it is never the place to delete anything, because it runs on every release) and `onPurge` (an uninstall that asked for its data to be deleted, and the only hook whose failure refuses that uninstall). See the SDK's `PluginLifecycle`.
+
+## Debugging a plugin
+
+A plugin's jar is loaded into the gateway's own JVM, so a debugger attached to the gateway can break inside plugin source. Start the gateway with the agent and attach from the plugin project:
+
+```shell
+./gradlew bootRun -Pdebug=true
+```
+
+The agent is off by default and binds to `127.0.0.1:5005`; `debug.port`, `debug.address` and `debug.suspend` change that. [docs/plugin-debugging.md](docs/plugin-debugging.md) covers a container or a remote host, attaching from the plugin project, and what can be hot-reloaded without deploying — which is worth knowing, because the agent is an unauthenticated way into a JVM that holds every administrator's session.
+
+The edit loop itself is one task, which builds, signs, verifies and pushes the jar to a running gateway:
+
+```shell
+./gradlew deployPlugin -PapiPlugin.serverUrl=http://localhost:8080 -PapiPlugin.accessToken=<token>
+```
+
+Both settings also read an environment variable (`API_PLUGIN_SERVER_URL`, `API_PLUGIN_ACCESS_TOKEN`), and neither belongs in `build.gradle.kts`. The token is the `accessToken` a console login returns, and lasts 2 hours by default.
 
 # Security
 

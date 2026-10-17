@@ -37,9 +37,13 @@ interface ApiPluginExtension {
     val versionName: Property<String>
 
     /**
-     * Monotonically increasing integer version; upgrades must exceed the
-     * currently installed one. **Required** — no default, so a release can never
-     * silently ship with versionCode = 1; bump it on every upgrade.
+     * Monotonically increasing integer version. **Required** — no default, so a release can
+     * never silently ship with versionCode = 1.
+     *
+     * A version above the installed one is an upgrade. The version that is already installed
+     * may be deployed again, which replaces the code in place and is what a development loop
+     * does over and over - so this only has to move when a release does. Only a version below
+     * the installed one is refused.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -88,4 +92,32 @@ interface ApiPluginExtension {
      * @since 1.0.0
      */
     val archiveName: Property<String>
+
+    /**
+     * Gateway base URL that `deployPlugin` uploads to, e.g. "http://localhost:8080".
+     * No default; required for a deploy.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    val serverUrl: Property<String>
+
+    /**
+     * Access token from a console login, used by `deployPlugin`. No default; required for a
+     * deploy. Supply it through a gradle property or an environment variable so it never
+     * lands in the build script.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    val accessToken: Property<String>
+
+    /**
+     * Whether `deployPlugin` registers the jar's signer public key with the gateway before
+     * installing it. Defaults to false (the gateway normally already trusts the signer).
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    val trustSigner: Property<Boolean>
 }

@@ -67,6 +67,18 @@ class ApiAccessInterceptor(
         handler: Any
     ): Boolean {
         if (handler !is HandlerMethod) {
+            // A plugin that is not running has no route registered, so a request to one of its
+            // APIs arrives here bound for the static-resource handler instead. Left alone that
+            // answers "no static resource ... for request", which reads as a wrong URL rather
+            // than as a plugin that is switched off - and with the route gone, this is the only
+            // place left that can tell the two apart. Anything that is not the API URL of an
+            // installed plugin is left to the ordinary not-found path
+            val scoped = ApiPath.parse(request) ?: return true
+            val plugin = apiPluginService.getByPluginId(scoped.plugin) ?: return true
+            if (plugin.enable != 1) {
+                throw ApiDisabledException()
+            }
+
             return true
         }
         val annotation = handler.beanType.getAnnotation(ApiController::class.java) ?: return true

@@ -36,8 +36,12 @@ data class PluginDescriptor(
     val versionName: String,
 
     /**
-     * Monotonic integer version; must be greater than the currently installed
-     * version to allow an upgrade, and at least 1
+     * Monotonic integer version, at least 1
+     *
+     * A version greater than the installed one is an upgrade, and an upgrade takes the old
+     * version out of the gateway on the way to the new one. Re-installing the version that is
+     * already there is allowed and replaces the code in place, which is what a development loop
+     * does over and over; only a version older than the installed one is refused.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0

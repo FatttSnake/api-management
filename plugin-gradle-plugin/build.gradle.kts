@@ -25,6 +25,8 @@ dependencies {
     // Reuses PluginSigner / PluginDescriptor from the SDK so plugins are signed
     // in-process (no subprocess) with exactly the same code as the gateway's verifier.
     implementation(project(":plugin-sdk"))
+    // Parses the gateway's {code, success, msg, data} deploy responses.
+    implementation(libs.jackson.module.kotlin)
 }
 
 kotlin {

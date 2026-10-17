@@ -209,7 +209,7 @@ class LocalFileStorageProviderTests {
     fun `a saved file can be served back through the signed route`(@TempDir tempDir: Path) {
         // The end-to-end shape the controller relies on: mint, then rebuild both the
         // reference and the key out of the URL exactly the way the controller does.
-        val provider = providerAt(tempDir, baseUrl = "http://localhost:8111")
+        val provider = providerAt(tempDir, baseUrl = "http://localhost:8080")
         val verifier = ExternalLinkSigner(ServerProperties())
         provider.saveAt(StorageKeyUtil.pluginKey("alpha", "avatar/1.png"), png)
 
