@@ -9,8 +9,6 @@ import top.fatweb.apimanagement.entity.permission.Power
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see BaseMapper
- * @see Power
  */
 @Mapper
 interface PowerMapper : BaseMapper<Power>

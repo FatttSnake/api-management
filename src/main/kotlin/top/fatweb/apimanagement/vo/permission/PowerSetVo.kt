@@ -19,7 +19,6 @@ data class PowerSetVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ModuleVo
      */
     @field:Schema(description = "模块列表")
     val moduleList: List<ModuleVo>?,
@@ -29,7 +28,6 @@ data class PowerSetVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see MenuVo
      */
     @field:Schema(description = "菜单列表")
     val menuList: List<MenuVo>?,
@@ -39,7 +37,6 @@ data class PowerSetVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ScopeVo
      */
     @field:Schema(description = "作用域列表")
     val scopeList: List<ScopeVo>?,
@@ -49,7 +46,6 @@ data class PowerSetVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see OperationVo
      */
     @field:Schema(description = "操作列表")
     val operationList: List<OperationVo>?

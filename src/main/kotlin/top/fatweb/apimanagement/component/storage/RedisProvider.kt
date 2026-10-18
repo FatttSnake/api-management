@@ -10,7 +10,6 @@ import java.util.concurrent.TimeUnit
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see RedisTemplate
  */
 @Suppress("UNCHECKED_CAST")
 @Component

@@ -22,8 +22,6 @@ import top.fatweb.apimanagement.vo.system.TwoFactorSettingsVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ISettingsService
- * @see ISensitiveWordService
  */
 @BaseController(path = ["/system/settings"], name = "系统设置", description = "系统设置相关接口")
 class SettingsController(
@@ -36,8 +34,6 @@ class SettingsController(
      * @return Response object includes base settings information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see BaseSettingsVo
      */
     @Operation(summary = "获取基础设置")
     @GetMapping("/base")
@@ -52,8 +48,6 @@ class SettingsController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see BaseSettingsParam
-     * @see ResponseResult
      */
     @Operation(summary = "更新基础设置")
     @PutMapping("/base")
@@ -70,8 +64,6 @@ class SettingsController(
      * @return Response object includes mail settings
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see MailSettingsVo
      */
     @Operation(summary = "获取邮件设置")
     @GetMapping("/mail")
@@ -86,8 +78,6 @@ class SettingsController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see MailSettingsParam
-     * @see ResponseResult
      */
     @Operation(summary = "更新邮件设置")
     @PutMapping("/mail")
@@ -105,8 +95,6 @@ class SettingsController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see MailSendParam
-     * @see ResponseResult
      */
     @Operation(summary = "邮件发送测试")
     @PostMapping("/mail")
@@ -123,8 +111,6 @@ class SettingsController(
      * @return Response object includes sensitive word settings information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see SensitiveWordVo
      */
     @Operation(summary = "获取敏感词配置")
     @GetMapping("/sensitive")
@@ -139,8 +125,6 @@ class SettingsController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see SensitiveWordAddParam
-     * @see ResponseResult
      */
     @Operation(summary = "添加敏感词")
     @PostMapping("/sensitive")
@@ -158,8 +142,6 @@ class SettingsController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see SensitiveWordUpdateParam
-     * @see ResponseResult
      */
     @Operation(summary = "修改敏感词")
     @PutMapping("/sensitive")
@@ -173,11 +155,9 @@ class SettingsController(
     /**
      * Delete sensitive word
      *
-     * @see id Sensitive word ID
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
      */
     @Operation(summary = "删除敏感词")
     @DeleteMapping("/sensitive/{id}")
@@ -194,8 +174,6 @@ class SettingsController(
      * @return Response object includes two-factor settings information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see TwoFactorSettingsVo
      */
     @Operation(summary = "获取双因素设置")
     @GetMapping("/two-factor")
@@ -210,8 +188,6 @@ class SettingsController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see TwoFactorSettingsParam
-     * @see ResponseResult
      */
     @Operation(summary = "更新双因素设置")
     @PutMapping("/two-factor")
@@ -228,8 +204,6 @@ class SettingsController(
      * @return Response object includes API platform settings information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see ApiSettingsVo
      */
     @Operation(summary = "获取 API 平台设置")
     @GetMapping("/api")
@@ -244,8 +218,6 @@ class SettingsController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiSettingsParam
-     * @see ResponseResult
      */
     @Operation(summary = "更新 API 平台设置")
     @PutMapping("/api")

@@ -20,10 +20,6 @@ import top.fatweb.avatargenerator.GitHubAvatar
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServerProperties
- * @see PasswordEncoder
- * @see IUserService
- * @see IUserInfoService
  */
 @Component
 class InitConfig(

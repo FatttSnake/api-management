@@ -342,8 +342,8 @@ class PluginOpenApiGenerator(
         scalar(clazz, nullable)?.let { return it }
         if (clazz.isEnum) return enumOf(clazz, nullable)
         if (isByteArray(clazz)) return octetStream(nullable)
-        // An uploaded part is bytes as well, and 3.1 spells a binary payload the same way: a
-        // string carrying the media type, where 3.0's `format: binary` no longer exists
+        // An uploaded part is bytes as well, and 3.1 spells a binary payload as a string
+        // carrying the media type
         if (clazz.name == "org.springframework.web.multipart.MultipartFile") {
             return octetStream(nullable)
         }

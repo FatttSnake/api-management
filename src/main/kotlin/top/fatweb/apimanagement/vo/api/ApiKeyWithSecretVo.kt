@@ -8,7 +8,6 @@ import top.fatweb.apimanagement.entity.api.ApiKey
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ApiKeyVo
  * @see ApiKey
  */
 @Schema(description = "API Key 创建返回参数（含一次性 SecretKey）")

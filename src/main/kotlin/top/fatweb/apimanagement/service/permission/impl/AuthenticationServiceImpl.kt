@@ -53,18 +53,6 @@ import java.util.*
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServerProperties
- * @see TemplateEngine
- * @see AuthenticationManager
- * @see PasswordEncoder
- * @see RedisProvider
- * @see JwtProvider
- * @see CsrfTokenManager
- * @see TurnstileApi
- * @see IUserService
- * @see IUserInfoService
- * @see ISensitiveWordService
- * @see IAuthenticationService
  */
 @Service
 class AuthenticationServiceImpl(

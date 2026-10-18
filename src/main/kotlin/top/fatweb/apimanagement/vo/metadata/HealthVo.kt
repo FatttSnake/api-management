@@ -25,7 +25,6 @@ data class HealthVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "时间戳", example = "1900-01-01T00:00:00.000Z")
     val timestamp: LocalDateTime?

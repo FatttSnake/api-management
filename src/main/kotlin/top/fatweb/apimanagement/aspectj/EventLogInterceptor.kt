@@ -24,7 +24,6 @@ import top.fatweb.apimanagement.vo.permission.RegisterVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IEventLogService
  */
 @Aspect
 @Component
@@ -48,7 +47,6 @@ class EventLogInterceptor(
      * @param retValue Return value
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see JoinPoint
      */
     @AfterReturning(value = "eventLogPointcut()", returning = "retValue")
     fun doAfter(joinPoint: JoinPoint, retValue: Any?) {

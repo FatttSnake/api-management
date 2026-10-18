@@ -9,8 +9,6 @@ import top.fatweb.apimanagement.entity.api.ApiPluginSetting
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see BaseMapper
- * @see ApiPluginSetting
  */
 @Mapper
 interface ApiPluginSettingMapper : BaseMapper<ApiPluginSetting>

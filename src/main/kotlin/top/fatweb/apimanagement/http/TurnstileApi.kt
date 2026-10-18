@@ -17,7 +17,6 @@ interface TurnstileApi {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see SiteverifyResponse
      */
     @FormUrlEncoded
     @POST("siteverify")

@@ -56,7 +56,6 @@ data class SysLogVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "操作时间")
     val operateTime: LocalDateTime?,
@@ -129,7 +128,6 @@ data class SysLogVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "开始时间")
     val startTime: LocalDateTime?,
@@ -139,7 +137,6 @@ data class SysLogVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "结束时间")
     val endTime: LocalDateTime?,

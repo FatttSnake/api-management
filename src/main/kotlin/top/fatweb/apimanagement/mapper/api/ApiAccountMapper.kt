@@ -11,8 +11,6 @@ import java.math.BigDecimal
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see BaseMapper
- * @see ApiAccount
  */
 @Mapper
 interface ApiAccountMapper : BaseMapper<ApiAccount> {

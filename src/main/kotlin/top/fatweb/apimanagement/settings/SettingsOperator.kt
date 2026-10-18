@@ -81,8 +81,6 @@ object SettingsOperator {
      * @param value Value to set
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see KMutableProperty1
-     * @see BaseSettings
      */
     @JvmName("setBaseValue")
     fun <V> setValue(field: KMutableProperty1<BaseSettings, V?>, value: V?) {
@@ -108,8 +106,6 @@ object SettingsOperator {
      * @return Value
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see KMutableProperty1
-     * @see BaseSettings
      */
     @JvmName("getBaseValue")
     fun <V> getValue(field: KMutableProperty1<BaseSettings, V?>): V? =
@@ -123,8 +119,6 @@ object SettingsOperator {
      * @return Value
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see KMutableProperty1
-     * @see BaseSettings
      */
     @JvmName("getBaseValue")
     fun <V> getValue(field: KMutableProperty1<BaseSettings, V?>, default: V): V =
@@ -137,8 +131,6 @@ object SettingsOperator {
      * @param value Value to set
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see KMutableProperty1
-     * @see MailSettings
      */
     @JvmName("setMailValue")
     fun <V> setValue(field: KMutableProperty1<MailSettings, V?>, value: V?) {
@@ -163,8 +155,6 @@ object SettingsOperator {
      * @return Value
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see KMutableProperty1
-     * @see MailSettings
      */
     @JvmName("getMailValue")
     fun <V> getValue(field: KMutableProperty1<MailSettings, V?>): V? =
@@ -178,8 +168,6 @@ object SettingsOperator {
      * @return Value
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see KMutableProperty1
-     * @see MailSettings
      */
     @JvmName("getMailValue")
     fun <V> getValue(field: KMutableProperty1<MailSettings, V?>, default: V): V =
@@ -192,8 +180,6 @@ object SettingsOperator {
      * @param value Value to set
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see KMutableProperty1
-     * @see TwoFactorSettings
      */
     @JvmName("setTwoFactorValue")
     fun <V> setValue(field: KMutableProperty1<TwoFactorSettings, V?>, value: V?) {
@@ -211,8 +197,6 @@ object SettingsOperator {
      * @return Value
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see KMutableProperty1
-     * @see TwoFactorSettings
      */
     @JvmName("getTwoFactorValue")
     fun <V> getValue(field: KMutableProperty1<TwoFactorSettings, V?>): V? =
@@ -226,8 +210,6 @@ object SettingsOperator {
      * @return Value
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see KMutableProperty1
-     * @see TwoFactorSettings
      */
     @JvmName("getTwoFactorValue")
     fun <V> getValue(field: KMutableProperty1<TwoFactorSettings, V?>, default: V): V =
@@ -240,8 +222,6 @@ object SettingsOperator {
      * @param value Value to set
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see KMutableProperty1
-     * @see ApiSettings
      */
     @JvmName("setApiValue")
     fun <V> setValue(field: KMutableProperty1<ApiSettings, V?>, value: V?) {
@@ -259,8 +239,6 @@ object SettingsOperator {
      * @return Value
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see KMutableProperty1
-     * @see ApiSettings
      */
     @JvmName("getApiValue")
     fun <V> getValue(field: KMutableProperty1<ApiSettings, V?>): V? =
@@ -274,8 +252,6 @@ object SettingsOperator {
      * @return Value
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see KMutableProperty1
-     * @see ApiSettings
      */
     @JvmName("getApiValue")
     fun <V> getValue(field: KMutableProperty1<ApiSettings, V?>, default: V): V =

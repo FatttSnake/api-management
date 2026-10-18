@@ -19,7 +19,6 @@ import top.fatweb.apimanagement.vo.permission.base.RoleVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IRoleService
  */
 @BaseController(path = ["/system/role"], name = "角色管理", description = "角色管理相关接口")
 class RoleController(
@@ -32,8 +31,6 @@ class RoleController(
      * @return Response object includes role information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see RoleWithPowerVo
      */
     @Operation(summary = "获取单个角色")
     @GetMapping("/{id}")
@@ -48,10 +45,6 @@ class RoleController(
      * @return Response object includes role paging information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see RoleGetParam
-     * @see ResponseResult
-     * @see PageVo
-     * @see RoleWithPowerVo
      */
     @Operation(summary = "获取角色")
     @GetMapping
@@ -67,8 +60,6 @@ class RoleController(
      * @return Response object includes role list
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see RoleVo
      */
     @Operation(summary = "获取角色列表")
     @GetMapping("/list")
@@ -86,9 +77,6 @@ class RoleController(
      * @return Response object includes role information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see RoleAddParam
-     * @see ResponseResult
-     * @see RoleVo
      */
     @Operation(summary = "添加角色")
     @PostMapping
@@ -105,8 +93,6 @@ class RoleController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see RoleUpdateParam
-     * @see ResponseResult
      */
     @Operation(summary = "修改角色")
     @PutMapping
@@ -124,8 +110,6 @@ class RoleController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see RoleUpdateStatusParam
-     * @see ResponseResult
      */
     @Operation(summary = "修改角色状态")
     @PatchMapping
@@ -143,7 +127,6 @@ class RoleController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
      */
     @Operation(summary = "删除角色")
     @DeleteMapping("/{id}")
@@ -161,8 +144,6 @@ class RoleController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see RoleDeleteParam
-     * @see ResponseResult
      */
     @Operation(summary = "批量删除角色")
     @DeleteMapping

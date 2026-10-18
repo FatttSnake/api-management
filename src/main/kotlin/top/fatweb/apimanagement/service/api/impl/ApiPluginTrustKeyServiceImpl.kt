@@ -29,10 +29,6 @@ import top.fatweb.apimanagement.vo.api.ApiPluginTrustKeyVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServiceImpl
- * @see ApiPluginTrustKeyMapper
- * @see ApiPluginTrustKey
- * @see IApiPluginTrustKeyService
  */
 @Service
 @DS("master")

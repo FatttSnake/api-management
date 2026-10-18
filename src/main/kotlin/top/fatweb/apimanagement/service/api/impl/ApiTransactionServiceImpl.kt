@@ -25,10 +25,6 @@ import java.math.BigDecimal
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServiceImpl
- * @see ApiTransactionMapper
- * @see ApiTransaction
- * @see IApiTransactionService
  */
 @Service
 @DS("master")

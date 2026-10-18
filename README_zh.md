@@ -179,7 +179,7 @@ knife4j:
 
 平台的全部「可用 API」均来自插件。插件开发相关见项目 [api-management-plugins](https://github.com/FatttSnake/api-management-plugins)。
 
-插件是一个独立的 Gradle 工程，应用本仓库随 SDK 一同发布的 Gradle 插件 **`top.fatweb.api-plugin`**：它会自动加入 SDK 依赖、从 `apiPlugin { }` DSL 生成 `api-plugin.json` 描述符、生成 Ed25519 开发者密钥对、把公钥嵌入 jar 并完成签名——`./gradlew build` 即可产出**已签名**的插件 jar。
+插件是一个独立的 Gradle 工程，应用本仓库随 SDK 一同发布的 Gradle 插件 **`top.fatweb.api-plugin`**：它加入 SDK 依赖、从 `apiPlugin { }` DSL 生成 `api-plugin.json` 描述符、生成 Ed25519 密钥对、把公钥嵌入 jar 并完成签名——`./gradlew build` 产出**已签名**的插件 jar。
 
 把 SDK 与 Gradle 插件发布给插件工程使用（本仓库内执行一次）：
 
@@ -189,7 +189,7 @@ knife4j:
 
 ### 依赖
 
-`runtimeClasspath` 里的依赖会以嵌套 jar 的形式打进插件包的 `META-INF/api-plugin-libs/`，**不需要**再自己配 shadow/fat jar。网关已提供的库（SDK、Spring、Jackson、SLF4J、Kotlin、Swagger、MyBatis/Hikari、JDBC 驱动与 BouncyCastle）会被过滤掉，运行时从网关解析。其余依赖由网关解压到 `app.storage.plugin-library-dir`，并按依赖的 SHA-256 在插件间共享同一个类加载器——相同 jar 只定义一次。要保留瘦包可设 `apiPlugin { bundleDependencies = false }`。
+`runtimeClasspath` 依赖会以嵌套 jar 打进插件包的 `META-INF/api-plugin-libs/`，**不需要**再配 shadow/fat jar。网关已提供的库（SDK、Spring、Jackson、SLF4J、Kotlin、Swagger、MyBatis/Hikari、JDBC 驱动与 BouncyCastle）会被过滤掉，运行时从网关解析。其余依赖由网关解压到 `app.storage.plugin-library-dir`，并按依赖的 SHA-256 在插件间共享类加载器。要保留瘦包可设 `apiPlugin { bundleDependencies = false }`。
 
 网关默认提供 BouncyCastle 1.86（`bcprov`、`bcpkix`、`bcutil`）。需要其他版本的插件可设 `apiPlugin { bundleBouncyCastle = true }` 自带一份；由于 provider 是 JVM 全局注册的，这类插件必须把 `Provider` 实例传给 BouncyCastle 的 builder，**不要**调用 `Security.addProvider`——全局注册会在 reload 后钉住插件的类加载器，并可能与网关的 `"BC"` provider 冲突。
 
@@ -204,17 +204,17 @@ knife4j:
 | `POST /system/api/plugin/{pluginId}/config/datasource/test` | 用**尚未保存**的值试连一次（`name` + 要用的配置项；某项不传或传 `null` 表示用已存值）。仅 MySQL——SQLite 是网关自备的文件，没有管理员的连接可试。失败回 40067 与驱动原文 |
 | `POST /system/api/plugin/{pluginId}/reload` | 用已存储的 jar 原地重挂载，用于**换了 jar**；配置与数据不受影响。改数据源**不需要**它 |
 
-配置项的三种提交状态：**缺省 = 不动、空串 = 清除、有值 = 写入**。数字是唯一有「空表单」的类型，未设置时 `value` 为 `null`、声明的默认值在 `default` 里（插件读到的是它）；其余类型未设置时直接回默认值。`hasValue` 区分「显示的是默认值」还是「管理员设的值」——要回到默认值，把默认值写进去即可。**必填项按分组校验**：只要求本次提交的分组里那些必填项有值，别的分组没填不影响保存这一组。**secret 永不回值**，不提交即保持原值、提交空串即清除。
+配置项的三种提交状态：**缺省 = 不动、空串 = 清除、有值 = 写入**。数字是唯一有「空表单」的类型，未设置时 `value` 为 `null`、声明的默认值在 `default` 里（插件读到的是它）；其余类型未设置时直接回默认值。`hasValue` 区分「显示的是默认值」还是「管理员设的值」——要回到默认值，把默认值写进去即可。**必填项按分组校验**。**secret 永不回值**，不提交即保持原值、提交空串即清除。
 
-数据源：只有声明了 `datasources` 的插件才会拿到 `context.datasources`，且只含**已配置**的那些；名字不在 map 里，就是网关还没有东西可连。一个插件可以声明多个，两种方言也可以混用。方言由插件声明（`dbType`），不由管理员选——写 SQL/DDL 的是插件作者，他才知道自己在哪个方言上验证过。**SQLite 零配置**，声明即由网关按 `app.storage.plugin-datasource-dir/{pluginId}/{name}.db` 供给。**MySQL 数据源就是几条普通配置项**，因此表单、声明的约束、密钥加密全部复用；JDBC URL 由网关拼装，`params` 以**连接属性**下发给驱动（拒绝 `autoDeserialize`、`allowLoadLocalInfile`、`propertiesTransform` 等越出连接本身的属性——这是缓解而非沙箱，真正的边界仍是插件签名与信任库）。**host 与 database 都有值才算已配置**，清空任意一个即取消配置——只填了一半的表单，网关仍然没有东西可连，于是它只是「不在 map 里」，插件照常挂载、由接口自己报告该数据源不可用，直到管理员补齐；也正因为如此，声明了 `minLength` 或 `pattern` 的 host / database 字段会拒绝那个用于取消配置的空串。这些配置项必须落在同一个分组里，一个分组也只能描述一条连接：分组就是一条连接被填写、保存和测试的单位。
+数据源：只有声明了 `datasources` 的插件才会拿到 `context.datasources`，且只含**已配置**的那些；名字不在 map 里，就是网关还没有东西可连。一个插件可以声明多个，两种方言也可以混用。方言由插件声明（`dbType`），不由管理员选。**SQLite 零配置**，声明即由网关按 `app.storage.plugin-datasource-dir/{pluginId}/{name}.db` 供给。**MySQL 数据源就是普通配置项**，因此表单、约束与密钥加密全部复用；JDBC URL 由网关拼装，`params` 以**连接属性**下发给驱动（`autoDeserialize`、`allowLoadLocalInfile`、`propertiesTransform` 等越出连接本身的属性会被拒绝）。**host 与 database 都有值才算已配置**，清空任意一个即取消配置——因此声明了 `minLength` 或 `pattern` 的 host / database 字段会拒绝那个空串。这些配置项必须落在同一个分组里，一个分组也只能描述一条连接：分组就是一条连接被填写、保存和测试的单位。
 
-**升级是原地替换，管理员设过的东西全部保留**：插件行与接口行是**更新**而非重建，因此插件级的默认单价、限流与门禁，每个接口自己的单价、计费模式、是否需要 key、限流、访问模式与启用状态，以及这些接口上的角色授权，全部原样保留；唯一会消失的是新版本不再提供的接口，连同挂在它上面的授权。**重装当前已安装的同一个版本号是允许的**，同样按原地替换处理——调试循环正是反复做这件事，所以不必每改一次就递增 `versionCode`；只有**比已装版本更旧**才会被拒绝（40066）。
+**升级是原地替换，管理员设过的东西全部保留**：插件行与接口行是**更新**而非重建，因此插件级的默认单价、限流与门禁，每个接口自己的单价、计费模式、是否需要 key、限流、访问模式与启用状态，以及这些接口上的角色授权，全部原样保留；只有新版本不再提供的接口会连同其授权一起消失。**重装当前已安装的版本号是允许的**，行为相同，所以调试循环不必每改一次就递增 `versionCode`；只有**比已装版本更旧**才会被拒绝（40066）。
 
-插件可以只被关掉而不被移除：`PATCH /system/api/plugin` 传 `enable=false` 会把它拆下来。**被禁用的插件完全不运行**——网关启动时不加载它、它的路由不注册、请求它的接口会被拒；它的设置、文件区、数据源配置与授权一律不动，重新启用就是把同一个 jar 挂回同一批行上。
+插件可以只被关掉而不被移除：`PATCH /system/api/plugin` 传 `enable=false` 会把它拆下来。**被禁用的插件完全不运行**——网关启动时不加载它、路由不注册、请求它的接口会被拒；它的设置、文件区、数据源配置与授权一律不动，重新启用就是把同一个 jar 挂回同一批行上。
 
-`DELETE /system/api/plugin/{pluginId}?purgeData=true` 才会清除插件设置、SQLite 数据库目录与文件区（默认 `false` 即保留，便于重装续用）。网关只删自己保管的东西，`purgeData` 是给插件删自己东西的信号：实现 `onPurge` 即可——它在数据源、storage、配置都还开着、且没有任何请求在跑时被调用，这正是插件删掉自己建的表（包括网关从不碰的外部 MySQL 库）、释放 `saveContent` 过的内容寻址对象的地方。只有「真的卸载」才触发它：升级、reload、被禁用、关闭网关都不触发。没挂载的插件会**先被挂起来**，让它的退出钩子有东西可跑，而**该钩子失败会拒绝这次卸载**（40068），而不是删掉管理员的记录却把插件的数据留在原地——此时什么都还没删，修好原因重跑一次即可。插件释放掉的内容寻址对象由网关定期回收。
+`DELETE /system/api/plugin/{pluginId}?purgeData=true` 才会清除插件设置、SQLite 数据库目录与文件区（默认 `false` 即保留，便于重装续用）。插件自己的数据由 `onPurge` 删除：它在数据源、storage、配置都还开着、且没有请求在跑时被调用，正是插件删掉自己建的表（包括网关从不碰的外部 MySQL 库）、释放内容寻址对象的地方。只有「真的卸载」才触发它：升级、reload、被禁用、关闭网关都不触发。没挂载的插件会**先被挂起来**让退出钩子有东西可跑，而**该钩子失败会拒绝这次卸载**（40068），此时什么都还没删，修好原因重跑即可。插件释放掉的内容寻址对象由网关定期回收。
 
-生命周期钩子见 SDK 的 `PluginLifecycle`：`onStart`（每次挂载、路由注册之前）、`onStop`（每次卸载、先等在途请求结束，有超时上限）、`onUninstall`（插件被摘除之时，升级也会走——它**不是删数据的地方**，因为它每次发版升级都会跑）、`onPurge`（明确要求清除数据的卸载，也是唯一一个失败会拒绝该次卸载的钩子）。
+生命周期钩子见 SDK 的 `PluginLifecycle`：`onStart`（每次挂载、路由注册之前）、`onStop`（每次卸载、先等在途请求结束，有超时上限）、`onUninstall`（版本被摘除之时，升级也会走——它**不是删数据的地方**）、`onPurge`（明确要求清除数据的卸载，也是唯一一个失败会拒绝该次卸载的钩子）。
 
 ## 调试插件
 
@@ -256,7 +256,7 @@ knife4j:
 | local | `data/objects/{前2位}/{其余62位}` | `data/files/{key}` |
 | s3 | `{prefix}/objects/{前2位}/{其余62位}` | `{prefix}/files/{key}` |
 
-位置寻址是**系统级**能力，插件只是它的第一个使用方：插件的 key 为 `plugin-data/{插件ID}/{路径}`，其他子系统以后可以用别的前缀（如 `reports/2026/xxx.csv`），互不干扰。
+位置寻址是**系统级**能力：插件的 key 为 `plugin-data/{插件ID}/{路径}`，其他前缀留给其他子系统。
 
 另外，上传的外部插件 Jar 会物化到 `data/plugins` 目录用于类加载。
 
@@ -297,7 +297,7 @@ app:
 
 > **Q: 是否需要手动初始化数据库？**
 >
-> A: 不需要。本项目使用 `Flyway` 自动初始化 MySQL 与 SQLite 两套库，无需手动建表。为保证数据安全，升级时请先备份数据库。
+> A: 不需要。Flyway 会自动初始化两库。升级前请先备份数据库。
 
 > **Q: 如何在浏览器中查看接口文档？**
 >

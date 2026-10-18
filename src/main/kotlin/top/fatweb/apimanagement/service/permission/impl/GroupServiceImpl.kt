@@ -27,14 +27,6 @@ import top.fatweb.apimanagement.vo.permission.base.GroupVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServerProperties
- * @see RedisProvider
- * @see IRRoleGroupService
- * @see IUserService
- * @see ServiceImpl
- * @see GroupMapper
- * @see Group
- * @see IGroupService
  */
 @Service
 class GroupServiceImpl(

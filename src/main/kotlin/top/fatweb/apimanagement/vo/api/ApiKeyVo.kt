@@ -72,7 +72,6 @@ data class ApiKeyVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "过期时间", example = "2030-01-01T00:00:00.000Z")
     val expireTime: LocalDateTime?,
@@ -118,7 +117,6 @@ data class ApiKeyVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "最后使用时间", example = "2026-01-01T00:00:00.000Z")
     val lastUsedTime: LocalDateTime?,
@@ -137,7 +135,6 @@ data class ApiKeyVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "创建时间", example = "2026-01-01T00:00:00.000Z")
     val createTime: LocalDateTime?,
@@ -147,7 +144,6 @@ data class ApiKeyVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "修改时间", example = "2026-01-01T00:00:00.000Z")
     val updateTime: LocalDateTime?

@@ -39,7 +39,6 @@ data class ApiInterfaceUpdateParam(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiInterface.BillingMode
      */
     @field:Schema(
         description = "计费模式",
@@ -80,7 +79,6 @@ data class ApiInterfaceUpdateParam(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiInterface.AccessMode
      */
     @field:Schema(description = "访问模式 (null=继承插件)", allowableValues = ["DEFAULT", "RESTRICTED"])
     var accessMode: ApiInterface.AccessMode?

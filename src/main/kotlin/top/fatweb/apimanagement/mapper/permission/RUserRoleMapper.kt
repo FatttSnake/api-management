@@ -9,8 +9,6 @@ import top.fatweb.apimanagement.entity.permission.RUserRole
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see BaseMapper
- * @see RUserRole
  */
 @Mapper
 interface RUserRoleMapper : BaseMapper<RUserRole>

@@ -11,7 +11,6 @@ import org.springframework.security.core.userdetails.UserDetails
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see UserDetails
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
 class ApiKeyPrincipal : UserDetails {

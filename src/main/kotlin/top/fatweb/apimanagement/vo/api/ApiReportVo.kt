@@ -65,7 +65,6 @@ data class ApiReportVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiKeyVo
      */
     @field:Schema(description = "API Key 信息")
     val keyVo: ApiKeyVo?,
@@ -75,7 +74,6 @@ data class ApiReportVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see UserWithInfoVo
      */
     @field:Schema(description = "Key 所属用户信息")
     val userVo: UserWithInfoVo?,
@@ -85,7 +83,6 @@ data class ApiReportVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginVo
      */
     @field:Schema(description = "API 插件信息")
     val pluginVo: ApiPluginVo?,
@@ -95,7 +92,6 @@ data class ApiReportVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiInterfaceVo
      */
     @field:Schema(description = "API 接口信息")
     val interfaceVo: ApiInterfaceVo?

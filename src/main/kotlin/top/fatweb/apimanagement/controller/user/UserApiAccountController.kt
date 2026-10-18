@@ -20,8 +20,6 @@ import top.fatweb.apimanagement.vo.api.ApiTransactionVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IApiAccountService
- * @see IApiTransactionService
  */
 @BaseController(path = ["/user/api/account"], name = "我的 API 账户", description = "用户自助 API 账户接口")
 class UserApiAccountController(
@@ -34,8 +32,6 @@ class UserApiAccountController(
      * @return Response object includes account information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see ApiAccountVo
      */
     @Operation(summary = "获取我的 API 账户")
     @GetMapping
@@ -49,10 +45,6 @@ class UserApiAccountController(
      * @return Response object includes transaction paging information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiTransactionGetParam
-     * @see ResponseResult
-     * @see PageVo
-     * @see ApiTransactionVo
      */
     @Operation(summary = "获取我的 API 流水")
     @GetMapping("/transactions")

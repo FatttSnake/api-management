@@ -21,10 +21,6 @@ import top.fatweb.apimanagement.util.getToken
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServerProperties
- * @see RedisProvider
- * @see JwtProvider
- * @see OncePerRequestFilter
  */
 @Component
 class JwtAuthenticationTokenFilter(

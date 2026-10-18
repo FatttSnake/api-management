@@ -65,7 +65,6 @@ data class ApiTransactionVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiTransaction.Type
      */
     @field:Schema(description = "流水类型", allowableValues = ["TOPUP", "DEDUCT", "REFUND", "ADJUST"])
     val type: ApiTransaction.Type?,
@@ -104,7 +103,6 @@ data class ApiTransactionVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "交易时间", example = "2026-01-01T00:00:00.000Z")
     val createTime: LocalDateTime?

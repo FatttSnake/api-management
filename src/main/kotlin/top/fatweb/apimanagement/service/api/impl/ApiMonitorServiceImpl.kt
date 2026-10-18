@@ -22,11 +22,6 @@ import java.time.LocalDateTime
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServerProperties
- * @see RedisProvider
- * @see ApiUsageMapper
- * @see IApiPluginService
- * @see IApiMonitorService
  */
 @Service
 @DS("master")

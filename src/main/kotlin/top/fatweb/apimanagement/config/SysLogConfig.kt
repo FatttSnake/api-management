@@ -11,9 +11,6 @@ import top.fatweb.apimanagement.aspectj.SysLogInterceptor
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see SysLogInterceptor
- * @see ApiAccessInterceptor
- * @see WebMvcConfigurer
  */
 @Configuration
 class SysLogConfig(

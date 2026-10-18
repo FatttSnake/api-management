@@ -36,10 +36,6 @@ import java.util.concurrent.Executor
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  * @see Hidden
- * @see Executor
- * @see ISysLogService
- * @see HandlerInterceptor
- * @see ResponseBodyAdvice
  */
 @Hidden
 @ControllerAdvice

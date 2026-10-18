@@ -72,8 +72,8 @@ abstract class GeneratePluginDescriptor : DefaultTask() {
         val code = versionCode.orNull
             ?: error(
                 "apiPlugin.versionCode is REQUIRED — set it explicitly in the apiPlugin { } block " +
-                    "(e.g. versionCode = 1). It no longer defaults to 1, because the gateway holds " +
-                    "it against the installed version and refuses a deployment below it."
+                    "(e.g. versionCode = 1). It has no default: the gateway holds it against the " +
+                    "installed version and refuses a deployment below it."
             )
         require(code >= 1) { "apiPlugin.versionCode must be >= 1 (got $code)" }
 

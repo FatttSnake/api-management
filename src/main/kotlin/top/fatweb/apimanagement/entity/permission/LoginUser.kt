@@ -13,7 +13,6 @@ import java.time.ZoneOffset
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see UserDetails
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
 class LoginUser() : UserDetails {

@@ -11,10 +11,6 @@ import top.fatweb.apimanagement.service.permission.IRPowerRoleService
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServiceImpl
- * @see RPowerRoleMapper
- * @see RPowerRole
- * @see IRPowerRoleService
  */
 @Service
 class RPowerRoleServiceImpl : ServiceImpl<RPowerRoleMapper, RPowerRole>(), IRPowerRoleService

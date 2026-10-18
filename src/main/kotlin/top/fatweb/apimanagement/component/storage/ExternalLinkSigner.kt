@@ -16,7 +16,6 @@ import javax.crypto.spec.SecretKeySpec
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServerProperties
  */
 @Component
 class ExternalLinkSigner(

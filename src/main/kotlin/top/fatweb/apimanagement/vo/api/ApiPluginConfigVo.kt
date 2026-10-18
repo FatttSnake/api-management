@@ -25,7 +25,6 @@ data class ApiPluginConfigVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginConfigGroupVo
      */
     @field:Schema(description = "配置分组")
     val groups: List<ApiPluginConfigGroupVo>,
@@ -35,7 +34,6 @@ data class ApiPluginConfigVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginConfigDatasourceVo
      */
     @field:Schema(description = "数据源声明")
     val datasources: List<ApiPluginConfigDatasourceVo>
@@ -81,7 +79,6 @@ data class ApiPluginConfigGroupVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginConfigFieldVo
      */
     @field:Schema(description = "配置项")
     val fields: List<ApiPluginConfigFieldVo>,
@@ -271,7 +268,6 @@ data class ApiPluginConfigFieldVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginConfigOptionVo
      */
     @field:Schema(description = "枚举可选值")
     val options: List<ApiPluginConfigOptionVo>

@@ -39,11 +39,6 @@ private val SQL_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern(
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServerProperties
- * @see RedisProvider
- * @see IStatisticsLogService
- * @see IEventLogService
- * @see IStatisticsService
  */
 @Service
 class StatisticsServiceImpl(

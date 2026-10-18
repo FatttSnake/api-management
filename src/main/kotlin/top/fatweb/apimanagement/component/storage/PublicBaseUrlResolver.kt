@@ -14,7 +14,6 @@ import top.fatweb.apimanagement.properties.ServerProperties
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServerProperties
  */
 @Component
 class PublicBaseUrlResolver(

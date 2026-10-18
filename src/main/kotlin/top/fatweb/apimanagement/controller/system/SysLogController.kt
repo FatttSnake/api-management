@@ -18,7 +18,6 @@ import top.fatweb.apimanagement.vo.system.SysLogVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ISysLogService
  */
 @BaseController(path = ["/system/log"], name = "系统日志", description = "系统日志相关接口")
 class SysLogController(
@@ -31,9 +30,6 @@ class SysLogController(
      * @return Response object includes system log in page
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see SysLogGetParam
-     * @see ResponseResult
-     * @see SysLogVo
      */
     @Operation(summary = "获取")
     @GetMapping

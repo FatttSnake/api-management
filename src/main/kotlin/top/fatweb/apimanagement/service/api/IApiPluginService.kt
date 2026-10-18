@@ -112,7 +112,6 @@ interface IApiPluginService : IService<ApiPlugin> {
      * @return Effective access mode
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiInterface.AccessMode
      */
     fun resolveAccessMode(api: ApiInterface): ApiInterface.AccessMode
 

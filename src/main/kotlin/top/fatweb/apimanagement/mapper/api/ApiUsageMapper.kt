@@ -9,8 +9,6 @@ import top.fatweb.apimanagement.entity.api.ApiUsage
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see BaseMapper
- * @see ApiUsage
  */
 @Mapper
 interface ApiUsageMapper : BaseMapper<ApiUsage>

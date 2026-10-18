@@ -22,7 +22,6 @@ data class ApiAuditGetParam(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see EventLog.Event
      */
     @field:Schema(
         description = "事件类型",
@@ -35,7 +34,6 @@ data class ApiAuditGetParam(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "开始时间", example = "2026-01-01T00:00:00.000Z")
     @field:DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
@@ -46,7 +44,6 @@ data class ApiAuditGetParam(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "结束时间", example = "2026-12-31T00:00:00.000Z")
     @field:DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")

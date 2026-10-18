@@ -11,10 +11,6 @@ import top.fatweb.apimanagement.service.permission.IScopeService
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServiceImpl
- * @see ScopeMapper
- * @see Scope
- * @see IScopeService
  */
 @Service
 class ScopeServiceImpl : ServiceImpl<ScopeMapper, Scope>(), IScopeService

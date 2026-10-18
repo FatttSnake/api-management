@@ -55,7 +55,6 @@ data class LoginVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(
         description = "上次登录时间",

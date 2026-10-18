@@ -13,8 +13,6 @@ import top.fatweb.apimanagement.util.queryOrThrowException
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IUserService
- * @see UserDetailsService
  */
 @Service
 class UserDetailsServiceImpl(

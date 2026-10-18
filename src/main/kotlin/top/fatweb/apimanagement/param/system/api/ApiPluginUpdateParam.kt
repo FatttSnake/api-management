@@ -57,7 +57,6 @@ data class ApiPluginUpdateParam(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiInterface.AccessMode
      */
     @field:Schema(description = "默认访问模式 (接口继承此值)", allowableValues = ["DEFAULT", "RESTRICTED"])
     var defaultAccessMode: ApiInterface.AccessMode?

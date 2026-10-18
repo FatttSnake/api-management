@@ -13,7 +13,6 @@ import top.fatweb.apimanagement.vo.api.ApiMonitorDashboardVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IApiMonitorService
  */
 @BaseController(path = ["/system/api/monitor"], name = "API 监控", description = "API 监控相关接口")
 class ApiMonitorController(
@@ -25,8 +24,6 @@ class ApiMonitorController(
      * @return Response object includes dashboard information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see ApiMonitorDashboardVo
      */
     @Operation(summary = "获取 API 监控看板")
     @GetMapping("/dashboard")

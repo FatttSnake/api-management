@@ -9,8 +9,6 @@ import top.fatweb.apimanagement.entity.permission.RRoleGroup
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see BaseMapper
- * @see RRoleGroup
  */
 @Mapper
 interface RRoleGroupMapper : BaseMapper<RRoleGroup>

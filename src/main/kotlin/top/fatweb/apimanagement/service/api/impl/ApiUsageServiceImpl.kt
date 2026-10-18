@@ -25,12 +25,6 @@ import top.fatweb.apimanagement.vo.api.ApiUsageVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IApiKeyService
- * @see IApiPluginService
- * @see ServiceImpl
- * @see ApiUsageMapper
- * @see ApiUsage
- * @see IApiUsageService
  */
 @Service
 @DS("master")

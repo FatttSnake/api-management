@@ -25,7 +25,6 @@ data class ActiveInfoVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see HistoryVo
      */
     @field:Schema(description = "登录用户数量历史")
     val loginHistory: List<HistoryVo>,
@@ -45,7 +44,6 @@ data class ActiveInfoVo(
          *
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
-         * @see LocalDate
          */
         @field:Schema(description = "记录时间", example = "1900-01-01")
         val time: LocalDate,

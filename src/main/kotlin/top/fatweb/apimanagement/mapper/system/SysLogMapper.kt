@@ -12,8 +12,6 @@ import java.time.LocalDateTime
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see BaseMapper
- * @see SysLog
  */
 @Mapper
 interface SysLogMapper : BaseMapper<SysLog> {
@@ -30,7 +28,6 @@ interface SysLogMapper : BaseMapper<SysLog> {
      * @return System log in page
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     fun selectPage(
         page: IPage<SysLog>,

@@ -30,8 +30,6 @@ import java.time.Duration
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServerProperties
- * @see FileStorageProvider
  */
 @Component
 @ConditionalOnProperty(name = ["app.storage.mode"], havingValue = "s3")

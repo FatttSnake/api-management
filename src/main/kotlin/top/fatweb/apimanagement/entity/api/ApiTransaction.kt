@@ -74,7 +74,6 @@ class ApiTransaction : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Type
      */
     @TableField("type")
     var type: Type? = null
@@ -111,7 +110,6 @@ class ApiTransaction : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @TableField("create_time", fill = FieldFill.INSERT)
     var createTime: LocalDateTime? = null
@@ -121,7 +119,6 @@ class ApiTransaction : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @TableField("update_time", fill = FieldFill.INSERT_UPDATE)
     var updateTime: LocalDateTime? = null

@@ -9,8 +9,6 @@ import top.fatweb.apimanagement.entity.permission.RPowerRole
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see BaseMapper
- * @see RPowerRole
  */
 @Mapper
 interface RPowerRoleMapper : BaseMapper<RPowerRole>

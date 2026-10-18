@@ -29,7 +29,6 @@ data class SensitiveWordAddParam(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see SensitiveWord.Use
      */
     @field:Schema(description = "用于", allowableValues = ["USERNAME"])
     val useFor: Set<SensitiveWord.Use> = emptySet(),

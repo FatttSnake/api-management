@@ -9,8 +9,6 @@ import top.fatweb.apimanagement.entity.permission.Operation
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see BaseMapper
- * @see Operation
  */
 @Mapper
 interface OperationMapper : BaseMapper<Operation>

@@ -62,7 +62,6 @@ data class UserAddParam(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "过期时间", example = "1900-01-01T00:00:00.000Z")
     val expiration: LocalDateTime?,
@@ -72,7 +71,6 @@ data class UserAddParam(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "认证过期时间", example = "1900-01-01T00:00:00.000Z")
     val credentialsExpiration: LocalDateTime?,

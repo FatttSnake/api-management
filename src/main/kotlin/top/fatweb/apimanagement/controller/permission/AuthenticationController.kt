@@ -21,7 +21,6 @@ import top.fatweb.apimanagement.vo.permission.TwoFactorVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IAuthenticationService
  */
 @BaseController(name = "身份认证", description = "身份认证相关接口")
 class AuthenticationController(
@@ -30,17 +29,10 @@ class AuthenticationController(
     /**
      * Register
      *
-     * @see request Request information
-     * @see response Response information
      * @param registerParam Register parameters
      * @return Response object includes user ID
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see HttpServletRequest
-     * @see HttpServletResponse
-     * @see RegisterParam
-     * @see ResponseResult
-     * @see RegisterVo
      */
     @Operation(summary = "注册")
     @PostMapping("/register")
@@ -64,7 +56,6 @@ class AuthenticationController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
      */
     @Operation(summary = "发送验证邮件")
     @PostMapping("/resend")
@@ -81,8 +72,6 @@ class AuthenticationController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see VerifyParam
-     * @see ResponseResult
      */
     @Operation(summary = "验证邮箱")
     @PostMapping("/verify")
@@ -100,9 +89,6 @@ class AuthenticationController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see HttpServletRequest
-     * @see ForgetParam
-     * @see ResponseResult
      */
     @Operation(summary = "忘记密码")
     @PostMapping("/forget")
@@ -123,9 +109,6 @@ class AuthenticationController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see HttpServletRequest
-     * @see RetrieveParam
-     * @see ResponseResult
      */
     @Operation(summary = "找回密码")
     @PostMapping("/retrieve")
@@ -150,11 +133,6 @@ class AuthenticationController(
      * @return Response object includes login information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see HttpServletRequest
-     * @see HttpServletResponse
-     * @see LoginParam
-     * @see ResponseResult
-     * @see LoginVo
      */
     @Operation(summary = "登录")
     @PostMapping("/login")
@@ -179,8 +157,6 @@ class AuthenticationController(
      * @return Response object includes two-factor QR code
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see TwoFactorVo
      */
     @Operation(summary = "创建双因素验证码")
     @GetMapping("/two-factor")
@@ -194,8 +170,6 @@ class AuthenticationController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see TwoFactorValidateParam
-     * @see ResponseResult
      */
     @Operation(summary = "验证双因素")
     @PostMapping("/two-factor")
@@ -210,8 +184,6 @@ class AuthenticationController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see TwoFactorRemoveParam
-     * @see ResponseResult
      */
     @Operation(summary = "移除双因素")
     @DeleteMapping("/two-factor")
@@ -228,9 +200,6 @@ class AuthenticationController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see HttpServletRequest
-     * @see HttpServletResponse
-     * @see ResponseResult
      */
     @Operation(summary = "登出")
     @PostMapping("/logout")
@@ -260,7 +229,6 @@ class AuthenticationController(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      * @see HttpServletRequest
-     * @see HttpServletResponse
      * @see ResponseResult
      * @see TokenVo
      */

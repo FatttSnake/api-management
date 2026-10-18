@@ -16,10 +16,6 @@ import top.fatweb.apimanagement.util.updateOrThrowException
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServiceImpl
- * @see ApiPluginSettingMapper
- * @see ApiPluginSetting
- * @see IApiPluginSettingService
  */
 @Service
 @DS("master")

@@ -41,7 +41,6 @@ class SysLog : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LogType
      */
     @TableField("log_type")
     var logType: LogType? = null
@@ -78,7 +77,6 @@ class SysLog : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @TableField("operate_time")
     var operateTime: LocalDateTime? = null
@@ -151,7 +149,6 @@ class SysLog : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @TableField("start_time")
     var startTime: LocalDateTime? = null
@@ -161,7 +158,6 @@ class SysLog : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @TableField("end_time")
     var endTime: LocalDateTime? = null

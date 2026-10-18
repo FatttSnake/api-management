@@ -22,10 +22,6 @@ import top.fatweb.apimanagement.vo.system.SysLogVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServiceImpl
- * @see SysLogMapper
- * @see SysLog
- * @see ISysLogService
  */
 @DS("sqlite")
 @Service

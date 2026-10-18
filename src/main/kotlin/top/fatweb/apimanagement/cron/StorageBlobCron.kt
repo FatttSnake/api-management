@@ -16,7 +16,6 @@ import top.fatweb.apimanagement.service.system.IStorageBlobService
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IStorageBlobService
  */
 @Component
 class StorageBlobCron(

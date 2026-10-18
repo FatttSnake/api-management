@@ -23,8 +23,6 @@ import top.fatweb.apimanagement.vo.api.ApiTopVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IApiReportService
- * @see IStorageBlobService
  */
 @BaseController(path = ["/system/api/report"], name = "API 报表", description = "API 报表相关接口")
 class ApiReportController(
@@ -38,9 +36,6 @@ class ApiReportController(
      * @return Response object includes report information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiReportGetParam
-     * @see ResponseResult
-     * @see ApiReportVo
      */
     @Operation(summary = "获取 API 用量报表")
     @GetMapping("/usage")
@@ -55,9 +50,6 @@ class ApiReportController(
      * @return Response object includes report information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiReportGetParam
-     * @see ResponseResult
-     * @see ApiReportVo
      */
     @Operation(summary = "获取 API 费用报表")
     @GetMapping("/cost")
@@ -72,9 +64,6 @@ class ApiReportController(
      * @return Response object includes top list
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiReportGetParam
-     * @see ResponseResult
-     * @see ApiTopVo
      */
     @Operation(summary = "获取 API Top 列表")
     @GetMapping("/top")
@@ -89,8 +78,6 @@ class ApiReportController(
      * @return Response object includes file hash
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiReportGetParam
-     * @see ResponseResult
      */
     @Operation(summary = "导出 API 用量报表")
     @GetMapping("/export")
@@ -105,8 +92,6 @@ class ApiReportController(
      * @return Response object includes file hash
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiReportGetParam
-     * @see ResponseResult
      */
     @Operation(summary = "导出 API 用量明细")
     @GetMapping("/export/detail")
@@ -121,8 +106,6 @@ class ApiReportController(
      * @return Report file bytes
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseEntity
-     * @see ByteArray
      */
     @Operation(summary = "下载导出报表")
     @GetMapping("/export/{fileHash}")

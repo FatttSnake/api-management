@@ -29,7 +29,6 @@ data class ApiPluginConfigUpdateParam(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginConfigGroupParam
      */
     @field:Schema(description = "要保存的配置分组")
     @field:Valid
@@ -60,7 +59,6 @@ data class ApiPluginConfigGroupParam(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginConfigValueParam
      */
     @field:Schema(description = "配置项")
     @field:Valid

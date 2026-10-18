@@ -21,7 +21,6 @@ import top.fatweb.apimanagement.vo.permission.UserWithRoleInfoVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IUserService
  */
 @BaseController(path = ["/system/user"], name = "用户管理", description = "用户管理相关接口")
 class UserController(
@@ -38,8 +37,6 @@ class UserController(
      * @return Response object includes user information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see UserWithPowerInfoVo
      */
     @Operation(summary = "获取当前用户信息")
     @GetMapping("/info")
@@ -53,8 +50,6 @@ class UserController(
      * @return Response object includes user basic information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see UserWithInfoVo
      */
     @Operation(summary = "获取指定用户基本信息")
     @GetMapping("/info/{username}")
@@ -68,8 +63,6 @@ class UserController(
      * @return Response object includes user basic information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see UserWithInfoVo
      */
     @Operation(summary = "获取指定用户基本信息")
     @GetMapping("/infoById/{id}")
@@ -83,8 +76,6 @@ class UserController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see UserInfoUpdateParam
-     * @see ResponseResult
      */
     @Operation(summary = "更新当前用户信息")
     @PatchMapping("/info")
@@ -101,8 +92,6 @@ class UserController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see UserChangePasswordParam
-     * @see ResponseResult
      */
     @Operation(summary = "更改密码")
     @PostMapping("/info")
@@ -119,8 +108,6 @@ class UserController(
      * @return Response object includes user information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see UserWithRoleInfoVo
      */
     @Operation(summary = "获取单个用户")
     @GetMapping("/{id}")
@@ -135,10 +122,6 @@ class UserController(
      * @return Response object includes user paging information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see UserGetParam
-     * @see ResponseResult
-     * @see PageVo
-     * @see UserWithRoleInfoVo
      */
     @Operation(summary = "获取用户")
     @GetMapping
@@ -155,9 +138,6 @@ class UserController(
      * @return Response object includes user information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see UserAddParam
-     * @see ResponseResult
-     * @see UserWithRoleInfoVo
      */
     @Operation(summary = "添加用户")
     @PostMapping
@@ -174,8 +154,6 @@ class UserController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see UserUpdateParam
-     * @see ResponseResult
      */
     @Operation(summary = "修改用户")
     @PutMapping
@@ -193,8 +171,6 @@ class UserController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see UserUpdatePasswordParam
-     * @see ResponseResult
      */
     @Operation(summary = "修改密码")
     @PatchMapping
@@ -212,7 +188,6 @@ class UserController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
      */
     @Operation(summary = "删除用户")
     @DeleteMapping("/{id}")
@@ -230,8 +205,6 @@ class UserController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see UserDeleteParam
-     * @see ResponseResult
      */
     @Operation(summary = "批量删除用户")
     @DeleteMapping

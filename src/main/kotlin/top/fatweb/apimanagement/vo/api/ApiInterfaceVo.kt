@@ -102,7 +102,6 @@ data class ApiInterfaceVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiInterface.BillingMode
      */
     @field:Schema(description = "计费模式", allowableValues = ["FREE", "SUCCESS_ONLY", "ALWAYS"])
     val billingMode: ApiInterface.BillingMode?,
@@ -139,7 +138,6 @@ data class ApiInterfaceVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiInterface.AccessMode
      */
     @field:Schema(description = "访问模式 (null=继承插件)", allowableValues = ["DEFAULT", "RESTRICTED"])
     val accessMode: ApiInterface.AccessMode?,
@@ -149,7 +147,6 @@ data class ApiInterfaceVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "创建时间", example = "2026-01-01T00:00:00.000Z")
     val createTime: LocalDateTime?,
@@ -159,7 +156,6 @@ data class ApiInterfaceVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "修改时间", example = "2026-01-01T00:00:00.000Z")
     val updateTime: LocalDateTime?

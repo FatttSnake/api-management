@@ -11,8 +11,6 @@ import top.fatweb.apimanagement.entity.permission.User
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see BaseMapper
- * @see User
  */
 @Mapper
 interface UserMapper : BaseMapper<User> {

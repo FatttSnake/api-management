@@ -22,7 +22,6 @@ import top.fatweb.apimanagement.vo.api.ApiPluginVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IApiPluginService
  */
 @BaseController(path = ["/system/api"], name = "API 插件管理", description = "API 插件管理相关接口")
 class ApiPluginController(
@@ -35,10 +34,6 @@ class ApiPluginController(
      * @return Response object includes API plugin paging information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginGetParam
-     * @see ResponseResult
-     * @see PageVo
-     * @see ApiPluginVo
      */
     @Operation(summary = "获取 API 插件列表")
     @GetMapping("/plugin")
@@ -53,8 +48,6 @@ class ApiPluginController(
      * @return Response object includes API plugin information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see ApiPluginVo
      */
     @Operation(summary = "获取 API 插件")
     @GetMapping("/plugin/{pluginId}/info")
@@ -69,9 +62,6 @@ class ApiPluginController(
      * @return Response object includes installed plugin information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see MultipartFile
-     * @see ResponseResult
-     * @see ApiPluginVo
      */
     @Operation(summary = "安装 API 插件")
     @PostMapping("/plugin/install")
@@ -89,8 +79,6 @@ class ApiPluginController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginUpdateParam
-     * @see ResponseResult
      */
     @Operation(summary = "修改 API 插件")
     @PutMapping("/plugin")
@@ -108,8 +96,6 @@ class ApiPluginController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginUpdateStatusParam
-     * @see ResponseResult
      */
     @Operation(summary = "修改 API 插件启用状态")
     @PatchMapping("/plugin")
@@ -152,8 +138,6 @@ class ApiPluginController(
      * @return Response object includes reloaded plugin information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see ApiPluginVo
      */
     @Operation(summary = "重新挂载 API 插件")
     @PostMapping("/plugin/{pluginId}/reload")
@@ -171,8 +155,6 @@ class ApiPluginController(
      * @return Response object includes the declared config schema and its current values
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see ApiPluginConfigVo
      */
     @Operation(summary = "获取 API 插件配置")
     @GetMapping("/plugin/{pluginId}/config")
@@ -191,8 +173,6 @@ class ApiPluginController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginConfigUpdateParam
-     * @see ResponseResult
      */
     @Operation(summary = "修改 API 插件配置")
     @PutMapping("/plugin/config")
@@ -211,8 +191,6 @@ class ApiPluginController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginDatasourceTestParam
-     * @see ResponseResult
      */
     @Operation(summary = "测试 API 插件数据源连接")
     @PostMapping("/plugin/{pluginId}/config/datasource/test")
@@ -241,9 +219,6 @@ class ApiPluginController(
      * @return Response object includes API interface paging information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiInterfaceGetParam
-     * @see ResponseResult
-     * @see PageVo
      * @see ApiInterfaceVo
      */
     @Operation(summary = "获取 API 接口列表")
@@ -259,8 +234,6 @@ class ApiPluginController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiInterfaceUpdateParam
-     * @see ResponseResult
      */
     @Operation(summary = "修改 API 接口配置")
     @PutMapping
@@ -278,8 +251,6 @@ class ApiPluginController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiInterfaceUpdateStatusParam
-     * @see ResponseResult
      */
     @Operation(summary = "修改 API 接口启用状态")
     @PatchMapping

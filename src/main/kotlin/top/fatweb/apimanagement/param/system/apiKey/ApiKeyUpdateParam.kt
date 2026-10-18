@@ -58,7 +58,6 @@ data class ApiKeyUpdateParam(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "过期时间", example = "2030-01-01T00:00:00.000Z")
     var expireTime: LocalDateTime?,

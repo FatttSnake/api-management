@@ -18,7 +18,6 @@ import top.fatweb.apimanagement.vo.system.TwoFactorSettingsVo
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  * @see ServerProperties
- * @see ISettingsService
  */
 @Service
 class SettingsServiceImpl : ISettingsService {

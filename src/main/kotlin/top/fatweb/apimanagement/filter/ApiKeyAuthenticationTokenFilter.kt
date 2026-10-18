@@ -27,10 +27,6 @@ import java.util.concurrent.TimeUnit
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServerProperties
- * @see RedisProvider
- * @see IApiKeyService
- * @see OncePerRequestFilter
  */
 @Component
 class ApiKeyAuthenticationTokenFilter(

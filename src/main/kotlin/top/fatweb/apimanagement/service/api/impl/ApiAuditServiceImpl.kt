@@ -23,12 +23,6 @@ import top.fatweb.apimanagement.vo.api.ApiAuditVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IApiKeyService
- * @see IUserService
- * @see ServiceImpl
- * @see EventLogMapper
- * @see EventLog
- * @see IApiAuditService
  */
 @Service
 @DS("sqlite")

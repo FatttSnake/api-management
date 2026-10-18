@@ -82,32 +82,6 @@ import io.swagger.v3.oas.annotations.Operation as SwaggerOperation
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see JsonMapper
- * @see ApplicationContext
- * @see ThreadPoolTaskExecutor
- * @see RequestMappingHandlerMapping
- * @see ServerProperties
- * @see FileStorageProvider
- * @see PowerMapper
- * @see MenuMapper
- * @see ScopeMapper
- * @see OperationMapper
- * @see ApiInterfaceMapper
- * @see IStorageBlobService
- * @see IApiPluginSettingService
- * @see IApiPluginTrustKeyService
- * @see IApiAccountService
- * @see PluginDatasourceFactory
- * @see PluginStorageFactory
- * @see PluginRegistryCache
- * @see PluginConfigSchemaCache
- * @see PluginSettingReader
- * @see PluginOpenApiGenerator
- * @see ServiceImpl
- * @see ApiPluginMapper
- * @see ApiPlugin
- * @see IApiPluginService
- * @see ApplicationRunner
  */
 @Service
 @DS("master")
@@ -379,15 +353,14 @@ class ApiPluginServiceImpl(
     /**
      * Bring a plugin's runtime in line with the enable flag that was just written
      *
-     * The caller holds [mountLock], and has already written the row and refreshed the cache, so
-     * that a request arriving while this runs reads the new intent rather than the old one:
-     * switched off is refused, never served from a runtime that is on its way out.
+     * The caller holds [mountLock] and has already written the row and refreshed the cache, so a
+     * request arriving here reads the new intent: switched off is refused, never served from a
+     * runtime on its way out.
      *
-     * Disabling takes the runtime down and nothing else - the plugin's settings, its file area,
-     * its datasource configuration and its grants all stay exactly where they are, and switching
-     * it back on mounts the same jar over the same rows. Enabling is that mount, and a failure in
-     * it is the ordinary failed-mount outcome: the rows survive, `load_error` carries the reason,
-     * and the next attempt retries them.
+     * Disabling takes the runtime down and nothing else; settings, files, datasource
+     * configuration and grants stay put, and switching it back on mounts the same jar over the
+     * same rows. A failed enable is an ordinary failed mount: the rows survive, `load_error`
+     * carries the reason.
      *
      * @param pluginId Plugin ID
      * @param enabled Whether the plugin is now enabled
@@ -846,19 +819,16 @@ class ApiPluginServiceImpl(
     /**
      * Uninstall a plugin, giving it the chance to take its own data with it
      *
-     * Replacing a plugin with a newer version does not come through here: that leaves the
-     * registration standing and only swaps the runtime, so nothing the administrator configured
-     * is touched. This is the path where the plugin really goes away.
+     * An upgrade does not come through here: it leaves the registration standing and only swaps
+     * the runtime. This is the path where the plugin really goes away.
      *
      * @param pluginId Plugin ID
      * @param purgeData Whether everything the plugin owns - its settings, its datasource
      *        configuration and data, and the files it stored - should be deleted along with it.
-     *        The default an uninstall carries is false, so that a reinstall can pick up where
-     *        the plugin left off and an administrator who wants it gone can still ask for the
-     *        purge afterwards
+     *        False keeps them so a reinstall can pick up where the plugin left off
      * @throws PluginPurgeFailedException when [purgeData] is set and the plugin could not delete
-     *         its own data. The uninstall is refused rather than half-done: nothing has been
-     *         removed at that point, so running it again once the cause is fixed is all it takes
+     *         its own data. The uninstall is refused rather than half-done, so it can be retried
+     *         once the cause is fixed
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      * @see PluginLifecycle
@@ -924,13 +894,12 @@ class ApiPluginServiceImpl(
     /**
      * Mount a plugin that is not running, so that its own teardown hooks have something to run on
      *
-     * Only a purge asks for this. `onPurge` is where a plugin drops the tables it owns, and it
-     * reaches them through its datasources - which exist only while it is mounted - so a plugin
-     * the administrator switched off has to be brought up once more in order to be taken apart.
+     * Only a purge asks for this. `onPurge` reaches the plugin's tables through its
+     * datasources, which exist only while it is mounted, so a switched-off plugin is brought up
+     * once more to be taken apart.
      *
-     * The mount is never registered, never routed and never visible to the request path: it
-     * exists only to hand [unmount] a runtime. The plugin's `onStart` is deliberately not run
-     * with it, since nothing here is starting the plugin.
+     * The mount is never registered, routed or visible to the request path; it exists only to
+     * hand [unmount] a runtime. `onStart` is deliberately not run.
      *
      * @param plugin Installed plugin row
      * @return Runtime for [unmount] to take down
@@ -1141,10 +1110,9 @@ class ApiPluginServiceImpl(
      * @param expectedPluginId Plugin ID the jar must declare, or null to take the jar's own.
      *        A remount passes the install it is replacing, so a jar that turns out to belong to
      *        a different plugin is caught while the running one is still serving
-     * @param runStart Whether the plugin's own `onStart` hook is run as part of the mount. Only
-     *        a mount built to be purged passes false: that one exists to run the plugin's
-     *        teardown hooks against the datasources it declares, and starting it on the way to
-     *        taking it apart would be work nobody asked for
+     * @param runStart Whether the plugin's own `onStart` hook runs as part of the mount. Only a
+     *        mount built for a purge passes false: it exists to run the teardown hooks against
+     *        the declared datasources
      * @return Built mount, ready to activate
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0

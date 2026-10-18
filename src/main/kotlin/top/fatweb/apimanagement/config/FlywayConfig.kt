@@ -14,9 +14,6 @@ import javax.sql.DataSource
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see FlywayProperties
- * @see DataSource
- * @see JavaMigration
  */
 @Configuration
 class FlywayConfig(

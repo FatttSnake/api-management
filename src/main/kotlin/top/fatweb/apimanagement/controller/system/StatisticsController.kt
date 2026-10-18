@@ -15,7 +15,6 @@ import top.fatweb.apimanagement.vo.system.*
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IStatisticsService
  */
 @BaseController(path = ["/system/statistics"], name = "统计接口", description = "系统信息统计相关接口")
 class StatisticsController(
@@ -27,8 +26,6 @@ class StatisticsController(
      * @return Response object includes software information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see SoftwareInfoVo
      */
     @Operation(summary = "获取软件信息")
     @GetMapping("/software")
@@ -41,8 +38,6 @@ class StatisticsController(
      * @return Response object includes hardware information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see HardwareInfoVo
      */
     @Operation(summary = "获取硬件信息")
     @GetMapping("/hardware")
@@ -55,8 +50,6 @@ class StatisticsController(
      * @return Response object includes CPU information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see CpuInfoVo
      */
     @Operation(summary = "获取 CPU 信息")
     @GetMapping("/cpu")
@@ -69,8 +62,6 @@ class StatisticsController(
      * @return Response object includes storage information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see StorageInfoVo
      */
     @Operation(summary = "获取存储信息")
     @GetMapping("/storage")
@@ -84,9 +75,6 @@ class StatisticsController(
      * @return Response object includes online user information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see OnlineInfoGetParam
-     * @see ResponseResult
-     * @see OnlineInfoVo
      */
     @Operation(summary = "获取在线用户数量信息")
     @GetMapping("/online")
@@ -101,9 +89,6 @@ class StatisticsController(
      * @return Response object includes history of active information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ActiveInfoGetParam
-     * @see ResponseResult
-     * @see ActiveInfoVo
      */
     @Operation(summary = "获取用户活跃信息")
     @GetMapping("/active")

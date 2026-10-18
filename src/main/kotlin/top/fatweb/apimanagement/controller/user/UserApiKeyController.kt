@@ -21,7 +21,6 @@ import top.fatweb.apimanagement.vo.api.ApiKeyWithSecretVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IApiKeyService
  */
 @BaseController(path = ["/user/api/key"], name = "我的 API Key", description = "用户自助 API Key 管理接口")
 class UserApiKeyController(
@@ -34,8 +33,6 @@ class UserApiKeyController(
      * @return Response object includes API key information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see ApiKeyVo
      */
     @Operation(summary = "获取我的单个 API Key")
     @GetMapping("/{id}")
@@ -49,10 +46,6 @@ class UserApiKeyController(
      * @return Response object includes API key paging information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiKeyGetParam
-     * @see ResponseResult
-     * @see PageVo
-     * @see ApiKeyVo
      */
     @Operation(summary = "获取我的 API Key")
     @GetMapping
@@ -66,9 +59,6 @@ class UserApiKeyController(
      * @return Response object includes API key information and one-time secret key
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiKeyAddParam
-     * @see ResponseResult
-     * @see ApiKeyWithSecretVo
      */
     @Operation(summary = "创建我的 API Key")
     @PostMapping
@@ -84,8 +74,6 @@ class UserApiKeyController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiKeyUpdateParam
-     * @see ResponseResult
      */
     @Operation(summary = "修改我的 API Key")
     @PutMapping
@@ -102,8 +90,6 @@ class UserApiKeyController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiKeyUpdateStatusParam
-     * @see ResponseResult
      */
     @Operation(summary = "修改我的 API Key 状态")
     @PatchMapping
@@ -120,8 +106,6 @@ class UserApiKeyController(
      * @return Response object includes new one-time secret key
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see ApiKeyWithSecretVo
      */
     @Operation(summary = "重新生成我的 SecretKey")
     @PostMapping("/{id}/regenerate")
@@ -137,7 +121,6 @@ class UserApiKeyController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
      */
     @Operation(summary = "删除我的 API Key")
     @DeleteMapping("/{id}")
@@ -154,8 +137,6 @@ class UserApiKeyController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiKeyDeleteParam
-     * @see ResponseResult
      */
     @Operation(summary = "批量删除我的 API Key")
     @DeleteMapping
@@ -171,8 +152,6 @@ class UserApiKeyController(
      * @return Response object includes API interface groups
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see ApiKeyAvailableGroupVo
      */
     @Operation(summary = "获取我可授权的 API 列表（按插件分组）")
     @GetMapping("/available-apis")

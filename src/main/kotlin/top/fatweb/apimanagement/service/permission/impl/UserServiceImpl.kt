@@ -47,20 +47,6 @@ import kotlin.io.encoding.Base64
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServerProperties
- * @see PasswordEncoder
- * @see RedisProvider
- * @see IUserInfoService
- * @see IModuleService
- * @see IMenuService
- * @see IScopeService
- * @see IOperationService
- * @see IRUserRoleService
- * @see IRUserGroupService
- * @see ServiceImpl
- * @see UserMapper
- * @see User
- * @see IUserService
  */
 @DS("master")
 @Service

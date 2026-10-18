@@ -9,8 +9,6 @@ import top.fatweb.apimanagement.entity.system.EventLog
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see BaseMapper
- * @see EventLog
  */
 @Mapper
 interface EventLogMapper : BaseMapper<EventLog>

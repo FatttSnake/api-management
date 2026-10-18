@@ -25,7 +25,6 @@ data class OnlineInfoVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see HistoryVo
      */
     @field:Schema(description = "历史记录")
     val history: List<HistoryVo>
@@ -36,7 +35,6 @@ data class OnlineInfoVo(
          *
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
-         * @see LocalDateTime
          */
         @field:Schema(description = "记录时间")
         val time: LocalDateTime,

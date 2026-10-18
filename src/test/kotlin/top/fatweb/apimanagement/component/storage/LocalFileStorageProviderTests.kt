@@ -198,8 +198,8 @@ class LocalFileStorageProviderTests {
     fun `content keys are validated before a path is resolved`(@TempDir tempDir: Path) {
         val provider = providerAt(tempDir)
 
-        // '..' used to shift the resolved path out of objects/, and a short key threw
-        // StringIndexOutOfBoundsException while splitting the shard directory.
+        // '..' must not shift the resolved path out of objects/, and a short key must not
+        // throw StringIndexOutOfBoundsException while splitting the shard directory.
         listOf("../..", "..", "ab", "", "Z".repeat(64)).forEach { key ->
             assertFailsWith<IllegalArgumentException>("expected '$key' to be rejected") { provider.load(key) }
         }

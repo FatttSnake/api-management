@@ -46,7 +46,6 @@ data class ApiTopVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginVo
      */
     @field:Schema(description = "API 插件信息")
     val pluginVo: ApiPluginVo?,
@@ -56,7 +55,6 @@ data class ApiTopVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiInterfaceVo
      */
     @field:Schema(description = "API 接口信息")
     val interfaceVo: ApiInterfaceVo?

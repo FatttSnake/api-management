@@ -18,7 +18,6 @@ import top.fatweb.apimanagement.vo.api.ApiUsageVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IApiUsageService
  */
 @BaseController(path = ["/user/api/usage"], name = "我的 API 用量", description = "用户自助 API 用量接口")
 class UserApiUsageController(
@@ -31,10 +30,6 @@ class UserApiUsageController(
      * @return Response object includes usage paging information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiUsageGetParam
-     * @see ResponseResult
-     * @see PageVo
-     * @see ApiUsageVo
      */
     @Operation(summary = "获取我的 API 用量")
     @GetMapping

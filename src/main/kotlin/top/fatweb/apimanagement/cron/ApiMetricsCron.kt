@@ -16,9 +16,6 @@ import top.fatweb.apimanagement.service.system.IStatisticsLogService
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServerProperties
- * @see RedisProvider
- * @see IStatisticsLogService
  */
 @Component
 class ApiMetricsCron(

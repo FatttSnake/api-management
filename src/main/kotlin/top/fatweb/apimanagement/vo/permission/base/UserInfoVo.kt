@@ -64,7 +64,6 @@ data class UserInfoVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "创建时间", example = "1900-01-01T00:00:00.000Z")
     val createTime: LocalDateTime?,
@@ -74,7 +73,6 @@ data class UserInfoVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "修改时间", example = "1900-01-01T00:00:00.000Z")
     val updateTime: LocalDateTime?

@@ -68,7 +68,6 @@ data class SysLogGetParam(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "查询开始时间", example = "1900-01-01T00:00:00.000Z")
     @field:DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
@@ -79,7 +78,6 @@ data class SysLogGetParam(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "查询结束时间", example = "1900-01-01T00:00:00.000Z")
     @field:DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")

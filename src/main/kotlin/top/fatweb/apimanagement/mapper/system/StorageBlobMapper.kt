@@ -10,8 +10,6 @@ import top.fatweb.apimanagement.entity.system.StorageBlob
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see BaseMapper
- * @see StorageBlob
  */
 @Mapper
 interface StorageBlobMapper : BaseMapper<StorageBlob> {

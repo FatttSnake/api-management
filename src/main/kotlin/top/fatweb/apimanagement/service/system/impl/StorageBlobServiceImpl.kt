@@ -20,10 +20,6 @@ import java.util.concurrent.TimeUnit
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServiceImpl
- * @see StorageBlobMapper
- * @see StorageBlob
- * @see IStorageBlobService
  */
 @Service
 class StorageBlobServiceImpl(

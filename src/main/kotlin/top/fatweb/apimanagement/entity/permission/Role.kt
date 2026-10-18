@@ -44,7 +44,6 @@ class Role : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @TableField("create_time", fill = FieldFill.INSERT)
     var createTime: LocalDateTime? = null
@@ -54,7 +53,6 @@ class Role : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @TableField("update_time", fill = FieldFill.INSERT_UPDATE)
     var updateTime: LocalDateTime? = null
@@ -84,7 +82,6 @@ class Role : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Module
      */
     @TableField(exist = false)
     var modules: List<Module>? = null
@@ -94,7 +91,6 @@ class Role : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Menu
      */
     @TableField(exist = false)
     var menus: List<Menu>? = null
@@ -104,7 +100,6 @@ class Role : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Scope
      */
     @TableField(exist = false)
     var scopes: List<Scope>? = null
@@ -114,7 +109,6 @@ class Role : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Operation
      */
     @TableField(exist = false)
     var operations: List<Operation>? = null
@@ -124,7 +118,6 @@ class Role : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see Power
      */
     @TableField(exist = false)
     var powers: List<Power>? = null

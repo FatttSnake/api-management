@@ -29,7 +29,6 @@ data class ApiAuditVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see EventLog.Event
      */
     @field:Schema(description = "事件类型")
     val event: EventLog.Event?,
@@ -48,7 +47,6 @@ data class ApiAuditVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "操作时间")
     val operateTime: LocalDateTime?,
@@ -67,7 +65,6 @@ data class ApiAuditVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see UserWithInfoVo
      */
     @field:Schema(description = "操作人信息")
     val userVo: UserWithInfoVo?,
@@ -77,7 +74,6 @@ data class ApiAuditVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiKeyVo
      */
     @field:Schema(description = "被操作 Key 信息")
     val keyVo: ApiKeyVo?,
@@ -87,7 +83,6 @@ data class ApiAuditVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see UserWithInfoVo
      */
     @field:Schema(description = "目标用户信息")
     val targetUserVo: UserWithInfoVo?

@@ -29,7 +29,6 @@ data class ApiPluginDatasourceTestParam(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiPluginConfigValueParam
      */
     @field:Schema(description = "要测试的配置项（缺省的项用已存值）")
     @field:Valid

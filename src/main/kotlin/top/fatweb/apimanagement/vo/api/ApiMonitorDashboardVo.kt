@@ -15,7 +15,6 @@ data class ApiMonitorDashboardVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiMonitorItemVo
      */
     @field:Schema(description = "实时指标（当前窗口）")
     val live: List<ApiMonitorItemVo>?,
@@ -52,7 +51,6 @@ data class ApiMonitorDashboardVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiTopVo
      */
     @field:Schema(description = "Top API")
     val topApis: List<ApiTopVo>?,
@@ -62,7 +60,6 @@ data class ApiMonitorDashboardVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiTopVo
      */
     @field:Schema(description = "今日 Top API")
     val todayTopApis: List<ApiTopVo>?
@@ -116,7 +113,6 @@ data class ApiMonitorDashboardVo(
          *
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
-         * @see ApiPluginVo
          */
         @field:Schema(description = "API 插件信息")
         val pluginVo: ApiPluginVo?,
@@ -126,7 +122,6 @@ data class ApiMonitorDashboardVo(
          *
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
-         * @see ApiInterfaceVo
          */
         @field:Schema(description = "API 接口信息")
         val interfaceVo: ApiInterfaceVo?

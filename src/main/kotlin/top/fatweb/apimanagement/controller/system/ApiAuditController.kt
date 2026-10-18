@@ -17,7 +17,6 @@ import top.fatweb.apimanagement.vo.api.ApiAuditVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IApiAuditService
  */
 @BaseController(path = ["/system/api/audit"], name = "API 审计", description = "API 审计查询相关接口")
 class ApiAuditController(
@@ -30,10 +29,6 @@ class ApiAuditController(
      * @return Response object includes audit paging information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiAuditGetParam
-     * @see ResponseResult
-     * @see PageVo
-     * @see ApiAuditVo
      */
     @Operation(summary = "获取 API 审计")
     @GetMapping

@@ -84,7 +84,6 @@ data class ApiPluginVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiInterface.AccessMode
      */
     @field:Schema(description = "默认访问模式 (接口继承此值)", allowableValues = ["DEFAULT", "RESTRICTED"])
     val defaultAccessMode: ApiInterface.AccessMode?,
@@ -148,7 +147,6 @@ data class ApiPluginVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "创建时间", example = "2026-01-01T00:00:00.000Z")
     val createTime: LocalDateTime?,
@@ -158,7 +156,6 @@ data class ApiPluginVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "修改时间", example = "2026-01-01T00:00:00.000Z")
     val updateTime: LocalDateTime?

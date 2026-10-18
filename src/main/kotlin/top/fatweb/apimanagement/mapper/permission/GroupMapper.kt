@@ -11,8 +11,6 @@ import top.fatweb.apimanagement.entity.permission.Group
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see BaseMapper
- * @see Group
  */
 @Mapper
 interface GroupMapper : BaseMapper<Group> {

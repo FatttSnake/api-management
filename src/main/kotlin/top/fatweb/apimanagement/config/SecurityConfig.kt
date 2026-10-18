@@ -24,10 +24,6 @@ import top.fatweb.apimanagement.util.TimezoneUtil
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ApiKeyAuthenticationTokenFilter
- * @see JwtAuthenticationTokenFilter
- * @see JwtAuthenticationEntryPointHandler
- * @see JwtAccessDeniedHandler
  */
 @Configuration
 @EnableMethodSecurity

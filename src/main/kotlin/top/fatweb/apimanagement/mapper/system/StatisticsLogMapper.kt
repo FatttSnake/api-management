@@ -9,8 +9,6 @@ import top.fatweb.apimanagement.entity.system.StatisticsLog
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see BaseMapper
- * @see StatisticsLog
  */
 @Mapper
 interface StatisticsLogMapper : BaseMapper<StatisticsLog>

@@ -80,7 +80,6 @@ class ApiKey : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @TableField("expire_time")
     var expireTime: LocalDateTime? = null
@@ -126,7 +125,6 @@ class ApiKey : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @TableField("last_used_time")
     var lastUsedTime: LocalDateTime? = null
@@ -145,7 +143,6 @@ class ApiKey : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @TableField("create_time", fill = FieldFill.INSERT)
     var createTime: LocalDateTime? = null
@@ -155,7 +152,6 @@ class ApiKey : Serializable {
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @TableField("update_time", fill = FieldFill.INSERT_UPDATE)
     var updateTime: LocalDateTime? = null

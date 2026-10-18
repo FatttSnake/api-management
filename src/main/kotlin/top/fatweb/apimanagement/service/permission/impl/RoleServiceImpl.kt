@@ -25,16 +25,7 @@ import top.fatweb.apimanagement.vo.permission.base.RoleVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see ServerProperties
- * @see RedisProvider
- * @see IRPowerRoleService
  * @see IScopeService
- * @see IMenuService
- * @see IUserService
- * @see ServiceImpl
- * @see RoleMapper
- * @see Role
- * @see IRoleService
  */
 @Service
 class RoleServiceImpl(

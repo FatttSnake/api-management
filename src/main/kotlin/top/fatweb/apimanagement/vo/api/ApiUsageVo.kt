@@ -156,7 +156,6 @@ data class ApiUsageVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiInterface.BillingMode
      */
     @field:Schema(description = "计费模式")
     val billingMode: ApiInterface.BillingMode?,
@@ -166,7 +165,6 @@ data class ApiUsageVo(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "调用时间")
     val createTime: LocalDateTime?

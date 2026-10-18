@@ -14,7 +14,6 @@ import java.util.concurrent.locks.ReentrantLock
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see PluginInFlightTracker.Handle
  */
 @Component
 class PluginInFlightTracker {

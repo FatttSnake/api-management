@@ -31,7 +31,6 @@ data class ApiTransactionGetParam(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ApiTransaction.Type
      */
     @field:Schema(description = "流水类型", allowableValues = ["TOPUP", "DEDUCT", "REFUND", "ADJUST"])
     var type: ApiTransaction.Type?,
@@ -41,7 +40,6 @@ data class ApiTransactionGetParam(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "开始时间", example = "2026-01-01T00:00:00.000Z")
     @field:DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
@@ -52,7 +50,6 @@ data class ApiTransactionGetParam(
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see LocalDateTime
      */
     @field:Schema(description = "结束时间", example = "2026-12-31T00:00:00.000Z")
     @field:DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")

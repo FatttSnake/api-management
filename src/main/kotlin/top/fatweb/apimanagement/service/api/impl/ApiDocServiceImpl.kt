@@ -24,10 +24,6 @@ import top.fatweb.apimanagement.vo.api.ApiDocVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see JsonMapper
- * @see IApiPluginService
- * @see IApiKeyService
- * @see IApiDocService
  */
 @Service
 @DS("master")

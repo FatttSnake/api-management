@@ -19,7 +19,6 @@ import top.fatweb.apimanagement.vo.permission.base.GroupVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IGroupService
  */
 @BaseController(path = ["/system/group"], name = "用户组管理", description = "用户组管理相关接口")
 class GroupController(
@@ -32,8 +31,6 @@ class GroupController(
      * @return Response object includes group information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see GroupWithRoleVo
      */
     @Operation(summary = "获取单个用户组")
     @GetMapping("/{id}")
@@ -48,10 +45,6 @@ class GroupController(
      * @return Response object includes group paging information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see GroupGetParam
-     * @see ResponseResult
-     * @see PageVo
-     * @see GroupWithRoleVo
      */
     @Operation(summary = "获取用户组")
     @GetMapping
@@ -67,8 +60,6 @@ class GroupController(
      * @return Response object includes group list
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see GroupVo
      */
     @Operation(summary = "获取用户组列表")
     @GetMapping("/list")
@@ -85,9 +76,6 @@ class GroupController(
      * @return Response object includes group information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see GroupAddParam
-     * @see ResponseResult
-     * @see GroupVo
      */
     @Operation(summary = "添加用户组")
     @PostMapping
@@ -104,8 +92,6 @@ class GroupController(
      * @return Response object includes group information
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see GroupUpdateParam
-     * @see ResponseResult
      * @see GroupVo
      */
     @Operation(summary = "修改用户组")
@@ -124,8 +110,6 @@ class GroupController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see GroupUpdateStatusParam
-     * @see ResponseResult
      */
     @Operation(summary = "修改用户组状态")
     @PatchMapping
@@ -143,7 +127,6 @@ class GroupController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
      */
     @Operation(summary = "删除用户组")
     @DeleteMapping("/{id}")
@@ -161,8 +144,6 @@ class GroupController(
      * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see GroupDeleteParam
-     * @see ResponseResult
      */
     @Operation(summary = "批量删除用户组")
     @DeleteMapping

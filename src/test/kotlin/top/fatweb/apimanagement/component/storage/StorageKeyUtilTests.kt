@@ -119,8 +119,8 @@ class StorageKeyUtilTests {
     fun `content keys are exactly one lowercase sha256 digest`() {
         assertTrue(StorageKeyUtil.CONTENT_KEY_REGEX.matches("a".repeat(64)))
 
-        // A short key is the case that used to throw StringIndexOutOfBoundsException
-        // while resolving the shard directory.
+        // A short key must not throw StringIndexOutOfBoundsException while resolving the
+        // shard directory.
         listOf("", "ab", "..", "A".repeat(64), "a".repeat(63), "a".repeat(65))
             .forEach { assertFalse(StorageKeyUtil.CONTENT_KEY_REGEX.matches(it), "expected '$it' to be rejected") }
     }

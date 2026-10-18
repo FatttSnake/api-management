@@ -13,7 +13,6 @@ import top.fatweb.apimanagement.vo.permission.PowerSetVo
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
- * @see IPowerService
  */
 @BaseController(path = ["/system/power"], name = "权限管理", description = "权限管理相关接口")
 class PowerController(
@@ -25,8 +24,6 @@ class PowerController(
      * @return Response object includes power list
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see ResponseResult
-     * @see PowerSetVo
      */
     @Operation(summary = "获取权限列表")
     @GetMapping("/list")
