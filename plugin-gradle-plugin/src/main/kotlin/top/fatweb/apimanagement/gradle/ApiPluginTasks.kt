@@ -320,7 +320,7 @@ abstract class DeployPlugin : DefaultTask() {
             .timeout(REQUEST_TIMEOUT)
             .header("Authorization", "Bearer $token")
             .header("Content-Type", "multipart/form-data; boundary=$boundary")
-            .POST(HttpRequest.BodyPublishers.ofByteArray(multipartBody(boundary, jar.name, jar.readBytes())))
+            .POST(multipartBody(boundary, jar.name, jar))
             .build()
 
         val reply = envelope(send(install), token)
@@ -430,7 +430,7 @@ abstract class DeployPlugin : DefaultTask() {
             ?: return "is not a JWT (it has no payload segment)"
         val payload = try {
             String(Base64.getUrlDecoder().decode(segment), Charsets.UTF_8)
-        } catch (e: IllegalArgumentException) {
+        } catch (_: IllegalArgumentException) {
             return "has a payload that is not base64url"
         }
         val exp = try {
@@ -467,7 +467,11 @@ abstract class DeployPlugin : DefaultTask() {
         throw GradleException("apiPlugin.serverUrl is not a valid URL: $url")
     }
 
-    private fun multipartBody(boundary: String, fileName: String, content: ByteArray): ByteArray {
+    private fun multipartBody(
+        boundary: String,
+        fileName: String,
+        file: File
+    ): HttpRequest.BodyPublisher {
         val escaped = fileName.replace("\\", "\\\\").replace("\"", "\\\"")
         val header = buildString {
             append("--").append(boundary).append(CRLF)
@@ -475,8 +479,13 @@ abstract class DeployPlugin : DefaultTask() {
                 .append(escaped).append("\"").append(CRLF)
             append("Content-Type: application/java-archive").append(CRLF).append(CRLF)
         }.toByteArray(Charsets.UTF_8)
+        val footer = "$CRLF--$boundary--$CRLF".toByteArray(Charsets.UTF_8)
 
-        return header + content + "$CRLF--$boundary--$CRLF".toByteArray(Charsets.UTF_8)
+        return HttpRequest.BodyPublishers.concat(
+            HttpRequest.BodyPublishers.ofByteArray(header),
+            HttpRequest.BodyPublishers.ofFile(file.toPath()),
+            HttpRequest.BodyPublishers.ofByteArray(footer)
+        )
     }
 
     /**
@@ -505,9 +514,9 @@ abstract class DeployPlugin : DefaultTask() {
     )
 
     companion object {
-        // Matches the gateway's own cap (ApiPluginServiceImpl.MAX_JAR_SIZE); refusing here
+        // Matches the gateway's default cap (app.storage.plugin-jar-max-bytes); refusing here
         // saves uploading something the gateway is certain to reject.
-        private const val MAX_JAR_SIZE_BYTES = 50L * 1024 * 1024
+        private const val MAX_JAR_SIZE_BYTES = 200L * 1024 * 1024
 
         // Codes the gateway returns in the envelope (ResponseCode).
         private const val CODE_PLUGIN_NOT_TRUSTED = 40064

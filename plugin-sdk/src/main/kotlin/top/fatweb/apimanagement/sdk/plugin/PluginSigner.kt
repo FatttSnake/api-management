@@ -1,5 +1,6 @@
 package top.fatweb.apimanagement.sdk.plugin
 
+import java.io.InputStream
 import java.math.BigInteger
 import java.nio.file.Files
 import java.nio.file.Path
@@ -198,7 +199,7 @@ object PluginSigner {
         JarFile(jar.toFile()).use { jarFile ->
             jarFile.entries().asSequence().forEach { entry ->
                 if (entry.isDirectory || entry.name == SIGNATURE_ENTRY) return@forEach
-                val hash = jarFile.getInputStream(entry).use { sha256Hex(it.readBytes()) }
+                val hash = jarFile.getInputStream(entry).use { sha256Hex(it) }
                 entries[entry.name] = hash
             }
         }
@@ -299,4 +300,15 @@ object PluginSigner {
 
     private fun sha256Hex(bytes: ByteArray): String =
         MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+
+    private fun sha256Hex(input: InputStream): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        while (true) {
+            val read = input.read(buffer)
+            if (read < 0) break
+            digest.update(buffer, 0, read)
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
 }

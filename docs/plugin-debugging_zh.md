@@ -128,3 +128,6 @@ access token 就是控制台登录响应里的 `accessToken`，默认有效期 2
   `40063` 挂载本身失败。
 - 插件打包了网关也拥有的类：`PluginClassLoaderManager` 里那些共享前缀只会从网关解析、
   不回落到 jar，所以打包了其中某个类的插件必须停止打包它。
+- 运行时缺第三方类：运行时依赖会自动打进 `META-INF/api-plugin-libs/`，网关已提供的库则从
+  网关解析。BouncyCastle 默认由网关提供；`bundleBouncyCastle = true` 可改为插件自带，
+  此时必须把 `Provider` 实例传给 builder，不能调用 `Security.addProvider`。

@@ -46,6 +46,22 @@ data class StorageProperties(
     @field:NotBlank val pluginDir: String = "data/plugins",
 
     /**
+     * Directory holding the extracted dependency jars shared by plugins
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @field:NotBlank val pluginLibraryDir: String = "data/plugin-libs",
+
+    /**
+     * Maximum accepted plugin jar size in bytes
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @field:Min(1) val pluginJarMaxBytes: Long = 200L * 1024 * 1024,
+
+    /**
      * Directory holding the SQLite databases of the plugins that declare one
      *
      * @author FatttSnake, fatttsnake@gmail.com

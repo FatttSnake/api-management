@@ -3,7 +3,7 @@ kotlin = "2.3.21"
 spring-boot = "4.1.1"
 dokka = "2.2.0"
 
-bcprov-jdk18on = "1.85.2"
+bouncycastle = "1.86"
 jwt = "4.6.0"
 hikaricp = "7.1.0"
 dynamic-datasource = "4.5.0"
@@ -41,8 +41,8 @@ spring-boot-starter-data-redis = { group = "org.springframework.boot", name = "s
 # Jackson 3
 jackson-module-kotlin = { group = "tools.jackson.module", name = "jackson-module-kotlin" }
 jackson-dataformat-yaml = { group = "tools.jackson.dataformat", name = "jackson-dataformat-yaml" }
-# Bouncy Castle Provider
-bcprov-jdk18on = { group = "org.bouncycastle", name = "bcprov-jdk18on", version.ref = "bcprov-jdk18on" }
+# Bouncy Castle
+bcpkix-jdk18on = { group = "org.bouncycastle", name = "bcpkix-jdk18on", version.ref = "bouncycastle" }
 # JWT
 java-jwt = { group = "com.auth0", name = "java-jwt", version.ref = "jwt" }
 # Database

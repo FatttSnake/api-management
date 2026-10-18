@@ -187,6 +187,12 @@ To make the SDK and the Gradle plugin available to plugin projects, publish them
 ./gradlew :plugin-sdk:publishToMavenLocal :plugin-gradle-plugin:publishToMavenLocal
 ```
 
+### Dependencies
+
+`runtimeClasspath` dependencies are bundled into the plugin jar as nested jars under `META-INF/api-plugin-libs/`; no shadow/fat-jar setup is needed. Libraries the gateway already provides (the SDK, Spring, Jackson, SLF4J, Kotlin, Swagger, MyBatis/Hikari, JDBC drivers and BouncyCastle) are filtered out and resolve from the gateway. The gateway extracts the rest to `app.storage.plugin-library-dir` and shares one class loader per dependency digest across plugins, so identical jars are defined once. Set `apiPlugin { bundleDependencies = false }` to keep a thin jar.
+
+BouncyCastle 1.86 (`bcprov`, `bcpkix`, `bcutil`) is provided by the gateway by default. A plugin that needs a different version sets `apiPlugin { bundleBouncyCastle = true }`; because the provider is registered JVM-wide, such a plugin must pass a `Provider` instance to BouncyCastle builders instead of calling `Security.addProvider` — a global registration pins the plugin's class loader across reloads and can collide with the gateway's `"BC"` provider.
+
 ## Plugin configuration and datasources
 
 A plugin ships a `META-INF/plugin-config.json` inside its own jar declaring which settings it has (their type, default, constraints, whether they are secrets, which named datasources it needs and in which dialect). The gateway reads it **while mounting**, snapshots it onto the plugin row, and the console renders a form from it; the plugin itself only reads `PluginContext.getSetting(key)`, with the gateway resolving defaults. A key declared there belongs to the administrator, and the plugin's `saveSetting` raises on it.

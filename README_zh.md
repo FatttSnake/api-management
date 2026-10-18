@@ -187,6 +187,12 @@ knife4j:
 ./gradlew :plugin-sdk:publishToMavenLocal :plugin-gradle-plugin:publishToMavenLocal
 ```
 
+### 依赖
+
+`runtimeClasspath` 里的依赖会以嵌套 jar 的形式打进插件包的 `META-INF/api-plugin-libs/`，**不需要**再自己配 shadow/fat jar。网关已提供的库（SDK、Spring、Jackson、SLF4J、Kotlin、Swagger、MyBatis/Hikari、JDBC 驱动与 BouncyCastle）会被过滤掉，运行时从网关解析。其余依赖由网关解压到 `app.storage.plugin-library-dir`，并按依赖的 SHA-256 在插件间共享同一个类加载器——相同 jar 只定义一次。要保留瘦包可设 `apiPlugin { bundleDependencies = false }`。
+
+网关默认提供 BouncyCastle 1.86（`bcprov`、`bcpkix`、`bcutil`）。需要其他版本的插件可设 `apiPlugin { bundleBouncyCastle = true }` 自带一份；由于 provider 是 JVM 全局注册的，这类插件必须把 `Provider` 实例传给 BouncyCastle 的 builder，**不要**调用 `Security.addProvider`——全局注册会在 reload 后钉住插件的类加载器，并可能与网关的 `"BC"` provider 冲突。
+
 ## 插件配置与数据源
 
 插件在自己的 jar 里放一份 `META-INF/plugin-config.json` 声明它有哪些配置项（类型、默认值、约束、是否密钥项、需要哪些具名数据源、各是什么方言），网关在**挂载时**读取并快照到插件行上，控制台据此渲染配置界面；插件侧只读 `PluginContext.getSetting(key)`，默认值由网关回落。schema 声明过的 key 归管理员，插件 `saveSetting` 写它会抛异常。

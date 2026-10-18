@@ -44,7 +44,7 @@ dependencies {
     implementation(libs.jackson.module.kotlin)
     implementation(libs.jackson.dataformat.yaml)
 
-    implementation(libs.bcprov.jdk18on)
+    implementation(libs.bcpkix.jdk18on)
 
     implementation(libs.java.jwt)
 

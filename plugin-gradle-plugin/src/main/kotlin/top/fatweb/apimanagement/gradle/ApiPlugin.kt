@@ -2,8 +2,14 @@ package top.fatweb.apimanagement.gradle
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+import org.gradle.api.artifacts.result.ResolvedDependencyResult
+import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.tasks.bundling.Jar
+import top.fatweb.apimanagement.sdk.plugin.PluginClasspath
 import java.io.File
 
 /**
@@ -43,6 +49,8 @@ class ApiPlugin : Plugin<Project> {
         ext.trustSigner.convention(
             providers.gradleProperty("apiPlugin.trustSigner").map { it.toBoolean() }.orElse(false)
         )
+        ext.bundleDependencies.convention(true)
+        ext.bundleBouncyCastle.convention(false)
 
         // versionName falls back to the project `version` when it is unset OR
         // blank, so an empty string behaves exactly like "not set".
@@ -92,15 +100,56 @@ class ApiPlugin : Plugin<Project> {
             task.outputFile.set(generatedRoot.map { it.file("META-INF/plugin.pub.pem") })
         }
 
+        val runtimeClasspath = project.configurations.named("runtimeClasspath")
+        val bundleLibrariesTask = project.tasks.register(
+            "bundlePluginLibraries",
+            BundlePluginLibraries::class.java
+        ) { task ->
+            task.group = "api plugin"
+            task.description = "Bundles the plugin's runtime dependencies as nested jars"
+            task.classpath.from(runtimeClasspath)
+            task.artifactModules.set(providers.provider {
+                runtimeClasspath.get().incoming.artifacts.artifacts
+                    .associate { artifact ->
+                        val module = componentId(artifact.id.componentIdentifier)
+                            ?: "file:${artifact.file.absolutePath}"
+                        artifact.file.absolutePath to module
+                    }
+            })
+            task.dependencyEdges.set(providers.provider {
+                val edges = linkedSetOf<String>()
+                runtimeClasspath.get().incoming.resolutionResult.allComponents.forEach { component ->
+                    val from = componentId(component.id) ?: return@forEach
+                    component.dependencies.filterIsInstance<ResolvedDependencyResult>().forEach { dependency ->
+                        val to = componentId(dependency.selected.id) ?: return@forEach
+                        edges += "$from=$to"
+                    }
+                }
+                edges.sorted()
+            })
+            task.providedPatterns.set(ext.bundleBouncyCastle.map { bundle ->
+                if (bundle) {
+                    PluginClasspath.PROVIDED_DEPENDENCIES.filterNot { it == "org.bouncycastle*" }
+                } else {
+                    PluginClasspath.PROVIDED_DEPENDENCIES
+                }
+            })
+            task.bundleDependencies.set(ext.bundleDependencies)
+            task.bundleBouncyCastle.set(ext.bundleBouncyCastle)
+            task.outputDirectory.set(layout.buildDirectory.dir("generated/api-plugin-libs"))
+        }
+
         val archiveName = ext.archiveName.orElse(
             ext.pluginId.zip(versionName) { id, v -> "$id-$v.jar" }
         )
         val jarFile = archiveName.zip(libsDir) { name, dir -> dir.file(name) }
 
         project.tasks.named("jar", Jar::class.java).configure { jar ->
-            jar.dependsOn(descriptorTask, pubKeyTask)
+            jar.dependsOn(descriptorTask, pubKeyTask, bundleLibrariesTask)
             jar.archiveFileName.set(archiveName)
             jar.from(generatedRoot)
+            jar.from(bundleLibrariesTask.flatMap { it.outputDirectory })
+            jar.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
         }
 
         val signTask = project.tasks.register("signPlugin", SignPlugin::class.java) { task ->
@@ -134,6 +183,12 @@ class ApiPlugin : Plugin<Project> {
             task.trustSigner.set(ext.trustSigner)
             task.jarFile.set(jarFile)
         }
+    }
+
+    private fun componentId(id: ComponentIdentifier): String? = when (id) {
+        is ModuleComponentIdentifier -> "${id.group}:${id.module}:${id.version}"
+        is ProjectComponentIdentifier -> "project:${id.projectPath}"
+        else -> null
     }
 
     private fun ensureRepositories(project: Project) {

@@ -144,3 +144,7 @@ outright, and `deployPlugin` reports them.
 - A class the plugin bundles that the gateway also owns: the shared prefixes in
   `PluginClassLoaderManager` resolve from the gateway with no fallback to the jar, so a plugin
   that ships its own copy of one has to stop bundling it.
+- A third-party class is missing: runtime dependencies are bundled automatically under
+  `META-INF/api-plugin-libs/`, and gateway-provided libraries resolve from the gateway.
+  BouncyCastle is gateway-provided by default; `bundleBouncyCastle = true` opts into a private
+  copy, which must pass `Provider` instances instead of calling `Security.addProvider`.

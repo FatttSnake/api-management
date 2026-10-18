@@ -120,4 +120,22 @@ interface ApiPluginExtension {
      * @since 1.0.0
      */
     val trustSigner: Property<Boolean>
+
+    /**
+     * Whether runtime dependencies are bundled into the plugin jar as nested jars.
+     * Defaults to true.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    val bundleDependencies: Property<Boolean>
+
+    /**
+     * Whether the plugin bundles its own BouncyCastle instead of using the gateway's shared
+     * copy. Defaults to false.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    val bundleBouncyCastle: Property<Boolean>
 }

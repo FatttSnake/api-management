@@ -133,7 +133,9 @@ class ApiPluginServiceImpl(
     private val pluginConfigSchemaCache: PluginConfigSchemaCache,
     private val pluginInFlightTracker: PluginInFlightTracker,
     private val pluginSettingReader: PluginSettingReader,
-    private val pluginOpenApiGenerator: PluginOpenApiGenerator
+    private val pluginOpenApiGenerator: PluginOpenApiGenerator,
+    private val pluginLibraryCache: PluginLibraryCache,
+    private val pluginLibraryRegistry: PluginLibraryRegistry
 ) : ServiceImpl<ApiPluginMapper, ApiPlugin>(), IApiPluginService,
     ApplicationRunner {
     companion object {
@@ -176,11 +178,6 @@ class ApiPluginServiceImpl(
          * @since 1.0.0
          */
         private const val POWER_TYPE_OPERATION = 4
-
-        /**
-         * Maximum accepted plugin jar size (50 MB)
-         */
-        private const val MAX_JAR_SIZE = 50L * 1024 * 1024
 
         /**
          * How long an unmount waits for the plugin's in-flight requests to finish
@@ -325,8 +322,9 @@ class ApiPluginServiceImpl(
         getByPluginId(pluginId)?.toVo() ?: throw NoRecordFoundException()
 
     override fun installPlugin(jarBytes: ByteArray, jarName: String): ApiPluginVo = synchronized(mountLock) {
-        if (jarBytes.size > MAX_JAR_SIZE) {
-            throw PluginInstallException("Plugin jar exceeds ${MAX_JAR_SIZE / 1024 / 1024} MB")
+        val maxJarBytes = serverProperties.storage.pluginJarMaxBytes
+        if (jarBytes.size > maxJarBytes) {
+            throw PluginInstallException("Plugin jar exceeds ${maxJarBytes / 1024 / 1024} MB")
         }
         val pluginDir = Path.of(serverProperties.storage.pluginDir)
         Files.createDirectories(pluginDir)
@@ -1061,6 +1059,7 @@ class ApiPluginServiceImpl(
         val openapiJson: String?,
         val configSchemaJson: String?,
         val classLoader: URLClassLoader,
+        val libraries: PluginLibrarySet,
         val context: GenericApplicationContext,
         val endpoints: List<MountedEndpoint>,
         val datasources: Map<String, DataSource>,
@@ -1117,6 +1116,7 @@ class ApiPluginServiceImpl(
         fun toRuntime() = PluginRuntime(
             pluginId = descriptor.pluginId,
             classLoader = classLoader,
+            libraries = libraries,
             context = context,
             pluginContext = pluginContext,
             endpoints = endpoints,
@@ -1159,6 +1159,7 @@ class ApiPluginServiceImpl(
         runStart: Boolean = true
     ): PreparedMount {
         var mountedLoader: URLClassLoader? = null
+        var mountedLibraries: PluginLibrarySet? = null
         var mountedContext: GenericApplicationContext? = null
         var mountedDatasources = emptyMap<String, DataSource>()
         var savedFileHash: String? = null
@@ -1190,7 +1191,24 @@ class ApiPluginServiceImpl(
                     "Plugin jar blob belongs to '${descriptor.pluginId}', not '$expectedPluginId'"
                 )
             }
-            val loader = PluginClassLoaderManager.create(jarPath.toUri().toURL())
+            // Dependencies are materialized only after the signature and trust checks above
+            val installedLibraries = pluginLibraryCache.install(jarPath)
+            val libraries = pluginLibraryRegistry.acquire(installedLibraries)
+            mountedLibraries = libraries
+            val parentFirstPrefixes = if (PluginLibraryIndex.bundlesBouncyCastle(installedLibraries.index)) {
+                logger.warn(
+                    "Plugin '{}' bundles BouncyCastle; use Provider instances instead of Security.addProvider",
+                    descriptor.pluginId
+                )
+                PluginClasspath.PARENT_FIRST_PREFIXES
+            } else {
+                PluginClasspath.PARENT_FIRST_PREFIXES + PluginClasspath.BOUNCY_CASTLE_PREFIX
+            }
+            val loader = PluginClassLoaderManager.create(
+                jarPath.toUri().toURL(),
+                libraries.loaders,
+                parentFirstPrefixes
+            )
             mountedLoader = loader
             val scan = scanJar(loader, jarPath)
             if (scan.controllers.isEmpty()) {
@@ -1329,6 +1347,7 @@ class ApiPluginServiceImpl(
                 openapiJson = openapiJson,
                 configSchemaJson = configSchemaJson,
                 classLoader = loader,
+                libraries = libraries,
                 context = childContext,
                 endpoints = endpoints,
                 datasources = datasources,
@@ -1347,6 +1366,7 @@ class ApiPluginServiceImpl(
             // runtime is ever recorded for a mount that did not finish
             closeDatasources(mountedDatasources)
             mountedLoader?.let { runCatching { it.close() } }
+            mountedLibraries?.let { runCatching { it.release() } }
             savedFileHash?.let { runCatching { storageBlobService.removeFile(it) } }
             runCatching { Files.deleteIfExists(jarPath) }
             // A schema published for a hook that never ran is put back to what the rows say:
@@ -1670,6 +1690,7 @@ class ApiPluginServiceImpl(
             }
         }
         runCatching { runtime.classLoader.close() }
+        runtime.libraries.release()
         // Forgotten after the resources, so a straggler that outlived the drain decrements the
         // state nothing waits on any more rather than the next mount's
         pluginInFlightTracker.release(pluginId)
@@ -1698,6 +1719,7 @@ class ApiPluginServiceImpl(
         runCatching { prepared.context.close() }
         closeDatasources(prepared.datasources)
         runCatching { prepared.classLoader.close() }
+        runCatching { prepared.libraries.release() }
     }
 
     /**
@@ -2081,7 +2103,7 @@ class ApiPluginServiceImpl(
                     if (AnnotatedElementUtils.hasAnnotation(clazz, Component::class.java)) {
                         components.add(clazz)
                     }
-                } catch (e: Throwable) {
+                } catch (_: Throwable) {
                     // Recorded rather than logged and dropped: a class that cannot be loaded is
                     // usually an optional helper the plugin bundled, but one under a controller
                     // root package is the plugin's own code, and dropping that silently would make
