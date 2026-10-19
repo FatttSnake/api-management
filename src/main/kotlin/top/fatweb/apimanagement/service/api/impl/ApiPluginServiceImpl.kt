@@ -1387,11 +1387,9 @@ class ApiPluginServiceImpl(
         var dbRowsCreated = false
         var mountedRuntime: PluginRuntime? = null
         try {
-            // The old runtime is the only thing a replacement takes down. Its rows, its
-            // interface rows and its permission nodes are deliberately left standing: the
-            // upserts below match them on (path, method) and on code, and that match is what
-            // carries the administrator's pricing, access settings and role grants across a
-            // replacement instead of rebuilding them under fresh ids
+            // A replacement takes down only the old runtime. The plugin row, the interface rows
+            // and the permission nodes stay: interfaces are matched on code, which carries the
+            // administrator's pricing, access settings and role grants across the replacement
             prepared.previousVersionCode?.let { previousCode ->
                 pluginRuntimes.remove(pluginId)?.let { runtime ->
                     // A version that moved forward is an upgrade, and an upgrade takes the old
@@ -1433,13 +1431,32 @@ class ApiPluginServiceImpl(
                 pluginId, prepared.descriptor.name, API_ROOT_MENU_ID, API_MODULE_ID
             )
 
-            // What the plugin's endpoints were, read before the loop below writes over them. The
-            // loop matches an interface on (path, method), so an endpoint whose route is gone - or
-            // whose code changed - would otherwise leave its previous row behind for good, and
-            // upsertOperation can never match a code the mount no longer derives
-            val previousInterfaces = apiInterfaceMapper.selectList(
+            // Interfaces are identified by code, not by route: a changed mapping updates its row
+            // in place and keeps its settings
+            val previousByCode = apiInterfaceMapper.selectList(
                 KtQueryWrapper(ApiInterface()).eq(ApiInterface::pluginId, pluginId)
-            )
+            ).mapNotNull { row -> row.code?.let { code -> code to row } }.toMap()
+            val endpointsByCode = prepared.endpoints.associateBy { it.code }
+
+            // Rows of codes this mount no longer derives go first, freeing their routes
+            val orphanedCodes = previousByCode.keys - endpointsByCode.keys
+            orphanedCodes.forEach { code ->
+                previousByCode.getValue(code).id?.let { apiInterfaceMapper.deleteById(it) }
+            }
+
+            // Moved routes are parked first so exchanged routes cannot collide on
+            // (plugin_id, path, method); the placeholder is outside the /api/ namespace
+            previousByCode.forEach { (code, row) ->
+                val endpoint = endpointsByCode[code] ?: return@forEach
+                if (row.path != endpoint.fullPath || row.method != endpoint.httpMethod) {
+                    apiInterfaceMapper.update(
+                        KtUpdateWrapper(ApiInterface()).apply {
+                            eq(ApiInterface::id, row.id)
+                            set(ApiInterface::path, "#moving:${row.id}")
+                        }
+                    )
+                }
+            }
 
             val scopeIds = ConcurrentHashMap<String, Long>()
             prepared.endpoints.forEach { endpoint ->
@@ -1453,19 +1470,9 @@ class ApiPluginServiceImpl(
                 upsertOperation(endpoint.code, endpoint.name, scopeId)
             }
 
-            // Reconcile, after the endpoints are in place so a scope they still use is never
-            // emptied and rebuilt: drop the interface rows whose route this mount no longer
-            // serves, and the permission entries under a code it no longer derives. A route that
-            // kept its path but changed its code keeps both - the row is updated in place and the
-            // code is still current - so this removes what is gone, not what moved
-            val currentRoutes = prepared.endpoints.mapTo(HashSet()) { it.fullPath to it.httpMethod }
-            previousInterfaces
-                .filterNot { (it.path to it.method) in currentRoutes }
-                .forEach { apiInterfaceMapper.deleteById(it.id) }
-            val currentCodes = prepared.endpoints.mapTo(HashSet()) { it.code }
-            val orphanedCodes = previousInterfaces.mapNotNull { it.code }.filterNot { it in currentCodes }
+            // Cleaned after the endpoint upserts so a scope still in use is never emptied
             if (orphanedCodes.isNotEmpty()) {
-                cleanupPermissionTree(pluginId, orphanedCodes)
+                cleanupPermissionTree(pluginId, orphanedCodes.toList())
             }
 
             if (prepared.startupError != null) {
@@ -2245,11 +2252,11 @@ class ApiPluginServiceImpl(
         pluginId: String, code: String, name: String, description: String,
         fullPath: String, httpMethod: String, version: Int
     ) {
+        // The code is the row's identity: a changed mapping updates the row in place
         val existing = apiInterfaceMapper.selectOne(
             KtQueryWrapper(ApiInterface())
                 .eq(ApiInterface::pluginId, pluginId)
-                .eq(ApiInterface::path, fullPath)
-                .eq(ApiInterface::method, httpMethod)
+                .eq(ApiInterface::code, code)
         )
 
         if (existing == null) {
@@ -2270,9 +2277,11 @@ class ApiPluginServiceImpl(
                 ) > 0
             }
         } else {
-            existing.code = code
             existing.name = name
             existing.description = description
+            existing.path = fullPath
+            existing.method = httpMethod
+            existing.apiVersion = version
             updateOrThrowException { apiInterfaceMapper.updateById(existing) > 0 }
         }
     }
