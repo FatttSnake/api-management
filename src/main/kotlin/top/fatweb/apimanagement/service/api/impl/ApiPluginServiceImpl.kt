@@ -1788,10 +1788,10 @@ class ApiPluginServiceImpl(
      * @param pluginId Plugin ID from the descriptor, which namespaces every path and every code
      * @param controllers Controller bean instances
      * @return Mounted endpoints, not yet registered
-     * @throws PluginInstallException when a controller declares an API version below 1 or more than
-     *         one base path, a mapped method declares more than one path, a mapped method declares
-     *         no usable operation ID, its code exceeds [MAX_CODE_LENGTH], two endpoints under one
-     *         version resolve to the same code, or two of them claim the same path and HTTP method
+     * @throws PluginInstallException when a controller declares an API version below 1, a mapped
+     *         method declares more than one path, a mapped method declares no usable operation ID,
+     *         its code exceeds [MAX_CODE_LENGTH], two endpoints under one version resolve to the
+     *         same code, or two of them claim the same path and HTTP method
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      * @see activateEndpoints
@@ -1813,16 +1813,7 @@ class ApiPluginServiceImpl(
                             "the API version must be at least 1"
                 )
             }
-            // The base path is an array too, and only one is supported: a second entry would be
-            // dropped, leaving endpoints that look reachable under both but are mounted under one
-            if (annotation.path.size > 1) {
-                throw PluginInstallException(
-                    "${targetClass.name} declares @ApiController(path = [...]) with " +
-                            "${annotation.path.size} paths; the plugin mount supports exactly one " +
-                            "base path per controller"
-                )
-            }
-            val basePath = annotation.path.firstOrNull()?.trim('/') ?: ""
+            val basePath = annotation.path.trim('/')
             targetClass.declaredMethods.forEach { method ->
                 val mapping = resolveMapping(method) ?: return@forEach
                 val operation = method.getAnnotation(SwaggerOperation::class.java)

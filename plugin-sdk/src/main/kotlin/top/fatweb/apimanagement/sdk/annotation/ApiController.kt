@@ -26,13 +26,12 @@ annotation class ApiController(
     val version: Int = 1,
 
     /**
-     * Interface sub-path within the plugin namespace, default [""]
+     * Interface sub-path within the plugin namespace, default `""`
      *
-     * An array only to match `@RequestMapping`'s shape: exactly one entry is supported, and
-     * declaring more refuses the install.
+     * Leading and trailing slashes are ignored.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    val path: Array<String> = [""]
+    val path: String = ""
 )
