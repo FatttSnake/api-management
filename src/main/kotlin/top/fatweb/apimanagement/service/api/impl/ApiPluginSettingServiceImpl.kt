@@ -10,6 +10,8 @@ import top.fatweb.apimanagement.mapper.api.ApiPluginSettingMapper
 import top.fatweb.apimanagement.service.api.IApiPluginSettingService
 import top.fatweb.apimanagement.util.saveOrThrowException
 import top.fatweb.apimanagement.util.updateOrThrowException
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 /**
  * Plugin setting service implement
@@ -54,6 +56,7 @@ class ApiPluginSettingServiceImpl : ServiceImpl<ApiPluginSettingMapper, ApiPlugi
             }
         } else {
             existing.settingValue = value
+            existing.updateTime = LocalDateTime.now(ZoneOffset.UTC)
             updateOrThrowException { updateById(existing) }
         }
     }
