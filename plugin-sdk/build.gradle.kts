@@ -27,6 +27,9 @@ dependencies {
     // @Service / @Component / @Autowired for plugin beans (spring-web does not
     // transitively expose spring-context's org.springframework.stereotype package).
     api("org.springframework:spring-context")
+    // @NotNull / @NotBlank / @Valid on plugin DTOs. Only the API is exposed: the gateway
+    // already runs Hibernate Validator, and `jakarta.` classes resolve parent-first.
+    api("jakarta.validation:jakarta.validation-api")
     // Logging: `org.slf4j.` is a parent-first prefix in PluginClassLoaderManager, so at
     // runtime the plugin gets the gateway's binding and appenders. Exposing the API here
     // saves every plugin from declaring it just to compile.

@@ -189,7 +189,7 @@ To make the SDK and the Gradle plugin available to plugin projects, publish them
 
 ### Dependencies
 
-`runtimeClasspath` dependencies are bundled as nested jars under `META-INF/api-plugin-libs/`; no shadow/fat-jar setup is needed. Libraries the gateway provides (the SDK, Spring, Jackson, SLF4J, Kotlin, Swagger, MyBatis/Hikari, JDBC drivers and BouncyCastle) are filtered out and resolve from the gateway. The gateway extracts the rest to `app.storage.plugin-library-dir` and shares one class loader per dependency digest across plugins. Set `apiPlugin { bundleDependencies = false }` to keep a thin jar.
+`runtimeClasspath` dependencies are bundled as nested jars under `META-INF/api-plugin-libs/`; no shadow/fat-jar setup is needed. Libraries the gateway provides (the SDK, Spring, Bean Validation, Jackson, SLF4J, Kotlin, Swagger, MyBatis/Hikari, JDBC drivers and BouncyCastle) are filtered out and resolve from the gateway. The gateway extracts the rest to `app.storage.plugin-library-dir` and shares one class loader per dependency digest across plugins. Set `apiPlugin { bundleDependencies = false }` to keep a thin jar.
 
 BouncyCastle 1.86 (`bcprov`, `bcpkix`, `bcutil`) is provided by the gateway by default. A plugin that needs a different version sets `apiPlugin { bundleBouncyCastle = true }`; because the provider is registered JVM-wide, such a plugin must pass a `Provider` instance to BouncyCastle builders instead of calling `Security.addProvider` — a global registration pins the plugin's class loader across reloads and can collide with the gateway's `"BC"` provider.
 

@@ -189,7 +189,7 @@ knife4j:
 
 ### 依赖
 
-`runtimeClasspath` 依赖会以嵌套 jar 打进插件包的 `META-INF/api-plugin-libs/`，**不需要**再配 shadow/fat jar。网关已提供的库（SDK、Spring、Jackson、SLF4J、Kotlin、Swagger、MyBatis/Hikari、JDBC 驱动与 BouncyCastle）会被过滤掉，运行时从网关解析。其余依赖由网关解压到 `app.storage.plugin-library-dir`，并按依赖的 SHA-256 在插件间共享类加载器。要保留瘦包可设 `apiPlugin { bundleDependencies = false }`。
+`runtimeClasspath` 依赖会以嵌套 jar 打进插件包的 `META-INF/api-plugin-libs/`，**不需要**再配 shadow/fat jar。网关已提供的库（SDK、Spring、Bean Validation、Jackson、SLF4J、Kotlin、Swagger、MyBatis/Hikari、JDBC 驱动与 BouncyCastle）会被过滤掉，运行时从网关解析。其余依赖由网关解压到 `app.storage.plugin-library-dir`，并按依赖的 SHA-256 在插件间共享类加载器。要保留瘦包可设 `apiPlugin { bundleDependencies = false }`。
 
 网关默认提供 BouncyCastle 1.86（`bcprov`、`bcpkix`、`bcutil`）。需要其他版本的插件可设 `apiPlugin { bundleBouncyCastle = true }` 自带一份；由于 provider 是 JVM 全局注册的，这类插件必须把 `Provider` 实例传给 BouncyCastle 的 builder，**不要**调用 `Security.addProvider`——全局注册会在 reload 后钉住插件的类加载器，并可能与网关的 `"BC"` provider 冲突。
 
