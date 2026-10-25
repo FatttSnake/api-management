@@ -129,7 +129,22 @@ classes already loaded**:
 So hot reload is a way to skip a deploy while tuning a method; `deployPlugin` is the loop for
 everything else.
 
-## 4. When something goes wrong
+## 4. Resources and class loading
+
+Classes and resources follow different rules. A class under one of the shared prefixes resolves
+from the gateway only; every other class is child-first. Resource lookups are confined to the
+plugin jar and the libraries bundled under `META-INF/api-plugin-libs/`, with one exception: a
+single `.class` lookup may fall through to the gateway so Spring's metadata readers can inspect
+gateway-provided interfaces and annotations. `getResources` never merges the gateway, so
+`PathMatchingResourcePatternResolver`, `ServiceLoader` and the child context's component scan
+stay plugin-only. `PluginContext.classLoader` is that loader — use it from a thread the plugin
+creates, where the thread context class loader is not the plugin's.
+
+This is a default-behavior boundary, not a security boundary: a plugin can still load gateway
+classes, reach gateway beans through the parent context, or deliberately use the gateway's class
+loader.
+
+## 5. When something goes wrong
 
 A plugin that fails to mount is still installed: it serves nothing, its routes are not
 registered, and the reason is on its row as `load_error`, which the plugin list shows. The

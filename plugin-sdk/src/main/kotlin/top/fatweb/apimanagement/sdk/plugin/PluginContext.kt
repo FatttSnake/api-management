@@ -22,6 +22,18 @@ interface PluginContext {
     val pluginId: String
 
     /**
+     * Class loader of the plugin
+     *
+     * Resource lookups see the plugin jar and the libraries it bundles; class lookups still
+     * resolve gateway-provided classes. Use it instead of the thread context class loader when
+     * loading resources from a thread the plugin creates itself.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    val classLoader: ClassLoader
+
+    /**
      * The plugin's own isolated datasources, by the name each was declared under
      *
      * A `SQLITE` datasource appears the moment it is declared; a `MYSQL` one only once an

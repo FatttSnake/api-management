@@ -19,7 +19,8 @@ import javax.sql.DataSource
  *
  * Creates a child-first [URLClassLoader] for a plugin jar: classes under the well-known
  * prefixes resolve from the parent so their identity is shared, and everything else is loaded
- * from the plugin jar first.
+ * from the plugin jar first. Resource lookups are limited to the plugin jar and its bundled
+ * libraries; only `.class` files may fall through to the gateway, for Spring's metadata readers.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
@@ -67,20 +68,25 @@ class PluginClassLoaderManager {
                     }
                 }
 
+                // Resources do not fall through to the parent, except class files: Spring's
+                // metadata readers open classes - including gateway-provided interfaces and
+                // annotations - by resource name. Everything else stays inside the plugin jar
+                // and the libraries it bundles.
                 override fun getResource(name: String): URL? {
                     findResource(name)?.let { return it }
                     libraries.forEach { library -> library.getResource(name)?.let { return it } }
-                    return parent.getResource(name)
+                    return if (name.endsWith(".class")) parent.getResource(name) else null
                 }
 
                 override fun getResources(name: String): Enumeration<URL> {
-                    val urls = linkedSetOf<URL>()
-                    findResources(name).asSequence().forEach { urls.add(it) }
+                    val urls = linkedMapOf<String, URL>()
+                    findResources(name).asSequence()
+                        .forEach { urls.putIfAbsent(it.toExternalForm(), it) }
                     libraries.forEach { library ->
-                        library.getResources(name).asSequence().forEach { urls.add(it) }
+                        library.getResources(name).asSequence()
+                            .forEach { urls.putIfAbsent(it.toExternalForm(), it) }
                     }
-                    parent.getResources(name).asSequence().forEach { urls.add(it) }
-                    return Collections.enumeration(urls)
+                    return Collections.enumeration(urls.values)
                 }
 
                 private fun loadFromLibraries(name: String): Class<*>? {

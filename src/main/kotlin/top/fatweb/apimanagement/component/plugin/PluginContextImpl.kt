@@ -23,6 +23,7 @@ import javax.sql.DataSource
  */
 class PluginContextImpl(
     override val pluginId: String,
+    override val classLoader: ClassLoader,
     override val datasources: Map<String, DataSource>,
     override val storage: PluginStorage,
     private val apiAccountService: IApiAccountService,

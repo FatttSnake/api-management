@@ -191,6 +191,8 @@ knife4j:
 
 `runtimeClasspath` 依赖会以嵌套 jar 打进插件包的 `META-INF/api-plugin-libs/`，**不需要**再配 shadow/fat jar。网关已提供的库（SDK、Spring、Bean Validation、Jackson、SLF4J、Kotlin、Swagger、MyBatis/Hikari、JDBC 驱动与 BouncyCastle）会被过滤掉，运行时从网关解析。其余依赖由网关解压到 `app.storage.plugin-library-dir`，并按依赖的 SHA-256 在插件间共享类加载器。要保留瘦包可设 `apiPlugin { bundleDependencies = false }`。
 
+插件的类加载器与网关共享**类**，但不共享**资源**。资源查找只看到插件 jar 与打包进来的依赖；唯一例外是单个 `.class` 查找可以回落到网关，因为 Spring 的 metadata reader 需要读取网关提供的接口与注解的字节码。`getResources` 不会回落，因此 `PathMatchingResourcePatternResolver`、`ServiceLoader` 与子上下文的组件扫描仍只看到插件自己的内容。`PluginContext.classLoader` 就是这个 loader，供插件自建线程使用。这是默认行为边界，不是安全边界：插件仍能加载网关类、通过父上下文拿到网关 Bean，或刻意使用网关的类加载器。
+
 网关默认提供 BouncyCastle 1.86（`bcprov`、`bcpkix`、`bcutil`）。需要其他版本的插件可设 `apiPlugin { bundleBouncyCastle = true }` 自带一份；由于 provider 是 JVM 全局注册的，这类插件必须把 `Provider` 实例传给 BouncyCastle 的 builder，**不要**调用 `Security.addProvider`——全局注册会在 reload 后钉住插件的类加载器，并可能与网关的 `"BC"` provider 冲突。
 
 ## 插件配置与数据源

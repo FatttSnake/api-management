@@ -116,7 +116,19 @@ access token 就是控制台登录响应里的 `accessToken`，默认有效期 2
 
 所以热替换只是调方法体时省一次部署；其它一切仍然走 `deployPlugin`。
 
-## 4. 出问题的时候
+## 4. 资源与类加载
+
+类与资源遵循不同的规则。共享前缀下的类只从网关解析；其余类 child-first。资源查找限于插件
+自己的 jar 和 `META-INF/api-plugin-libs/` 里打包的依赖，唯一例外是单个 `.class` 查找可以
+回落到网关，让 Spring 的 metadata reader 能读取网关提供的接口与注解。`getResources` 不会
+合并网关，所以 `PathMatchingResourcePatternResolver`、`ServiceLoader` 以及子上下文的组件扫描
+仍只看到插件自己的内容。`PluginContext.classLoader` 就是这个 loader——在插件自建线程里用它，
+因为那里的线程上下文类加载器不是插件的。
+
+这是默认行为边界，不是安全边界：插件仍能加载网关类、通过父上下文拿到网关 Bean，或刻意使用
+网关的类加载器。
+
+## 5. 出问题的时候
 
 挂载失败的插件仍然是「已安装」状态：它不提供任何服务、路由不注册，原因写在它的
 `load_error` 上，插件列表能读到。另一半情况是网关自己的校验失败——那类会直接拒绝上传，

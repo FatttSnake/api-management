@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Component
 import org.springframework.web.method.HandlerMethod
-import org.springframework.web.servlet.HandlerInterceptor
+import org.springframework.web.servlet.AsyncHandlerInterceptor
 import top.fatweb.apimanagement.component.api.ApiPath
 import top.fatweb.apimanagement.component.plugin.PluginInFlightTracker
 import top.fatweb.apimanagement.component.storage.RedisProvider
@@ -47,7 +47,7 @@ class ApiAccessInterceptor(
     private val apiAccountService: IApiAccountService,
     private val apiTransactionService: IApiTransactionService,
     private val pluginInFlightTracker: PluginInFlightTracker
-) : HandlerInterceptor {
+) : AsyncHandlerInterceptor {
     private companion object {
         const val ATTR_API = "apimanagement.api"
         const val ATTR_INFLIGHT = "apimanagement.inflight"
@@ -155,9 +155,7 @@ class ApiAccessInterceptor(
     ) {
         // Restored first, before anything else can return early: the thread carries a plugin's
         // class loader only for the span of its own request, and the pool hands it on afterwards
-        (request.getAttribute(ATTR_TCCL) as? ClassLoader)?.let {
-            Thread.currentThread().contextClassLoader = it
-        }
+        restoreTccl(request)
 
         // Left before anything else can return early: the counter has to come back down on
         // every admitted request, including one that failed before the API attributes were
@@ -216,6 +214,23 @@ class ApiAccessInterceptor(
                 val balanceAfter = apiAccountService.getBalance(ownerId)
                 runCatching { apiTransactionService.saveDeduct(apiUsage = usage, balanceAfter = balanceAfter) }
             }
+        }
+    }
+
+    override fun afterConcurrentHandlingStarted(
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+        handler: Any
+    ) {
+        // An async handler returns to the container before afterCompletion runs on the dispatch
+        // thread. Restore here so the pool never keeps a plugin's class loader.
+        restoreTccl(request)
+    }
+
+    private fun restoreTccl(request: HttpServletRequest) {
+        (request.getAttribute(ATTR_TCCL) as? ClassLoader)?.let {
+            Thread.currentThread().contextClassLoader = it
+            request.removeAttribute(ATTR_TCCL)
         }
     }
 

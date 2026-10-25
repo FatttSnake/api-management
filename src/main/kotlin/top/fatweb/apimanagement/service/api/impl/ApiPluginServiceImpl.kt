@@ -1257,6 +1257,7 @@ class ApiPluginServiceImpl(
             // ---- 7. plugin context + lifecycle ----
             val pluginContext = PluginContextImpl(
                 pluginId = descriptor.pluginId,
+                classLoader = loader,
                 datasources = datasources,
                 storage = pluginStorage,
                 apiAccountService = apiAccountService,
@@ -1762,6 +1763,7 @@ class ApiPluginServiceImpl(
         ctx.registerBean("pluginContext", PluginContext::class.java, Supplier {
             PluginContextImpl(
                 pluginId = pluginId,
+                classLoader = loader,
                 datasources = datasources,
                 storage = pluginStorage,
                 apiAccountService = apiAccountService,
@@ -2092,7 +2094,6 @@ class ApiPluginServiceImpl(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      * @see scanJar
-     * @see controllerRootPackages
      */
     private fun verifyLoadFailures(scan: JarScan, jarPath: Path) {
         if (scan.failures.isEmpty()) return
@@ -2118,7 +2119,6 @@ class ApiPluginServiceImpl(
      * @param jarPath Plugin jar path
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
-     * @see controllerRootPackages
      */
     private fun warnUnscannedComponents(scan: JarScan, jarPath: Path) {
         if (scan.components.isEmpty()) return
