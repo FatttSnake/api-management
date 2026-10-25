@@ -189,7 +189,11 @@ knife4j:
 
 ### 依赖
 
-`runtimeClasspath` 依赖会以嵌套 jar 打进插件包的 `META-INF/api-plugin-libs/`，**不需要**再配 shadow/fat jar。网关已提供的库（SDK、Spring、Bean Validation、Jackson、SLF4J、Kotlin、Swagger、MyBatis/Hikari、JDBC 驱动与 BouncyCastle）会被过滤掉，运行时从网关解析。其余依赖由网关解压到 `app.storage.plugin-library-dir`，并按依赖的 SHA-256 在插件间共享类加载器。要保留瘦包可设 `apiPlugin { bundleDependencies = false }`。
+`runtimeClasspath` 依赖会以嵌套 jar 打进插件包的 `META-INF/api-plugin-libs/`，**不需要**再配 shadow/fat jar。网关已提供的库（SDK、Spring、Bean Validation、Jackson、SLF4J、Kotlin、Swagger、Flyway、MyBatis/Hikari、JDBC 驱动与 BouncyCastle）会被过滤掉，运行时从网关解析。其余依赖由网关解压到 `app.storage.plugin-library-dir`，并按依赖的 SHA-256 在插件间共享类加载器。要保留瘦包可设 `apiPlugin { bundleDependencies = false }`。
+
+SDK 里带着这些库在网关上的实际版本；`checkPluginClasspath`（`build` 的一部分）会在插件解析到**比网关更新**的版本时失败——provided 依赖请不写版本或写成 `compileOnly`，让 SDK 固定版本。更旧的版本允许。描述符会记录构建插件所用的 SDK 版本，网关拒绝比自身更新的构建；除 BouncyCastle 外，jar 里打包了网关已提供的库也会在安装时被拒绝。
+
+Flyway 通过 SDK 提供给需要自管数据源的插件：在 `onStart` 里用 `Flyway.configure(context.classLoader)` 对 `context.datasources` 执行迁移，迁移脚本放在插件 jar 的 `db/migration` 下——插件的类加载器看不到网关的迁移资源。
 
 插件的类加载器与网关共享**类**，但不共享**资源**。资源查找只看到插件 jar 与打包进来的依赖；唯一例外是单个 `.class` 查找可以回落到网关，因为 Spring 的 metadata reader 需要读取网关提供的接口与注解的字节码。`getResources` 不会回落，因此 `PathMatchingResourcePatternResolver`、`ServiceLoader` 与子上下文的组件扫描仍只看到插件自己的内容。`PluginContext.classLoader` 就是这个 loader，供插件自建线程使用。这是默认行为边界，不是安全边界：插件仍能加载网关类、通过父上下文拿到网关 Bean，或刻意使用网关的类加载器。
 

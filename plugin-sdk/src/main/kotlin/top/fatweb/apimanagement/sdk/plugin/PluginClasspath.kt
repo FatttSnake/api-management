@@ -32,6 +32,7 @@ object PluginClasspath {
         "com.zaxxer.hikari.",
         "com.mysql.cj.jdbc.",
         "org.sqlite.",
+        "org.flywaydb.",
         "kotlin.",
         "kotlinx.",
         "top.fatweb.apimanagement."

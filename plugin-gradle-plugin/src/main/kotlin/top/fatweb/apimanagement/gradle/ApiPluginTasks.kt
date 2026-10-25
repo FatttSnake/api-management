@@ -58,6 +58,10 @@ abstract class GeneratePluginDescriptor : DefaultTask() {
     @get:Input
     abstract val mainClass: Property<String>
 
+    @get:Optional
+    @get:Input
+    abstract val builtWithSdk: Property<String>
+
     @get:OutputFile
     abstract val outputFile: RegularFileProperty
 
@@ -86,6 +90,9 @@ abstract class GeneratePluginDescriptor : DefaultTask() {
             append(",\"author\":").append(json(author.get()))
             if (mainClass.isPresent && mainClass.get().isNotBlank()) {
                 append(",\"mainClass\":").append(json(mainClass.get()))
+            }
+            if (builtWithSdk.isPresent && builtWithSdk.get().isNotBlank()) {
+                append(",\"builtWithSdk\":").append(json(builtWithSdk.get()))
             }
             append('}')
         }

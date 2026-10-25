@@ -53,6 +53,7 @@ dynamic-datasource = { group = "com.baomidou", name = "dynamic-datasource-spring
 mybatis-plus-bom = { group = "com.baomidou", name = "mybatis-plus-bom", version.ref = "mybatis-plus" }
 mybatis-plus = { group = "com.baomidou", name = "mybatis-plus-spring-boot4-starter" }
 mybatis-plus-jsqlparser = { group = "com.baomidou", name = "mybatis-plus-jsqlparser" }
+flyway-core = { group = "org.flywaydb", name = "flyway-core", version.ref = "flyway" }
 flyway-mysql = { group = "org.flywaydb", name = "flyway-mysql", version.ref = "flyway" }
 # Avatar Generator
 avatar-generator = { group = "top.fatweb", name = "avatar-generator", version.ref = "avatar-generator" }

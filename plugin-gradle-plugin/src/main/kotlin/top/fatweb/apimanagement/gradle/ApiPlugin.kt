@@ -10,6 +10,7 @@ import org.gradle.api.artifacts.result.ResolvedDependencyResult
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.tasks.bundling.Jar
 import top.fatweb.apimanagement.sdk.plugin.PluginClasspath
+import top.fatweb.apimanagement.sdk.plugin.PluginSdk
 import java.io.File
 
 /**
@@ -33,7 +34,7 @@ class ApiPlugin : Plugin<Project> {
         ext.description.convention("")
         ext.author.convention("")
         ext.sdkVersion.convention(
-            providers.gradleProperty("apiPlugin.sdkVersion").orElse(providers.provider { DEFAULT_SDK_VERSION })
+            providers.gradleProperty("apiPlugin.sdkVersion").orElse(providers.provider { PluginSdk.version })
         )
 
         // Deploy credentials are a gradle property or an environment variable, never a build
@@ -83,6 +84,8 @@ class ApiPlugin : Plugin<Project> {
             task.pluginDescription.set(ext.description)
             task.author.set(ext.author)
             task.mainClass.set(ext.mainClass)
+            // Stamped so the gateway can refuse a plugin built against a newer SDK than its own
+            task.builtWithSdk.set(ext.sdkVersion)
             task.outputFile.set(generatedRoot.map { it.file("META-INF/api-plugin.json") })
         }
 
@@ -139,6 +142,35 @@ class ApiPlugin : Plugin<Project> {
             task.outputDirectory.set(layout.buildDirectory.dir("generated/api-plugin-libs"))
         }
 
+        // The SDK jar carries the versions the gateway provides. Resolved without transitives:
+        // only the manifest inside it is needed.
+        val gatewayManifest = project.configurations.create("apiPluginGatewayManifest") { configuration ->
+            configuration.isCanBeConsumed = false
+            configuration.isCanBeResolved = true
+            configuration.isTransitive = false
+        }
+        project.dependencies.addProvider(
+            gatewayManifest.name,
+            ext.sdkVersion.map { "top.fatweb:api-management-plugin-sdk:$it" }
+        )
+
+        val checkClasspathTask = project.tasks.register(
+            "checkPluginClasspath",
+            CheckPluginClasspath::class.java
+        ) { task ->
+            task.group = "api plugin"
+            task.description =
+                "Fails when gateway-provided dependencies resolve to versions newer than the gateway's"
+            task.sdkJar.from(gatewayManifest)
+            task.providedPatterns.set(PluginClasspath.PROVIDED_DEPENDENCIES)
+            task.bundleBouncyCastle.set(ext.bundleBouncyCastle)
+            task.compileModules.set(providers.provider { moduleMap(project, "compileClasspath") })
+            task.runtimeModules.set(providers.provider { moduleMap(project, "runtimeClasspath") })
+        }
+        project.tasks.matching { it.name == "check" }.configureEach { task ->
+            task.dependsOn(checkClasspathTask)
+        }
+
         val archiveName = ext.archiveName.orElse(
             ext.pluginId.zip(versionName) { id, v -> "$id-$v.jar" }
         )
@@ -155,7 +187,7 @@ class ApiPlugin : Plugin<Project> {
         val signTask = project.tasks.register("signPlugin", SignPlugin::class.java) { task ->
             task.group = "api plugin"
             task.description = "Signs the plugin jar (Ed25519) using keys/private.pem"
-            task.dependsOn(genKeysTask, project.tasks.named("jar"))
+            task.dependsOn(genKeysTask, project.tasks.named("jar"), checkClasspathTask)
             task.jarFile.set(jarFile)
             task.privateKeyFile.set(layout.projectDirectory.file("keys/private.pem"))
         }
@@ -191,6 +223,14 @@ class ApiPlugin : Plugin<Project> {
         else -> null
     }
 
+    private fun moduleMap(project: Project, configurationName: String): Map<String, String> =
+        project.configurations.getByName(configurationName).incoming.artifacts.artifacts
+            .associate { artifact ->
+                val module = componentId(artifact.id.componentIdentifier)
+                    ?: "file:${artifact.file.absolutePath}"
+                artifact.file.absolutePath to module
+            }
+
     private fun ensureRepositories(project: Project) {
         val existing = project.repositories
             .withType(MavenArtifactRepository::class.java)
@@ -211,7 +251,4 @@ class ApiPlugin : Plugin<Project> {
         }
     }
 
-    companion object {
-        private const val DEFAULT_SDK_VERSION = "1.0.0-SNAPSHOT"
-    }
 }

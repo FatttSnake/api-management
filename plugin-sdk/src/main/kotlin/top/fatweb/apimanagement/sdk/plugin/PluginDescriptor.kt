@@ -70,7 +70,17 @@ data class PluginDescriptor(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    val mainClass: String? = null
+    val mainClass: String? = null,
+
+    /**
+     * Version of the plugin SDK the jar was built with
+     *
+     * The gateway refuses a build newer than its own. Null for a descriptor written by hand.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    val builtWithSdk: String? = null
 ) {
     companion object {
         /**

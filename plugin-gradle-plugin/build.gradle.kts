@@ -27,6 +27,12 @@ dependencies {
     implementation(project(":plugin-sdk"))
     // Parses the gateway's {code, success, msg, data} deploy responses.
     implementation(libs.jackson.module.kotlin)
+
+    testImplementation(libs.kotlin.test.junit5)
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
 }
 
 kotlin {

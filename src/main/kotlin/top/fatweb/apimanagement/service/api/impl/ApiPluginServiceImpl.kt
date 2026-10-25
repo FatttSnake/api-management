@@ -1159,8 +1159,20 @@ class ApiPluginServiceImpl(
                     "Plugin jar blob belongs to '${descriptor.pluginId}', not '$expectedPluginId'"
                 )
             }
+            // A plugin built against a newer SDK may call APIs this gateway does not have. Older
+            // is fine: the SDK only grows, so a build against an older one still runs
+            descriptor.builtWithSdk?.takeIf { it.isNotBlank() }?.let { builtWith ->
+                if (PluginSdk.isNewer(builtWith)) {
+                    throw PluginInstallException(
+                        "Plugin was built with plugin SDK $builtWith, newer than this gateway's " +
+                            "${PluginSdk.version}; upgrade the gateway or rebuild the plugin against SDK " +
+                            PluginSdk.version
+                    )
+                }
+            }
             // Dependencies are materialized only after the signature and trust checks above
             val installedLibraries = pluginLibraryCache.install(jarPath)
+            verifyNoProvidedLibraries(descriptor.pluginId, installedLibraries.index)
             val libraries = pluginLibraryRegistry.acquire(installedLibraries)
             mountedLibraries = libraries
             val parentFirstPrefixes = if (PluginLibraryIndex.bundlesBouncyCastle(installedLibraries.index)) {
@@ -2159,6 +2171,40 @@ class ApiPluginServiceImpl(
     private fun unloadableNote(failures: List<String>): String =
         if (failures.isEmpty()) "" else
             " (${failures.size} class(es) could not be loaded: ${failures.joinToString(", ")})"
+
+    /**
+     * Refuse a jar that carries modules the gateway provides
+     *
+     * The authoring plugin strips them at build time, so their presence means the jar did not
+     * come from it (a hand-built or shaded jar). BouncyCastle is the one module a plugin may
+     * bundle on purpose.
+     *
+     * @param pluginId Plugin ID
+     * @param index Library index of the jar
+     * @throws PluginInstallException when a provided module is bundled
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    private fun verifyNoProvidedLibraries(pluginId: String, index: PluginLibraryIndex) {
+        val bundled = index.libraries
+            .flatMap { it.modules }
+            .mapNotNull { module ->
+                val parts = module.split(':')
+                if (parts.size < 2) return@mapNotNull null
+                val group = parts[0]
+                val name = parts[1]
+                if (group == PluginClasspath.BOUNCY_CASTLE_GROUP) return@mapNotNull null
+                if (!PluginClasspath.isProvided(group, name)) return@mapNotNull null
+                "$group:$name"
+            }
+            .distinct()
+        if (bundled.isNotEmpty()) {
+            throw PluginInstallException(
+                "Plugin '$pluginId' bundles dependencies the gateway provides: ${bundled.joinToString()}. " +
+                    "Build it with the apiPlugin Gradle plugin, which strips those from the jar."
+            )
+        }
+    }
 
     private fun readDescriptor(jarPath: Path): PluginDescriptor {
         val json = readJarEntry(jarPath, DESCRIPTOR_ENTRY)
