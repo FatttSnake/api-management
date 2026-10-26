@@ -23,6 +23,27 @@ class PluginClasspathTests {
     }
 
     @Test
+    fun `mybatis and mybatis-plus are provided by the gateway`() {
+        assertTrue(PluginClasspath.isProvided("org.mybatis", "mybatis"))
+        assertTrue(PluginClasspath.isProvided("org.mybatis", "mybatis-spring"))
+        assertTrue(PluginClasspath.isProvided("com.baomidou", "mybatis-plus-core"))
+        assertTrue(PluginClasspath.isProvided("com.github.jsqlparser", "jsqlparser"))
+    }
+
+    @Test
+    fun `mybatis classes resolve from the gateway`() {
+        assertTrue(PluginClasspath.PARENT_FIRST_PREFIXES.any {
+            "org.apache.ibatis.session.SqlSessionFactory".startsWith(it)
+        })
+        assertTrue(PluginClasspath.PARENT_FIRST_PREFIXES.any {
+            "org.mybatis.spring.SqlSessionTemplate".startsWith(it)
+        })
+        assertTrue(PluginClasspath.PARENT_FIRST_PREFIXES.any {
+            "net.sf.jsqlparser.parser.CCJSqlParserUtil".startsWith(it)
+        })
+    }
+
+    @Test
     fun `ordinary libraries are not treated as provided`() {
         assertFalse(PluginClasspath.isProvided("org.apache.commons", "commons-lang3"))
         assertFalse(PluginClasspath.isProvided("com.google.guava", "guava"))

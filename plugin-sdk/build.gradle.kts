@@ -50,6 +50,15 @@ dependencies {
     // extensions. `tools.jackson.` is a parent-first prefix for the same reason.
     api(libs.jackson.module.kotlin)
     api(libs.swagger.annotations.jakarta)
+    // MyBatis-Plus dependency management, propagated so every com.baomidou module a plugin
+    // declares resolves to the version the gateway ships.
+    api(platform(libs.mybatis.plus.bom))
+    // MyBatis and MyBatis-Plus are provided by the gateway too: a plugin that maps its own
+    // datasource compiles against these, and the bundler strips them from the plugin jar.
+    // org.mybatis:mybatis comes in transitively with mybatis-plus-core, so plain MyBatis
+    // (org.apache.ibatis) is exposed as well. The pagination module brings JSQLParser.
+    api(libs.mybatis.plus)
+    api(libs.mybatis.plus.jsqlparser)
     // Flyway is provided by the gateway: a plugin that migrates its own datasource compiles
     // against this, and the bundler strips it from the plugin jar. The version is pinned here
     // as well as in the gateway, and checkPluginClasspath keeps the two from drifting apart.
@@ -74,7 +83,6 @@ val env = providers.gradleProperty("env")
 
 dependencies {
     add(gatewayProvidedDependencies.name, platform("org.springframework.boot:spring-boot-dependencies:${libs.versions.spring.boot.get()}"))
-    add(gatewayProvidedDependencies.name, platform(libs.mybatis.plus.bom))
     add(gatewayProvidedDependencies.name, libs.spring.boot.starter.web)
     add(gatewayProvidedDependencies.name, libs.spring.boot.starter.validation)
     add(gatewayProvidedDependencies.name, libs.spring.boot.starter.security)
@@ -87,7 +95,9 @@ dependencies {
     add(gatewayProvidedDependencies.name, libs.bcpkix.jdk18on)
     add(gatewayProvidedDependencies.name, libs.hikaricp)
     add(gatewayProvidedDependencies.name, libs.dynamic.datasource)
+    add(gatewayProvidedDependencies.name, platform(libs.mybatis.plus.bom))
     add(gatewayProvidedDependencies.name, libs.mybatis.plus)
+    add(gatewayProvidedDependencies.name, libs.mybatis.plus.jsqlparser)
     add(gatewayProvidedDependencies.name, libs.sqlite.jdbc)
     add(gatewayProvidedDependencies.name, libs.mysql.connector.j)
     add(gatewayProvidedDependencies.name, libs.kotlin.reflect)

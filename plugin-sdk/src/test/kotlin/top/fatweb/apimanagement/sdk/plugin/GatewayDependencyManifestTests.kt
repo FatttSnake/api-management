@@ -38,6 +38,8 @@ class GatewayDependencyManifestTests {
 
         assertEquals(PluginSdk.version, manifest.sdkVersion)
         assertNotNull(manifest.versionOf("org.flywaydb:flyway-core"))
+        assertNotNull(manifest.versionOf("org.mybatis:mybatis"))
+        assertNotNull(manifest.versionOf("com.baomidou:mybatis-plus-core"))
     }
 
     @Test

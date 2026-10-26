@@ -189,7 +189,7 @@ knife4j:
 
 ### 依赖
 
-`runtimeClasspath` 依赖会以嵌套 jar 打进插件包的 `META-INF/api-plugin-libs/`，**不需要**再配 shadow/fat jar。网关已提供的库（SDK、Spring、Bean Validation、Jackson、SLF4J、Kotlin、Swagger、Flyway、MyBatis/Hikari、JDBC 驱动与 BouncyCastle）会被过滤掉，运行时从网关解析。其余依赖由网关解压到 `app.storage.plugin-library-dir`，并按依赖的 SHA-256 在插件间共享类加载器。要保留瘦包可设 `apiPlugin { bundleDependencies = false }`。
+`runtimeClasspath` 依赖会以嵌套 jar 打进插件包的 `META-INF/api-plugin-libs/`，**不需要**再配 shadow/fat jar。网关已提供的库（SDK、Spring、Bean Validation、Jackson、SLF4J、Kotlin、Swagger、Flyway、MyBatis/MyBatis-Plus/Hikari、JDBC 驱动与 BouncyCastle）会被过滤掉，运行时从网关解析。其余依赖由网关解压到 `app.storage.plugin-library-dir`，并按依赖的 SHA-256 在插件间共享类加载器。要保留瘦包可设 `apiPlugin { bundleDependencies = false }`。
 
 SDK 里带着这些库在网关上的实际版本；`checkPluginClasspath`（`build` 的一部分）会在插件解析到**比网关更新**的版本时失败——provided 依赖请不写版本或写成 `compileOnly`，让 SDK 固定版本。更旧的版本允许。描述符会记录构建插件所用的 SDK 版本，网关拒绝比自身更新的构建；除 BouncyCastle 外，jar 里打包了网关已提供的库也会在安装时被拒绝。
 

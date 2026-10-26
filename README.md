@@ -189,7 +189,7 @@ To make the SDK and the Gradle plugin available to plugin projects, publish them
 
 ### Dependencies
 
-`runtimeClasspath` dependencies are bundled as nested jars under `META-INF/api-plugin-libs/`; no shadow/fat-jar setup is needed. Libraries the gateway provides (the SDK, Spring, Bean Validation, Jackson, SLF4J, Kotlin, Swagger, Flyway, MyBatis/Hikari, JDBC drivers and BouncyCastle) are filtered out and resolve from the gateway. The gateway extracts the rest to `app.storage.plugin-library-dir` and shares one class loader per dependency digest across plugins. Set `apiPlugin { bundleDependencies = false }` to keep a thin jar.
+`runtimeClasspath` dependencies are bundled as nested jars under `META-INF/api-plugin-libs/`; no shadow/fat-jar setup is needed. Libraries the gateway provides (the SDK, Spring, Bean Validation, Jackson, SLF4J, Kotlin, Swagger, Flyway, MyBatis/MyBatis-Plus/Hikari, JDBC drivers and BouncyCastle) are filtered out and resolve from the gateway. The gateway extracts the rest to `app.storage.plugin-library-dir` and shares one class loader per dependency digest across plugins. Set `apiPlugin { bundleDependencies = false }` to keep a thin jar.
 
 The SDK carries the versions those provided libraries resolve to on the gateway, and `checkPluginClasspath` (part of `build`) fails when a plugin resolves one of them **newer** than the gateway ships — declare provided dependencies without a version, or as `compileOnly`, so the SDK pins them. Older versions are allowed. The descriptor records the SDK the plugin was built with, and the gateway refuses a build newer than its own; a jar that bundles a provided library (other than BouncyCastle) is refused at install.
 
