@@ -1,12 +1,3 @@
-import groovy.json.JsonSlurper
-import org.gradle.api.DefaultTask
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier
-import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.MapProperty
-import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.TaskAction
 import java.security.MessageDigest
 
 plugins {
@@ -36,7 +27,9 @@ repositories {
 }
 
 dependencies {
-    implementation(project(":plugin-sdk"))
+    implementation(project(":gateway-api"))
+    implementation(project(":plugin-runtime"))
+    implementation(project(":plugin-signing"))
 
     implementation(libs.kotlin.reflect)
     implementation(libs.kotlinx.coroutines.core)
@@ -178,75 +171,3 @@ if (env == "release") {
     }
 }
 
-/**
- * Checks the plugin SDK's gateway dependency manifest against this gateway
- *
- * The SDK embeds the versions of the modules a plugin may only use from the gateway, and a
- * plugin build fails when it resolves any of them at another version. This task is the other
- * half: it fails when the gateway's own resolved versions move away from that manifest.
- */
-abstract class VerifyGatewayDependencyManifest : DefaultTask() {
-    @get:Input
-    abstract val gatewayModules: MapProperty<String, String>
-
-    @get:Input
-    abstract val gatewayVersion: Property<String>
-
-    @get:InputFile
-    abstract val manifestFile: RegularFileProperty
-
-    @TaskAction
-    fun run() {
-        val manifest = JsonSlurper().parse(manifestFile.get().asFile) as Map<*, *>
-        val manifestVersion = manifest["sdkVersion"] as? String
-        if (manifestVersion != gatewayVersion.get()) {
-            throw GradleException(
-                "Gateway dependency manifest was generated for SDK $manifestVersion, not ${gatewayVersion.get()}"
-            )
-        }
-        val dependencies = manifest["dependencies"] as? Map<*, *>
-            ?: throw GradleException("Gateway dependency manifest has no 'dependencies' object")
-
-        val gateway = gatewayModules.get()
-        val mismatches = dependencies.entries.mapNotNull { (module, version) ->
-            val gatewayVersion = gateway[module] ?: return@mapNotNull null
-            if (gatewayVersion == version) {
-                null
-            } else {
-                "$module is $version in the manifest but $gatewayVersion in the gateway"
-            }
-        }
-        if (mismatches.isNotEmpty()) {
-            throw GradleException(
-                "Gateway dependency manifest is stale:\n" + mismatches.joinToString("\n") { "  $it" }
-            )
-        }
-    }
-}
-
-val verifyGatewayDependencyManifest = tasks.register<VerifyGatewayDependencyManifest>(
-    "verifyGatewayDependencyManifest"
-) {
-    group = "verification"
-    description = "Checks the plugin SDK's gateway dependency manifest against this gateway"
-    gatewayVersion.set(project.version.toString())
-    manifestFile.set(
-        project(":plugin-sdk").layout.buildDirectory.file(
-            "generated/plugin-sdk/META-INF/api-management-gateway-dependencies.json"
-        )
-    )
-    gatewayModules.set(providers.provider {
-        configurations.named("runtimeClasspath").get()
-            .incoming.resolutionResult.allComponents
-            .mapNotNull { component ->
-                val id = component.id as? ModuleComponentIdentifier ?: return@mapNotNull null
-                "${id.group}:${id.module}" to id.version
-            }
-            .toMap()
-    })
-    dependsOn(":plugin-sdk:generatePluginSdkResources")
-}
-
-tasks.named("check") {
-    dependsOn(verifyGatewayDependencyManifest)
-}

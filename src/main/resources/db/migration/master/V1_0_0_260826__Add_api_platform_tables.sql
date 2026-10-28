@@ -17,6 +17,14 @@ create table t_b_api_plugin
     signer_key_id       varchar(64)    null comment 'Signer public key fingerprint (t_b_api_plugin_trust_key.key_id)',
     openapi             longtext       null comment 'Embedded OpenAPI fragment JSON',
     config_schema       text           null comment 'Embedded plugin config schema JSON snapshot (META-INF/plugin-config.json)',
+    descriptor_format   int            not null default 1 comment 'Plugin descriptor format',
+    gateway_api_version int            not null default 1 comment 'Gateway API major version the plugin was compiled against',
+    requires_gateway    varchar(100)   not null default '>=1.0.0 <2.0.0' comment 'Required gateway version range',
+    requires_gateway_api varchar(100)  not null default '^1.0' comment 'Required gateway API version range',
+    dependency_lock     longtext       null comment 'Resolved dependency lock JSON',
+    lock_hash           varchar(64)    null comment 'Dependency lock SHA-256',
+    load_status         varchar(20)    not null default 'LOADED' comment 'Load status [LOADED, LOAD_ERROR, DISABLED, UNRESOLVED]',
+    load_error_code     varchar(40)    null comment 'Load error code',
     load_error          varchar(512)   null comment 'Last mount error message',
     create_time         datetime       not null default (utc_timestamp()) comment 'Create time',
     update_time         datetime       not null default (utc_timestamp()) comment 'Update time',
@@ -159,6 +167,49 @@ create table t_b_api_plugin_setting
     version       int          not null default 0,
     constraint t_b_api_plugin_setting_unique_key unique (plugin_id, setting_key)
 ) comment 'API Platform - Plugin Setting';
+
+drop table if exists t_b_plugin_module;
+create table t_b_plugin_module
+(
+    id          bigint       not null primary key,
+    group_id       varchar(200) not null comment 'Maven group',
+    artifact_id    varchar(200) not null comment 'Maven artifact',
+    module_version varchar(100) not null comment 'Resolved Maven version',
+    sha256         varchar(64)  not null comment 'Module jar SHA-256',
+    size           bigint       not null default 0 comment 'Module jar size in bytes',
+    source         varchar(500) null comment 'Repository the module was resolved from',
+    install_time   datetime     not null default (utc_timestamp()) comment 'Install time',
+    create_time    datetime     not null default (utc_timestamp()) comment 'Create time',
+    update_time    datetime     not null default (utc_timestamp()) comment 'Update time',
+    version        int          not null default 0,
+    constraint t_b_plugin_module_unique_coordinate unique (group_id, artifact_id, module_version),
+    constraint t_b_plugin_module_unique_sha unique (sha256)
+) comment 'API Platform - Plugin Module';
+create index t_b_plugin_module_index_sha on t_b_plugin_module (sha256);
+
+drop table if exists t_b_plugin_module_edge;
+create table t_b_plugin_module_edge
+(
+    id                  bigint not null primary key,
+    module_id           bigint not null comment 'Dependent module ID',
+    dependency_module_id bigint not null comment 'Direct dependency module ID',
+    version             int    not null default 0,
+    constraint t_b_plugin_module_edge_unique unique (module_id, dependency_module_id)
+) comment 'API Platform - Plugin Module Edge';
+create index t_b_plugin_module_edge_index_dependency on t_b_plugin_module_edge (dependency_module_id);
+
+drop table if exists t_b_plugin_module_ref;
+create table t_b_plugin_module_ref
+(
+    id          bigint      not null primary key,
+    plugin_id   varchar(64) not null comment 'Plugin ID',
+    module_id   bigint      not null comment 'Module ID',
+    create_time datetime    not null default (utc_timestamp()) comment 'Create time',
+    version     int         not null default 0,
+    constraint t_b_plugin_module_ref_unique unique (plugin_id, module_id)
+) comment 'API Platform - Plugin Module Reference';
+create index t_b_plugin_module_ref_index_plugin on t_b_plugin_module_ref (plugin_id);
+create index t_b_plugin_module_ref_index_module on t_b_plugin_module_ref (module_id);
 
 alter table t_s_menu
     add column plugin_id varchar(64) null comment 'API Platform plugin ID (plugin-created menu)';

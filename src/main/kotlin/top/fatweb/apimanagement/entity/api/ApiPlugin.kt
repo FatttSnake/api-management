@@ -170,6 +170,78 @@ class ApiPlugin : Serializable {
     var loadError: String? = null
 
     /**
+     * Plugin descriptor format
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @TableField("descriptor_format")
+    var descriptorFormat: Int? = null
+
+    /**
+     * Gateway API major version the plugin was compiled against
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @TableField("gateway_api_version")
+    var gatewayApiVersion: Int? = null
+
+    /**
+     * Required gateway version range
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @TableField("requires_gateway")
+    var requiresGateway: String? = null
+
+    /**
+     * Required gateway API version range
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @TableField("requires_gateway_api")
+    var requiresGatewayApi: String? = null
+
+    /**
+     * Resolved dependency lock JSON
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @TableField("dependency_lock")
+    var dependencyLock: String? = null
+
+    /**
+     * Dependency lock SHA-256
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @TableField("lock_hash")
+    var lockHash: String? = null
+
+    /**
+     * Load status
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @TableField("load_status")
+    var loadStatus: String? = null
+
+    /**
+     * Load error code
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @TableField("load_error_code")
+    var loadErrorCode: String? = null
+
+    /**
      * Create time
      *
      * @author FatttSnake, fatttsnake@gmail.com

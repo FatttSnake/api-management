@@ -1,10 +1,10 @@
 package top.fatweb.apimanagement.component.plugin
 
 import org.slf4j.LoggerFactory
+import top.fatweb.apimanagement.api.v1.Storage
 import top.fatweb.apimanagement.component.storage.FileStorageProvider
 import top.fatweb.apimanagement.component.storage.StorageKeyUtil
 import top.fatweb.apimanagement.properties.ServerProperties
-import top.fatweb.apimanagement.sdk.plugin.PluginStorage
 import top.fatweb.apimanagement.service.system.IStorageBlobService
 import java.time.Duration
 
@@ -22,7 +22,7 @@ class PluginStorageImpl(
     private val serverProperties: ServerProperties,
     private val fileStorageProvider: FileStorageProvider,
     private val storageBlobService: IStorageBlobService
-) : PluginStorage {
+) : Storage {
     private val logger = LoggerFactory.getLogger(this::class.java)
 
     override fun saveContent(content: ByteArray): String =

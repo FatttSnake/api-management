@@ -305,7 +305,7 @@
           "type": "string",
           "maxLength": 64,
           "pattern": "^[a-z][a-z0-9-]*$",
-          "description": "The name the plugin asks this datasource by, through PluginContext.datasources - part of the plugin's own vocabulary rather than a console label. It is also the SQLite filename and a child-context bean-name suffix, which is why it is held to a plain lowercase word. Unique in the plugin.",
+          "description": "The name the plugin asks this datasource by, through GatewayContext.dataSources() - part of the plugin's own vocabulary rather than a console label. It is also the SQLite filename, which is why it is held to a plain lowercase word. Unique in the plugin.",
           "$comment": "PluginDatasourceSchema.NAME_REGEX and MAX_NAME_LENGTH."
         },
         "dbType": {

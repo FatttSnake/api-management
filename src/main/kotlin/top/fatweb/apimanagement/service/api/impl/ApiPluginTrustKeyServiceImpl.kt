@@ -15,7 +15,7 @@ import top.fatweb.apimanagement.mapper.api.ApiPluginTrustKeyMapper
 import top.fatweb.apimanagement.param.system.api.ApiPluginTrustKeyAddParam
 import top.fatweb.apimanagement.param.system.api.ApiPluginTrustKeyGetParam
 import top.fatweb.apimanagement.param.system.api.ApiPluginTrustKeyUpdateStatusParam
-import top.fatweb.apimanagement.sdk.plugin.PluginSigner
+import top.fatweb.apimanagement.plugin.signing.PluginSigner
 import top.fatweb.apimanagement.service.api.IApiPluginTrustKeyService
 import top.fatweb.apimanagement.util.getLoginUserIdOrThrow
 import top.fatweb.apimanagement.util.saveOrThrowException

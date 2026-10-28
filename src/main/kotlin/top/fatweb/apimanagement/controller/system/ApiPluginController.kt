@@ -7,10 +7,12 @@ import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
 import top.fatweb.apimanagement.annotation.BaseController
 import top.fatweb.apimanagement.annotation.ProcessParam
+import top.fatweb.apimanagement.converter.api.toVo
 import top.fatweb.apimanagement.entity.common.ResponseCode
 import top.fatweb.apimanagement.entity.common.ResponseResult
+import top.fatweb.apimanagement.exception.PluginInstallException
 import top.fatweb.apimanagement.param.system.api.*
-import top.fatweb.apimanagement.service.api.IApiPluginService
+import top.fatweb.apimanagement.service.api.IPluginPlatformService
 import top.fatweb.apimanagement.vo.PageVo
 import top.fatweb.apimanagement.vo.api.ApiGroupVo
 import top.fatweb.apimanagement.vo.api.ApiInterfaceVo
@@ -25,7 +27,7 @@ import top.fatweb.apimanagement.vo.api.ApiPluginVo
  */
 @BaseController(path = ["/system/api"], name = "API 插件管理", description = "API 插件管理相关接口")
 class ApiPluginController(
-    private val apiPluginService: IApiPluginService
+    private val pluginPlatformService: IPluginPlatformService
 ) {
     /**
      * Get API plugin paging information
@@ -39,7 +41,7 @@ class ApiPluginController(
     @GetMapping("/plugin")
     @PreAuthorize("hasAnyAuthority('system:plugin:plugin:query')")
     fun getPlugin(@ProcessParam @Valid apiPluginGetParam: ApiPluginGetParam?): ResponseResult<PageVo<ApiPluginVo>> =
-        ResponseResult.databaseSuccess(data = apiPluginService.getPluginPage(apiPluginGetParam))
+        ResponseResult.databaseSuccess(data = pluginPlatformService.getPluginPage(apiPluginGetParam))
 
     /**
      * Get one API plugin by its plugin ID
@@ -53,7 +55,7 @@ class ApiPluginController(
     @GetMapping("/plugin/{pluginId}/info")
     @PreAuthorize("hasAnyAuthority('system:plugin:plugin:query')")
     fun getPluginInfo(@PathVariable pluginId: String): ResponseResult<ApiPluginVo> =
-        ResponseResult.databaseSuccess(data = apiPluginService.getPlugin(pluginId))
+        ResponseResult.databaseSuccess(data = pluginPlatformService.getPlugin(pluginId))
 
     /**
      * Install a plugin from an uploaded jar
@@ -69,7 +71,11 @@ class ApiPluginController(
     fun install(@RequestPart("file") file: MultipartFile): ResponseResult<ApiPluginVo> =
         ResponseResult.databaseSuccess(
             ResponseCode.DATABASE_INSERT_SUCCESS,
-            data = apiPluginService.installPlugin(file.bytes, file.originalFilename ?: "plugin.jar")
+            data = pluginPlatformService.install(
+                jarBytes = file.bytes,
+                jarName = file.originalFilename ?: "plugin.jar",
+                modules = emptyList()
+            ).toVo()
         )
 
     /**
@@ -84,7 +90,7 @@ class ApiPluginController(
     @PutMapping("/plugin")
     @PreAuthorize("hasAnyAuthority('system:plugin:plugin:modify')")
     fun updatePlugin(@ProcessParam @Valid @RequestBody apiPluginUpdateParam: ApiPluginUpdateParam): ResponseResult<Unit> {
-        apiPluginService.updatePlugin(apiPluginUpdateParam)
+        pluginPlatformService.updatePlugin(apiPluginUpdateParam)
 
         return ResponseResult.databaseSuccess(ResponseCode.DATABASE_UPDATE_SUCCESS)
     }
@@ -101,7 +107,11 @@ class ApiPluginController(
     @PatchMapping("/plugin")
     @PreAuthorize("hasAnyAuthority('system:plugin:plugin:status')")
     fun updatePluginStatus(@ProcessParam @Valid @RequestBody apiPluginUpdateStatusParam: ApiPluginUpdateStatusParam): ResponseResult<Unit> {
-        apiPluginService.updatePluginStatus(apiPluginUpdateStatusParam)
+        val plugin = apiPluginUpdateStatusParam.id
+            ?.let(pluginPlatformService::getById)
+            ?: throw PluginInstallException("Plugin not found")
+        val pluginId = plugin.pluginId ?: throw PluginInstallException("Plugin has no pluginId")
+        pluginPlatformService.setEnabled(pluginId, apiPluginUpdateStatusParam.enable == true)
 
         return ResponseResult.databaseSuccess(ResponseCode.DATABASE_UPDATE_SUCCESS)
     }
@@ -126,7 +136,7 @@ class ApiPluginController(
         @PathVariable pluginId: String,
         @RequestParam(name = "purgeData", defaultValue = "false") purgeData: Boolean
     ): ResponseResult<Unit> {
-        apiPluginService.uninstallPlugin(pluginId, purgeData)
+        pluginPlatformService.uninstall(pluginId, purgeData)
 
         return ResponseResult.databaseSuccess(ResponseCode.DATABASE_DELETE_SUCCESS)
     }
@@ -145,7 +155,7 @@ class ApiPluginController(
     fun reload(@PathVariable pluginId: String): ResponseResult<ApiPluginVo> =
         ResponseResult.databaseSuccess(
             ResponseCode.DATABASE_UPDATE_SUCCESS,
-            data = apiPluginService.reloadPlugin(pluginId)
+            data = pluginPlatformService.reload(pluginId).toVo()
         )
 
     /**
@@ -160,7 +170,7 @@ class ApiPluginController(
     @GetMapping("/plugin/{pluginId}/config")
     @PreAuthorize("hasAnyAuthority('system:plugin:config:query')")
     fun getConfig(@PathVariable pluginId: String): ResponseResult<ApiPluginConfigVo> =
-        ResponseResult.databaseSuccess(data = apiPluginService.getPluginConfig(pluginId))
+        ResponseResult.databaseSuccess(data = pluginPlatformService.getPluginConfig(pluginId))
 
     /**
      * Update the configuration of a plugin
@@ -178,7 +188,7 @@ class ApiPluginController(
     @PutMapping("/plugin/config")
     @PreAuthorize("hasAnyAuthority('system:plugin:config:modify')")
     fun updateConfig(@ProcessParam @Valid @RequestBody apiPluginConfigUpdateParam: ApiPluginConfigUpdateParam): ResponseResult<Unit> {
-        apiPluginService.updatePluginConfig(apiPluginConfigUpdateParam)
+        pluginPlatformService.updatePluginConfig(apiPluginConfigUpdateParam)
 
         return ResponseResult.databaseSuccess(ResponseCode.DATABASE_UPDATE_SUCCESS)
     }
@@ -199,7 +209,7 @@ class ApiPluginController(
         @PathVariable pluginId: String,
         @ProcessParam @Valid @RequestBody apiPluginDatasourceTestParam: ApiPluginDatasourceTestParam
     ): ResponseResult<Unit> {
-        apiPluginService.testPluginDatasource(
+        pluginPlatformService.testPluginDatasource(
             pluginId,
             apiPluginDatasourceTestParam.name.orEmpty(),
             // A value that is left out keeps its null, which is what says the stored one is
@@ -225,7 +235,7 @@ class ApiPluginController(
     @GetMapping
     @PreAuthorize("hasAnyAuthority('system:interface:interface:query')")
     fun getInterface(@ProcessParam @Valid apiInterfaceGetParam: ApiInterfaceGetParam?): ResponseResult<PageVo<ApiGroupVo>> =
-        ResponseResult.databaseSuccess(data = apiPluginService.getInterfacePage(apiInterfaceGetParam))
+        ResponseResult.databaseSuccess(data = pluginPlatformService.getInterfacePage(apiInterfaceGetParam))
 
     /**
      * Update API interface configuration
@@ -239,7 +249,7 @@ class ApiPluginController(
     @PutMapping
     @PreAuthorize("hasAnyAuthority('system:interface:interface:modify')")
     fun updateInterface(@ProcessParam @Valid @RequestBody apiInterfaceUpdateParam: ApiInterfaceUpdateParam): ResponseResult<Unit> {
-        apiPluginService.updateInterface(apiInterfaceUpdateParam)
+        pluginPlatformService.updateInterface(apiInterfaceUpdateParam)
 
         return ResponseResult.databaseSuccess(ResponseCode.DATABASE_UPDATE_SUCCESS)
     }
@@ -256,7 +266,7 @@ class ApiPluginController(
     @PatchMapping
     @PreAuthorize("hasAnyAuthority('system:interface:interface:status')")
     fun updateInterfaceStatus(@ProcessParam @Valid @RequestBody apiInterfaceUpdateStatusParam: ApiInterfaceUpdateStatusParam): ResponseResult<Unit> {
-        apiPluginService.updateInterfaceStatus(apiInterfaceUpdateStatusParam)
+        pluginPlatformService.updateInterfaceStatus(apiInterfaceUpdateStatusParam)
 
         return ResponseResult.databaseSuccess(ResponseCode.DATABASE_UPDATE_SUCCESS)
     }

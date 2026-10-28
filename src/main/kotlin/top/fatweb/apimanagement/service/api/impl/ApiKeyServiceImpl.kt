@@ -10,6 +10,7 @@ import org.springframework.security.access.AccessDeniedException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import top.fatweb.apimanagement.annotation.EventLogRecord
+import top.fatweb.apimanagement.component.plugin.PluginRegistryCache
 import top.fatweb.apimanagement.component.storage.RedisProvider
 import top.fatweb.apimanagement.converter.api.toEntity
 import top.fatweb.apimanagement.converter.api.toVo
@@ -27,7 +28,6 @@ import top.fatweb.apimanagement.mapper.permission.UserMapper
 import top.fatweb.apimanagement.param.system.apiKey.*
 import top.fatweb.apimanagement.properties.ServerProperties
 import top.fatweb.apimanagement.service.api.IApiKeyService
-import top.fatweb.apimanagement.service.api.IApiPluginService
 import top.fatweb.apimanagement.settings.ApiSettings
 import top.fatweb.apimanagement.settings.SettingsOperator
 import top.fatweb.apimanagement.util.*
@@ -51,7 +51,7 @@ class ApiKeyServiceImpl(
     private val serverProperties: ServerProperties,
     private val redisProvider: RedisProvider,
     private val userMapper: UserMapper,
-    private val apiPluginService: IApiPluginService,
+    private val pluginRegistryCache: PluginRegistryCache,
     private val apiInterfaceMapper: ApiInterfaceMapper
 ) : ServiceImpl<ApiKeyMapper, ApiKey>(), IApiKeyService {
     private companion object {
@@ -199,7 +199,7 @@ class ApiKeyServiceImpl(
             .map { (pluginId, apis) ->
                 ApiKeyAvailableGroupVo(
                     pluginId = pluginId.ifBlank { null },
-                    pluginName = apiPluginService.getByPluginId(pluginId)?.name,
+                    pluginName = pluginRegistryCache.getByPluginId(pluginId)?.name,
                     interfaces = apis.map { ApiKeyAvailableInterfaceVo(it.code, it.name) }
                 )
             }

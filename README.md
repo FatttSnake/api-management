@@ -24,18 +24,18 @@
 
 API Management is a **self-hosted API gateway and management platform**. It treats "available APIs" as resources delivered by **plugins**: a plugin is hot-installed into the gateway as a jar, the endpoints it declares get registered under a unified namespace, and they are then exposed in a uniform way — with **authentication, access control, rate limiting, metering, billing and auditing** handled by the platform and configured through a complete set of REST APIs.
 
-The backend is written in **Kotlin + Spring Boot**. The stable API surface needed to build plugins is extracted into the standalone **plugin-sdk** submodule, which is published together with the main application. For plugin development, see the [api-management-plugins](https://github.com/FatttSnake/api-management-plugins) project.
+The backend is written in **Kotlin + Spring Boot**. The stable API surface needed to build plugins is extracted into the standalone **`gateway-api`** submodule; the plugin runtime, module store and Gradle tooling live in **`plugin-runtime`**, **`plugin-signing`** and **`plugin-gradle-plugin`**. For plugin examples, see the [api-management-plugins](https://github.com/FatttSnake/api-management-plugins) project.
 
 # Features
 
-- **Pluginized API hosting** — upload a plugin jar; the gateway verifies its **Ed25519 signature** (against the trust key store maintained by the administrator), then hot-installs / upgrades / uninstalls it inside an **isolated classloader / child container** — no restart required.
+- **Pluginized API hosting** — upload a plugin jar; the gateway verifies its **Ed25519 signature** (against the trust key store maintained by the administrator), then hot-installs / upgrades / uninstalls it with an **isolated plugin class loader and per-plugin module graph** — no restart required.
 - **Namespaced & versioned routing** — every plugin endpoint is uniformly exposed as `/api/{plugin}/v{version}/...`; routes are persisted to the database and automatically restored after a restart.
 - **Multi-layer access control** — accounts log in with **JWT**; callers may also use an **AccessKey / SecretKey**; optional **two-factor authentication (TOTP)**; each interface supports a `need-key` switch, an enable toggle and two access modes, `DEFAULT` / `RESTRICTED`, all expressed as RBAC powers.
 - **Metering & billing** — per-interface price and billing mode (`FREE` / `SUCCESS_ONLY` / `ALWAYS`), **per-minute rate limits**; per-account **balance** and quota windows.
 - **RBAC permission tree** — users, groups, roles and fine-grained powers (module / menu / operation / scope); available APIs are **grouped by plugin** in the permission tree.
 - **Self-service for consumers** — "My API accounts", "My API keys", "API docs" and "My usage" endpoints for end users.
 - **Observability & audit** — API usage statistics, monitoring, reports and aggregated statistics (periodically computed), plus operation audit and system logs.
-- **Plugin SDK** — lifecycle hooks, **isolated per-plugin datasources** (several named ones per plugin, MySQL or SQLite), and a controlled context exposing the current caller, balance, interface configuration and plugin settings.
+- **Plugin platform** — lifecycle hooks, **isolated per-plugin datasources** (several named ones per plugin, MySQL or SQLite), independent dependency modules with version locks, and a controlled `GatewayContext` exposing settings, storage, caller identity, balance and interface configuration.
 - **Flexible storage & mail** — file storage on local disk or **S3**; built-in mail delivery (registration, security notices, etc.).
 - **Auto-migrated dual database** — MySQL holds key business data while SQLite holds high-volume data such as logs; both are initialized by Flyway.
 
@@ -43,16 +43,24 @@ The backend is written in **Kotlin + Spring Boot**. The stable API surface neede
 
 ```
 api-management/
-├── build.gradle.kts / settings.gradle.kts        # Gradle build (Java 25 toolchain, plugin-sdk & plugin-gradle-plugin submodules)
+├── build.gradle.kts / settings.gradle.kts        # Gradle build (Java 25 toolchain, plugin modules included)
 ├── docs/                                         # Project docs and assets (logo.svg, plugin-debugging.md / _zh.md, etc.)
-├── plugin-sdk/                                   # Plugin SDK (standalone submodule for plugin authors)
-│   └── src/main/kotlin/top/fatweb/apimanagement/sdk/
-│       ├── annotation/ApiController.kt           # Declares "one plugin + a set of API routes"
-│       └── plugin/                               # PluginDescriptor / PluginLifecycle / PluginContext / PluginStorage / ApiResponse / PluginSigner
+├── gateway-api/                                  # Stable plugin contract (Kotlin, Java-friendly, ABI manifest)
+│   └── src/main/kotlin/top/fatweb/apimanagement/api/v1/
+│       └── ApiPlugin / GatewayContext / ApiRoutes / ApiRequest / ApiResponse / capabilities
+├── plugin-runtime/                               # Class loading, module store, route registry, install lifecycle
+│   └── src/main/kotlin/top/fatweb/apimanagement/plugin/runtime/
+│       ├── classloader/                          # GatewayApiClassLoader / ModuleClassLoader / PluginClassLoader
+│       ├── module/                               # lock parser, content-addressed module store
+│       ├── route/                                # route registry, MVC handler mapping & adapter
+│       └── runtime/                              # descriptor parser, GatewayContext implementation, plugin loader
+├── plugin-signing/                               # Ed25519 signing/verification shared by gateway & Gradle tooling
 ├── plugin-gradle-plugin/                         # Gradle plugin `top.fatweb.api-plugin` for plugin authors
 │   └── src/main/kotlin/top/fatweb/apimanagement/gradle/
-│       ├── ApiPlugin.kt                          # Applies the apiPlugin DSL, adds the SDK dependency & repositories
-│       └── ApiPluginTasks.kt                     # generatePluginDescriptor / genPluginKeys / signPlugin / verifyPlugin / deployPlugin
+│       ├── ApiPlugin.kt                          # Applies the apiPlugin DSL, adds gateway-api as compileOnly
+│       ├── GeneratePluginLock.kt                 # Resolves runtime dependencies into api-plugin-deps.json
+│       ├── CheckPluginAbi.kt                     # Verifies plugin bytecode against gateway-api.abi.json
+│       └── ApiPluginTasks.kt                     # descriptor / keys / sign / verify / deployPlugin
 ├── src/main/kotlin/top/fatweb/apimanagement/
 │   ├── ApiManagementApplication.kt               # Entry point (ensures data dirs, generates config template on first run)
 │   ├── annotation / aspectj                      # Annotations & interceptors (API access, parameter processing, event/sys logs)
@@ -177,31 +185,83 @@ knife4j:
 
 # Plugin Development
 
-Every "available API" on the platform comes from a plugin. For plugin development, see the [api-management-plugins](https://github.com/FatttSnake/api-management-plugins) project.
+For the full architecture walkthrough — modules, class loading, install/startup flow, request path and data model — see [docs/plugin-platform.md](docs/plugin-platform.md).
 
-A plugin is a standalone Gradle project applying the **`top.fatweb.api-plugin`** Gradle plugin (published with the SDK from this repository). It adds the SDK dependency, generates the `api-plugin.json` descriptor from an `apiPlugin { }` DSL, creates the Ed25519 key pair, embeds the public key into the jar and signs it — `./gradlew build` produces a signed plugin jar.
+Every API is contributed by a plugin. A plugin is a standalone Gradle project applying the
+**`top.fatweb.api-plugin`** Gradle plugin; its only compile dependency is
+`top.fatweb:api-management-gateway-api`.
 
-To make the SDK and the Gradle plugin available to plugin projects, publish them from this repository once:
+Publish the contract and tooling once:
 
 ```shell
-./gradlew :plugin-sdk:publishToMavenLocal :plugin-gradle-plugin:publishToMavenLocal
+./gradlew :gateway-api:publishToMavenLocal :plugin-signing:publishToMavenLocal :plugin-gradle-plugin:publishToMavenLocal
 ```
 
-### Dependencies
+`./gradlew build` produces a signed jar containing:
 
-`runtimeClasspath` dependencies are bundled as nested jars under `META-INF/api-plugin-libs/`; no shadow/fat-jar setup is needed. Libraries the gateway provides (the SDK, Spring, Bean Validation, Jackson, SLF4J, Kotlin, Swagger, Flyway, MyBatis/MyBatis-Plus/Hikari, JDBC drivers and BouncyCastle) are filtered out and resolve from the gateway. The gateway extracts the rest to `app.storage.plugin-library-dir` and shares one class loader per dependency digest across plugins. Set `apiPlugin { bundleDependencies = false }` to keep a thin jar.
+| Entry | Purpose |
+|---|---|
+| `META-INF/api-plugin.json` | Descriptor format 1: pluginId, versions, mainClass, `requiresGateway`, `requiresGatewayApi` |
+| `META-INF/api-plugin-deps.json` | Exact dependency lock: GAV, SHA-256, size and direct dependency edges |
+| `META-INF/plugin.pub.pem` / `META-INF/plugin.sig` | Ed25519 public key and signature |
 
-The SDK carries the versions those provided libraries resolve to on the gateway, and `checkPluginClasspath` (part of `build`) fails when a plugin resolves one of them **newer** than the gateway ships — declare provided dependencies without a version, or as `compileOnly`, so the SDK pins them. Older versions are allowed. The descriptor records the SDK the plugin was built with, and the gateway refuses a build newer than its own; a jar that bundles a provided library (other than BouncyCastle) is refused at install.
+`checkPluginAbi` (part of `build`) reads `META-INF/gateway-api.abi.json` from the gateway API jar
+and fails when the plugin references a class, method, field or constructor the gateway does not
+have. Signing runs after ABI validation.
 
-Flyway is provided through the SDK for plugins that own a datasource. Migrate in `onStart` with `Flyway.configure(context.classLoader)` against `context.datasources`, and keep the scripts under `db/migration` in the plugin jar: the plugin class loader does not see the gateway's migration resources.
+## Programming model
 
-A plugin's class loader shares **classes** with the gateway but not **resources**. Resource lookups see only the plugin jar and the bundled libraries — the one exception is a single `.class` lookup, which may fall through to the gateway because Spring's metadata readers need the bytecode of gateway-provided interfaces and annotations. `getResources` never does, so `PathMatchingResourcePatternResolver`, `ServiceLoader` and the child context's component scan stay plugin-only. `PluginContext.classLoader` is that loader, for use from threads the plugin creates itself. This is a default-behavior boundary, not a security boundary: a plugin can still load gateway classes, reach gateway beans through the parent context, or deliberately use the gateway's class loader.
+Plugins do not use Spring MVC annotations and do not get a Spring child context. Implement
+`ApiPlugin` and register routes on the `GatewayContext` passed to `onStart`:
 
-BouncyCastle 1.86 (`bcprov`, `bcpkix`, `bcutil`) is provided by the gateway by default. A plugin that needs a different version sets `apiPlugin { bundleBouncyCastle = true }`; because the provider is registered JVM-wide, such a plugin must pass a `Provider` instance to BouncyCastle builders instead of calling `Security.addProvider` — a global registration pins the plugin's class loader across reloads and can collide with the gateway's `"BC"` provider.
+```kotlin
+class EchoPlugin : ApiPlugin {
+    override fun onStart(context: GatewayContext) {
+        context.api().register(
+            RouteDefinition("POST", "/echo/{name}", 1, OperationMetadata("echo", "Echo a name"))
+        ) { request ->
+            ApiResponse.ok(mapOf("message" to "hello, ${request.pathParam("name")}"))
+        }
+    }
+}
+```
+
+Java plugin authors use the same types. `ApiHandler`, `EventSubscriber` and `Subscription` are
+SAM interfaces, `ApiResponse`/`ParameterSpec`/`ApiPrincipal` expose static factories, and
+`GatewayContext` uses accessors (`context.api()`, `context.settings()`) rather than Kotlin
+properties.
+
+`GatewayContext` is the only gateway surface: `api()`, `settings()`, `dataSources()`,
+`storage()`, `users()`, `audit()`, `events()`, `http()`, `scheduler()`, `json()`, `logger()` and
+`metadata()`. It never exposes the Spring container, beans, mappers or the gateway object mapper.
+
+The request body is raw bytes (`request.body()` / `request.bodyText()`). Use `context.json()` for
+structured JSON, or a library the plugin brings itself. A response body can be bytes, a string, a
+map or a plain bean; `ApiResponse.raw(...)` bypasses the business envelope.
+
+## Dependencies
+
+The plugin jar is thin. Runtime dependencies are resolved at build time into the lock, and each
+module jar is uploaded separately (by `deployPlugin` before the plugin). The gateway stores modules
+content-addressed under `app.storage.plugin-module-dir`, verifies SHA-256, and shares one class
+loader for modules with the same GAV and digest. Different versions coexist.
+
+The gateway provides **only** the JDK, Kotlin stdlib and `gateway-api`. Spring, Jackson, MyBatis,
+Hikari, Flyway, JDBC drivers and everything else are ordinary plugin dependencies and are loaded
+from the plugin's own module graph. Kotlin stdlib and `org.jetbrains:annotations` are excluded from
+the lock because the platform supplies them.
+
+The lock is generated from `runtimeClasspath`; the runtime never resolves a version. Modules can
+also be managed independently through `GET/POST/DELETE /system/api/plugin/module` (upload, list,
+delete an unreferenced module, GC).
+
+Resource lookups see the plugin jar and its modules, plus the platform's `gateway-api` resources.
+This is a default-behavior boundary, not a security sandbox: plugins are signed, and code running
+in the same JVM can still use reflection.
 
 ## Plugin configuration and datasources
 
-A plugin ships a `META-INF/plugin-config.json` inside its own jar declaring which settings it has (their type, default, constraints, whether they are secrets, which named datasources it needs and in which dialect). The gateway reads it **while mounting**, snapshots it onto the plugin row, and the console renders a form from it; the plugin itself only reads `PluginContext.getSetting(key)`, with the gateway resolving defaults. A key declared there belongs to the administrator, and the plugin's `saveSetting` raises on it.
+A plugin ships a `META-INF/plugin-config.json` inside its own jar declaring which settings it has (their type, default, constraints, whether they are secrets, which named datasources it needs and in which dialect). The gateway reads it **while mounting**, snapshots it onto the plugin row, and the console renders a form from it; the plugin reads `GatewayContext.settings().get(key)`, with the gateway resolving defaults. A key declared there belongs to the administrator, and `settings().save(...)` refuses it.
 
 | Endpoint | Description |
 |---|---|
@@ -220,7 +280,7 @@ A plugin can be switched off without being removed: `PATCH /system/api/plugin` w
 
 `DELETE /system/api/plugin/{pluginId}?purgeData=true` purges the plugin's settings, SQLite database directory and file area (the default `false` keeps them for a reinstall). The plugin's own data is deleted by its `onPurge` hook, which runs while its datasources, storage and settings are still open and nothing is calling into it — where it drops its own tables (including those in an external MySQL the gateway never touches) and releases the content-addressed objects it saved. Only a real uninstall runs it: an upgrade, a reload, a switch-off and a shutdown never do. A plugin that is not mounted is mounted first so its exit hooks can run, and **a failure there refuses the uninstall** (40068) instead of deleting the administrator's record of a plugin whose data it failed to remove; nothing has been deleted, so the uninstall can be retried. Released content-addressed objects are swept on a schedule.
 
-Lifecycle hooks: `onStart` (every mount, before routes are registered), `onStop` (every unmount, after waiting for in-flight requests up to a timeout), `onUninstall` (as the version is taken out — an upgrade runs it too, and it is not the place to delete anything) and `onPurge` (an uninstall that asked for its data to be deleted; the only hook whose failure refuses the uninstall). See the SDK's `PluginLifecycle`.
+Lifecycle hooks: `onStart` (every mount, before routes are activated), `onStop` (every unmount), `onUninstall` (as the version is taken out — an upgrade runs it too, and it is not the place to delete anything) and `onPurge` (an uninstall that asked for its data to be deleted). See `gateway-api`'s `ApiPlugin`.
 
 ## Debugging a plugin
 
@@ -230,9 +290,9 @@ A plugin's jar is loaded into the gateway's own JVM, so a debugger attached to t
 ./gradlew bootRun -Pdebug=true
 ```
 
-The agent is off by default and binds to `127.0.0.1:5005`; `debug.port`, `debug.address` and `debug.suspend` change that. [docs/plugin-debugging.md](docs/plugin-debugging.md) covers a container or a remote host, attaching from the plugin project, and what can be hot-reloaded without deploying — which is worth knowing, because the agent is an unauthenticated way into a JVM that holds every administrator's session.
+The agent is off by default and binds to `127.0.0.1:5005`; `debug.port`, `debug.address` and `debug.suspend` change that. [docs/plugin-debugging.md](docs/plugin-debugging.md) covers attaching from the plugin project and the class-loading boundary — worth knowing, because the agent is an unauthenticated way into a JVM that holds every administrator's session.
 
-The edit loop itself is one task, which builds, signs, verifies and pushes the jar to a running gateway:
+The edit loop itself is one task, which builds, signs, verifies, uploads any dependency modules and pushes the jar to a running gateway:
 
 ```shell
 ./gradlew deployPlugin -PapiPlugin.serverUrl=http://localhost:8080 -PapiPlugin.accessToken=<token>
@@ -270,8 +330,8 @@ In addition, uploaded external plugin jars are materialized to `data/plugins` fo
 
 ## Plugin storage and external links
 
-A plugin reads and writes its own file area through `PluginContext.storage`
-(`PluginStorage`). Every path is confined to that plugin's own namespace.
+A plugin reads and writes its own file area through `GatewayContext.storage()`.
+Every path is confined to that plugin's own namespace.
 Location-addressed files are stored verbatim, which is what allows a **login-free
 external link** to be issued for them:
 
@@ -289,7 +349,7 @@ app:
 
 Content-addressed objects are compressed at rest and cannot be handed to a browser,
 so they have **no** external link and are reachable only through the read/write
-methods of `PluginStorage`.
+methods of the `Storage` capability.
 
 > An external link is an unrevocable bearer credential: whoever holds it can read
 > the file until it expires. Rotating `app.security.tokenSecret` invalidates every

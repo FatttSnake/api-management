@@ -1,9 +1,9 @@
 package top.fatweb.apimanagement.component.plugin
 
 import org.springframework.stereotype.Component
+import top.fatweb.apimanagement.api.v1.Storage
 import top.fatweb.apimanagement.component.storage.FileStorageProvider
 import top.fatweb.apimanagement.properties.ServerProperties
-import top.fatweb.apimanagement.sdk.plugin.PluginStorage
 import top.fatweb.apimanagement.service.system.IStorageBlobService
 
 /**
@@ -26,7 +26,7 @@ class PluginStorageFactory(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun create(pluginId: String): PluginStorage =
+    fun create(pluginId: String): Storage =
         PluginStorageImpl(
             pluginId = pluginId,
             serverProperties = serverProperties,

@@ -143,6 +143,51 @@ data class ApiPluginVo(
     val loadError: String?,
 
     /**
+     * Load status
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @field:Schema(description = "加载状态", allowableValues = ["LOADED", "LOAD_ERROR", "DISABLED", "UNRESOLVED"])
+    val loadStatus: String?,
+
+    /**
+     * Load error code
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @field:Schema(description = "加载错误码")
+    val loadErrorCode: String?,
+
+    /**
+     * Gateway API major version the plugin was compiled against
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @field:Schema(description = "插件编译所针对的网关 API 大版本", example = "1")
+    val gatewayApiVersion: Int?,
+
+    /**
+     * Required gateway version range
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @field:Schema(description = "要求的网关版本范围", example = ">=1.0.0 <2.0.0")
+    val requiresGateway: String?,
+
+    /**
+     * Required gateway API version range
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @field:Schema(description = "要求的网关 API 版本范围", example = "^1.0")
+    val requiresGatewayApi: String?,
+
+    /**
      * Create time
      *
      * @author FatttSnake, fatttsnake@gmail.com

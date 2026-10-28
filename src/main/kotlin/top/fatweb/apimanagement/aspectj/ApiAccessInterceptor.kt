@@ -5,10 +5,10 @@ import jakarta.servlet.http.HttpServletResponse
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Component
-import org.springframework.web.method.HandlerMethod
 import org.springframework.web.servlet.AsyncHandlerInterceptor
 import top.fatweb.apimanagement.component.api.ApiPath
 import top.fatweb.apimanagement.component.plugin.PluginInFlightTracker
+import top.fatweb.apimanagement.component.plugin.PluginRegistryCache
 import top.fatweb.apimanagement.component.storage.RedisProvider
 import top.fatweb.apimanagement.entity.api.ApiInterface
 import top.fatweb.apimanagement.entity.api.ApiKeyPrincipal
@@ -16,13 +16,11 @@ import top.fatweb.apimanagement.entity.api.ApiPlugin
 import top.fatweb.apimanagement.entity.api.ApiUsage
 import top.fatweb.apimanagement.entity.permission.LoginUser
 import top.fatweb.apimanagement.exception.*
+import top.fatweb.apimanagement.plugin.runtime.route.PluginInvocation
 import top.fatweb.apimanagement.properties.ServerProperties
-import top.fatweb.apimanagement.sdk.annotation.ApiController
 import top.fatweb.apimanagement.service.api.IApiAccountService
-import top.fatweb.apimanagement.service.api.IApiPluginService
 import top.fatweb.apimanagement.service.api.IApiTransactionService
 import top.fatweb.apimanagement.service.api.IApiUsageService
-import top.fatweb.apimanagement.service.api.impl.ApiPluginServiceImpl
 import top.fatweb.apimanagement.settings.ApiSettings
 import top.fatweb.apimanagement.settings.SettingsOperator
 import top.fatweb.apimanagement.util.TraceIdUtil
@@ -42,7 +40,7 @@ class ApiAccessInterceptor(
     @param:Qualifier("applicationTaskExecutor") private val customThreadPoolTaskExecutor: Executor,
     private val serverProperties: ServerProperties,
     private val redisProvider: RedisProvider,
-    private val apiPluginService: IApiPluginService,
+    private val pluginRegistryCache: PluginRegistryCache,
     private val apiUsageService: IApiUsageService,
     private val apiAccountService: IApiAccountService,
     private val apiTransactionService: IApiTransactionService,
@@ -66,61 +64,61 @@ class ApiAccessInterceptor(
         response: HttpServletResponse,
         handler: Any
     ): Boolean {
-        if (handler !is HandlerMethod) {
-            // A plugin that is not running has no route registered, so a request to one of its
-            // APIs arrives here bound for the static-resource handler instead. Left alone that
-            // answers "no static resource ... for request", which reads as a wrong URL rather
-            // than as a plugin that is switched off - and with the route gone, this is the only
-            // place left that can tell the two apart. Anything that is not the API URL of an
-            // installed plugin is left to the ordinary not-found path
+        if (handler !is PluginInvocation) {
+            // A switched-off plugin has no routes. Its requests land on the static-resource
+            // handler; answer them as "disabled" rather than as a wrong URL, when the URL
+            // belongs to an installed plugin.
             val scoped = ApiPath.parse(request) ?: return true
-            val plugin = apiPluginService.getByPluginId(scoped.plugin) ?: return true
+            val plugin = pluginRegistryCache.getByPluginId(scoped.plugin) ?: return true
             if (plugin.enable != 1) {
                 throw ApiDisabledException()
             }
-
             return true
         }
-        val annotation = handler.beanType.getAnnotation(ApiController::class.java) ?: return true
-        // The plugin ID is read back out of the URL - the same segment the router already matched
-        // against it - rather than from the annotation, which no longer carries one: a plugin's
-        // identity lives in its descriptor. The version does come from the annotation, because the
-        // router rolls a request forward (a v2 URL is served by a v1 controller when no v2
-        // controller exists) and the code has to name the version the endpoint was mounted under.
-        val scoped = ApiPath.parse(request) ?: throw ApiDisabledException()
-        // The same strict derivation the mount validated: a mounted endpoint always yields a code
-        // here, and a blank operationId - which the mount refuses - surfaces as an error rather
-        // than resolving to a method-name code that is not the endpoint's
-        val apiCode = ApiPluginServiceImpl.buildCode(
-            pluginId = scoped.plugin, version = annotation.version, method = handler.method
-        )
-        val apiInterface = apiPluginService.getByCode(apiCode) ?: throw ApiDisabledException()
+
+        val apiInterface = pluginRegistryCache.getByCode(handler.apiCode) ?: throw ApiDisabledException()
         val pluginId = apiInterface.pluginId ?: throw ApiDisabledException()
-        val plugin = apiPluginService.getByPluginId(pluginId) ?: throw ApiDisabledException()
+        val plugin = pluginRegistryCache.getByPluginId(pluginId) ?: throw ApiDisabledException()
         if (apiInterface.enable != 1 || plugin.enable != 1) {
             throw ApiDisabledException()
         }
 
-        request.setAttribute(ATTR_API, apiInterface)
+        return admit(
+            request = request,
+            plugin = plugin,
+            api = apiInterface,
+            pluginId = pluginId,
+            classLoader = handler.classLoader
+        )
+    }
+
+    private fun admit(
+        request: HttpServletRequest,
+        plugin: ApiPlugin,
+        api: ApiInterface,
+        pluginId: String,
+        classLoader: ClassLoader
+    ): Boolean {
+        request.setAttribute(ATTR_API, api)
         request.setAttribute(ATTR_START, System.nanoTime())
 
         when (val principal = SecurityContextHolder.getContext().authentication?.principal) {
             is ApiKeyPrincipal -> admitApiKey(
                 request = request,
                 plugin = plugin,
-                api = apiInterface,
+                api = api,
                 principal = principal
             )
 
             is LoginUser -> admitAccount(
                 request = request,
                 plugin = plugin,
-                api = apiInterface,
+                api = api,
                 principal = principal
             )
 
             else -> {
-                if (apiInterface.needKey == 1) {
+                if (api.needKey == 1) {
                     throw ApiKeyRequiredException()
                 }
                 request.setAttribute(ATTR_COST, BigDecimal.ZERO)
@@ -138,11 +136,10 @@ class ApiAccessInterceptor(
 
         // Set last, after every point above that can still refuse the request: Spring calls
         // afterCompletion only for a request this method admitted, so a class loader installed
-        // before a throw would have nothing to restore it. handler.beanType is the controller
-        // class - Spring has already unwrapped any proxy - so its loader is the plugin's, and the
-        // handler invocation runs between here and afterCompletion on this same thread
+        // before a throw would have nothing to restore it. The handler invocation runs between
+        // here and afterCompletion on this same thread.
         request.setAttribute(ATTR_TCCL, Thread.currentThread().contextClassLoader)
-        Thread.currentThread().contextClassLoader = handler.beanType.classLoader
+        Thread.currentThread().contextClassLoader = classLoader
 
         return true
     }
@@ -284,7 +281,8 @@ class ApiAccessInterceptor(
         request.setAttribute(ATTR_USER_ID, userId)
 
         // Access mode: RESTRICTED requires the caller to hold the api:* operation code
-        if (apiPluginService.resolveAccessMode(api) == ApiInterface.AccessMode.RESTRICTED) {
+        val accessMode = api.accessMode ?: plugin.defaultAccessMode ?: ApiInterface.AccessMode.RESTRICTED
+        if (accessMode == ApiInterface.AccessMode.RESTRICTED) {
             val codes = principal.user.operations?.mapNotNull { it.code }?.toSet() ?: emptySet()
             if (api.code !in codes) {
                 throw ApiPermissionDeniedException()

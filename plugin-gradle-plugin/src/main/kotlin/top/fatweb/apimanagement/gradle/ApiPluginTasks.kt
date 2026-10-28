@@ -14,8 +14,7 @@ import tools.jackson.databind.JsonNode
 import tools.jackson.module.kotlin.jacksonObjectMapper
 import tools.jackson.module.kotlin.readValue
 import tools.jackson.module.kotlin.treeToValue
-import top.fatweb.apimanagement.sdk.plugin.PluginDescriptor
-import top.fatweb.apimanagement.sdk.plugin.PluginSigner
+import top.fatweb.apimanagement.plugin.signing.PluginSigner
 import java.io.File
 import java.io.IOException
 import java.net.URI
@@ -44,7 +43,6 @@ abstract class GeneratePluginDescriptor : DefaultTask() {
     @get:Input
     abstract val versionName: Property<String>
 
-    @get:Optional
     @get:Input
     abstract val versionCode: Property<Int>
 
@@ -54,13 +52,14 @@ abstract class GeneratePluginDescriptor : DefaultTask() {
     @get:Input
     abstract val author: Property<String>
 
-    @get:Optional
     @get:Input
     abstract val mainClass: Property<String>
 
-    @get:Optional
     @get:Input
-    abstract val builtWithSdk: Property<String>
+    abstract val requiresGateway: Property<String>
+
+    @get:Input
+    abstract val requiresGatewayApi: Property<String>
 
     @get:OutputFile
     abstract val outputFile: RegularFileProperty
@@ -68,49 +67,45 @@ abstract class GeneratePluginDescriptor : DefaultTask() {
     @TaskAction
     fun run() {
         val id = pluginId.get()
-        require(PluginDescriptor.PLUGIN_ID_REGEX.matches(id)) {
-            "apiPlugin.pluginId must match ${PluginDescriptor.PLUGIN_ID_REGEX.pattern} (got \"$id\")"
+        require(PLUGIN_ID.matches(id)) {
+            "apiPlugin.pluginId must match ${PLUGIN_ID.pattern} (got \"$id\")"
         }
         val name = pluginName.get()
         require(name.isNotBlank()) { "apiPlugin.pluginName must not be blank" }
         val code = versionCode.orNull
             ?: error(
                 "apiPlugin.versionCode is REQUIRED — set it explicitly in the apiPlugin { } block " +
-                    "(e.g. versionCode = 1). It has no default: the gateway holds it against the " +
-                    "installed version and refuses a deployment below it."
+                    "(e.g. versionCode = 1)."
             )
         require(code >= 1) { "apiPlugin.versionCode must be >= 1 (got $code)" }
-
-        val json = buildString {
-            append("{\"pluginId\":").append(json(id))
-            append(",\"name\":").append(json(name))
-            append(",\"versionName\":").append(json(versionName.get()))
-            append(",\"versionCode\":").append(code)
-            append(",\"description\":").append(json(pluginDescription.get()))
-            append(",\"author\":").append(json(author.get()))
-            if (mainClass.isPresent && mainClass.get().isNotBlank()) {
-                append(",\"mainClass\":").append(json(mainClass.get()))
-            }
-            if (builtWithSdk.isPresent && builtWithSdk.get().isNotBlank()) {
-                append(",\"builtWithSdk\":").append(json(builtWithSdk.get()))
-            }
-            append('}')
+        val main = mainClass.orNull?.trim().orEmpty()
+        require(main.isNotBlank()) {
+            "apiPlugin.mainClass is required and must name the ApiPlugin implementation"
         }
+        require(requiresGateway.get().isNotBlank()) { "apiPlugin.requiresGateway must not be blank" }
+        require(requiresGatewayApi.get().isNotBlank()) { "apiPlugin.requiresGatewayApi must not be blank" }
 
+        val payload = linkedMapOf<String, Any>(
+            "format" to 1,
+            "pluginId" to id,
+            "name" to name,
+            "versionName" to versionName.get(),
+            "versionCode" to code,
+            "description" to pluginDescription.get(),
+            "author" to author.get(),
+            "mainClass" to main,
+            "requiresGateway" to requiresGateway.get(),
+            "requiresGatewayApi" to requiresGatewayApi.get(),
+            "dependencies" to emptyMap<String, String>()
+        )
         val out = outputFile.get().asFile
         out.parentFile.mkdirs()
-        out.writeText(json)
+        out.writeText(jacksonObjectMapper().writeValueAsString(payload))
         logger.lifecycle("Wrote plugin descriptor: {}", out)
     }
 
     companion object {
-        private fun json(value: String): String = "\"" +
-            value.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t") +
-            "\""
+        private val PLUGIN_ID = Regex("^[a-z][a-z0-9-]{0,63}$")
     }
 }
 
@@ -282,6 +277,15 @@ abstract class DeployPlugin : DefaultTask() {
     @get:Internal
     abstract val jarFile: RegularFileProperty
 
+    /**
+     * Directory holding dependency module jars produced by `generatePluginLock`.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @get:Internal
+    abstract val modulesDirectory: DirectoryProperty
+
     private val mapper = jacksonObjectMapper()
 
     private val httpClient: HttpClient = HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build()
@@ -321,6 +325,7 @@ abstract class DeployPlugin : DefaultTask() {
         if (trustSigner.get()) {
             registerSigner(base, token, publicKeyPem, fingerprint)
         }
+        uploadModules(base, token)
 
         val boundary = BOUNDARY_PREFIX + UUID.randomUUID().toString().replace("-", "")
         val install = HttpRequest.newBuilder(uri("$base/system/api/plugin/install"))
@@ -368,6 +373,41 @@ abstract class DeployPlugin : DefaultTask() {
                 logger.lifecycle("The gateway already trusts this signer: {}", fingerprint)
 
             else -> gatewayFailure(reply, fingerprint)
+        }
+    }
+
+    /**
+     * Uploads the dependency modules produced by `generatePluginLock`.
+     *
+     * @param base gateway base URL
+     * @param token access token
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    private fun uploadModules(base: String, token: String) {
+        val directory = modulesDirectory.get().asFile
+        if (!directory.isDirectory) {
+            return
+        }
+        val modules = directory.listFiles { file -> file.isFile && file.name.endsWith(".jar") }
+            ?.sortedBy { it.name }
+            .orEmpty()
+        modules.forEach { module ->
+            val boundary = BOUNDARY_PREFIX + UUID.randomUUID().toString().replace("-", "")
+            val request = HttpRequest.newBuilder(uri("$base/system/api/plugin/module/install"))
+                .timeout(REQUEST_TIMEOUT)
+                .header("Authorization", "Bearer $token")
+                .header("Content-Type", "multipart/form-data; boundary=$boundary")
+                .POST(multipartBody(boundary, module.name, module))
+                .build()
+            val reply = envelope(send(request), token)
+            if (!reply.success) {
+                throw GradleException(
+                    "Cannot install dependency module ${module.name}: " +
+                        (reply.msg?.takeIf { it.isNotBlank() } ?: "gateway code ${reply.code}")
+                )
+            }
+            logger.lifecycle("Uploaded dependency module {}", module.name)
         }
     }
 

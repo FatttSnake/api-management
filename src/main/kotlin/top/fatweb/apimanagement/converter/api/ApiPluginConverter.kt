@@ -30,6 +30,11 @@ fun ApiPlugin.toVo() = ApiPluginVo(
     jarName = this.jarName,
     signerKeyId = this.signerKeyId,
     loadError = this.loadError,
+    loadStatus = this.loadStatus,
+    loadErrorCode = this.loadErrorCode,
+    gatewayApiVersion = this.gatewayApiVersion,
+    requiresGateway = this.requiresGateway,
+    requiresGatewayApi = this.requiresGatewayApi,
     createTime = this.createTime,
     updateTime = this.updateTime
 )

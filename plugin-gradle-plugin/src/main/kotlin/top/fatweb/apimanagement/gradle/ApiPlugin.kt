@@ -8,9 +8,9 @@ import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.artifacts.result.ResolvedDependencyResult
 import org.gradle.api.file.DuplicatesStrategy
+import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.bundling.Jar
-import top.fatweb.apimanagement.sdk.plugin.PluginClasspath
-import top.fatweb.apimanagement.sdk.plugin.PluginSdk
+import top.fatweb.apimanagement.api.v1.version.VersionRange
 import java.io.File
 
 /**
@@ -25,20 +25,12 @@ class ApiPlugin : Plugin<Project> {
         val layout = project.layout
         val providers = project.providers
 
-        // --- DSL defaults (all overridable) --------------------------------
-        // versionCode deliberately has NO default: it drives the gateway's upgrade
-        // check, so a new release must set it explicitly rather than silently
-        // shipping versionCode = 1 (which the gateway rejects as a downgrade).
         ext.pluginId.convention(project.name)
         ext.pluginName.convention(ext.pluginId)
         ext.description.convention("")
         ext.author.convention("")
-        ext.sdkVersion.convention(
-            providers.gradleProperty("apiPlugin.sdkVersion").orElse(providers.provider { PluginSdk.version })
-        )
-
-        // Deploy credentials are a gradle property or an environment variable, never a build
-        // script literal or a file: the access token is a shared, long-lived secret.
+        ext.requiresGateway.convention(">=1.0.0 <2.0.0")
+        ext.requiresGatewayApi.convention("^1.0")
         ext.serverUrl.convention(
             providers.gradleProperty("apiPlugin.serverUrl")
                 .orElse(providers.environmentVariable("API_PLUGIN_SERVER_URL"))
@@ -50,26 +42,49 @@ class ApiPlugin : Plugin<Project> {
         ext.trustSigner.convention(
             providers.gradleProperty("apiPlugin.trustSigner").map { it.toBoolean() }.orElse(false)
         )
-        ext.bundleDependencies.convention(true)
-        ext.bundleBouncyCastle.convention(false)
 
-        // versionName falls back to the project `version` when it is unset OR
-        // blank, so an empty string behaves exactly like "not set".
         val projectVersion = providers.provider { project.version.toString() }
         val versionName = ext.versionName
             .orElse(projectVersion)
             .map { version -> version.ifBlank { projectVersion.get() } }
 
-        // --- repositories + SDK dependency -----------------------------------
-        ensureRepositories(project)
-        project.dependencies.add("implementation", providers.provider {
-            "top.fatweb:api-management-plugin-sdk:${ext.sdkVersion.get()}"
-        })
+        val gatewayApiVersion = ext.requiresGatewayApi.map { range ->
+            VersionRange.parse(range).minimumVersion().toString()
+        }
 
-        // --- task wiring -------------------------------------------------------
+        ensureRepositories(project)
+        project.dependencies.addProvider(
+            "compileOnly",
+            gatewayApiVersion.map { "top.fatweb:api-management-gateway-api:$it" }
+        )
+
+        val gatewayApi = project.configurations.create("apiPluginGatewayApi") { configuration ->
+            configuration.isCanBeConsumed = false
+            configuration.isCanBeResolved = true
+            configuration.isTransitive = false
+        }
+        project.dependencies.addProvider(
+            gatewayApi.name,
+            gatewayApiVersion.map { "top.fatweb:api-management-gateway-api:$it" }
+        )
+
         val generatedRoot = layout.buildDirectory.dir("generated/api-plugin")
+        val modulesDirectory = layout.buildDirectory.dir("generated/api-plugin-modules")
         val keysDir = layout.projectDirectory.dir("keys")
         val libsDir = layout.buildDirectory.dir("libs")
+        val runtimeClasspath = project.configurations.named("runtimeClasspath")
+
+        val lockTask = project.tasks.register("generatePluginLock", GeneratePluginLock::class.java) { task ->
+            task.group = "api plugin"
+            task.description = "Resolves and locks the plugin's runtime dependency modules"
+            task.classpath.from(runtimeClasspath)
+            task.artifactModules.set(
+                providers.provider { artifactModules(runtimeClasspath.get()) }
+            )
+            task.dependencyEdges.set(providers.provider { dependencyEdges(runtimeClasspath.get()) })
+            task.outputFile.set(generatedRoot.map { it.file("META-INF/api-plugin-deps.json") })
+            task.modulesDirectory.set(modulesDirectory)
+        }
 
         val descriptorTask = project.tasks.register(
             "generatePluginDescriptor",
@@ -84,8 +99,8 @@ class ApiPlugin : Plugin<Project> {
             task.pluginDescription.set(ext.description)
             task.author.set(ext.author)
             task.mainClass.set(ext.mainClass)
-            // Stamped so the gateway can refuse a plugin built against a newer SDK than its own
-            task.builtWithSdk.set(ext.sdkVersion)
+            task.requiresGateway.set(ext.requiresGateway)
+            task.requiresGatewayApi.set(ext.requiresGatewayApi)
             task.outputFile.set(generatedRoot.map { it.file("META-INF/api-plugin.json") })
         }
 
@@ -103,96 +118,37 @@ class ApiPlugin : Plugin<Project> {
             task.outputFile.set(generatedRoot.map { it.file("META-INF/plugin.pub.pem") })
         }
 
-        val runtimeClasspath = project.configurations.named("runtimeClasspath")
-        val bundleLibrariesTask = project.tasks.register(
-            "bundlePluginLibraries",
-            BundlePluginLibraries::class.java
-        ) { task ->
-            task.group = "api plugin"
-            task.description = "Bundles the plugin's runtime dependencies as nested jars"
-            task.classpath.from(runtimeClasspath)
-            task.artifactModules.set(providers.provider {
-                runtimeClasspath.get().incoming.artifacts.artifacts
-                    .associate { artifact ->
-                        val module = componentId(artifact.id.componentIdentifier)
-                            ?: "file:${artifact.file.absolutePath}"
-                        artifact.file.absolutePath to module
-                    }
-            })
-            task.dependencyEdges.set(providers.provider {
-                val edges = linkedSetOf<String>()
-                runtimeClasspath.get().incoming.resolutionResult.allComponents.forEach { component ->
-                    val from = componentId(component.id) ?: return@forEach
-                    component.dependencies.filterIsInstance<ResolvedDependencyResult>().forEach { dependency ->
-                        val to = componentId(dependency.selected.id) ?: return@forEach
-                        edges += "$from=$to"
-                    }
-                }
-                edges.sorted()
-            })
-            task.providedPatterns.set(ext.bundleBouncyCastle.map { bundle ->
-                if (bundle) {
-                    PluginClasspath.PROVIDED_DEPENDENCIES.filterNot { it == "org.bouncycastle*" }
-                } else {
-                    PluginClasspath.PROVIDED_DEPENDENCIES
-                }
-            })
-            task.bundleDependencies.set(ext.bundleDependencies)
-            task.bundleBouncyCastle.set(ext.bundleBouncyCastle)
-            task.outputDirectory.set(layout.buildDirectory.dir("generated/api-plugin-libs"))
+        val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
+        val mainClasses = sourceSets.getByName("main").output.classesDirs
+        val abiTask = project.tasks.register("checkPluginAbi", CheckPluginAbi::class.java) { task ->
+            task.group = "verification"
+            task.description = "Checks plugin bytecode against the gateway API ABI"
+            task.classesDirs.from(mainClasses)
+            task.abiJar.from(gatewayApi)
+            task.dependsOn(project.tasks.named("classes"))
         }
-
-        // The SDK jar carries the versions the gateway provides. Resolved without transitives:
-        // only the manifest inside it is needed.
-        val gatewayManifest = project.configurations.create("apiPluginGatewayManifest") { configuration ->
-            configuration.isCanBeConsumed = false
-            configuration.isCanBeResolved = true
-            configuration.isTransitive = false
-        }
-        project.dependencies.addProvider(
-            gatewayManifest.name,
-            ext.sdkVersion.map { "top.fatweb:api-management-plugin-sdk:$it" }
-        )
-
-        val checkClasspathTask = project.tasks.register(
-            "checkPluginClasspath",
-            CheckPluginClasspath::class.java
-        ) { task ->
-            task.group = "api plugin"
-            task.description =
-                "Fails when gateway-provided dependencies resolve to versions newer than the gateway's"
-            task.sdkJar.from(gatewayManifest)
-            task.providedPatterns.set(PluginClasspath.PROVIDED_DEPENDENCIES)
-            task.bundleBouncyCastle.set(ext.bundleBouncyCastle)
-            task.compileModules.set(providers.provider { moduleMap(project, "compileClasspath") })
-            task.runtimeModules.set(providers.provider { moduleMap(project, "runtimeClasspath") })
-        }
-        project.tasks.matching { it.name == "check" }.configureEach { task ->
-            task.dependsOn(checkClasspathTask)
-        }
+        project.tasks.named("check").configure { task -> task.dependsOn(abiTask) }
 
         val archiveName = ext.archiveName.orElse(
-            ext.pluginId.zip(versionName) { id, v -> "$id-$v.jar" }
+            ext.pluginId.zip(versionName) { id, version -> "$id-$version.jar" }
         )
         val jarFile = archiveName.zip(libsDir) { name, dir -> dir.file(name) }
 
         project.tasks.named("jar", Jar::class.java).configure { jar ->
-            jar.dependsOn(descriptorTask, pubKeyTask, bundleLibrariesTask)
+            jar.dependsOn(descriptorTask, pubKeyTask, lockTask)
             jar.archiveFileName.set(archiveName)
             jar.from(generatedRoot)
-            jar.from(bundleLibrariesTask.flatMap { it.outputDirectory })
             jar.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
         }
 
         val signTask = project.tasks.register("signPlugin", SignPlugin::class.java) { task ->
             task.group = "api plugin"
             task.description = "Signs the plugin jar (Ed25519) using keys/private.pem"
-            task.dependsOn(genKeysTask, project.tasks.named("jar"), checkClasspathTask)
+            task.dependsOn(genKeysTask, project.tasks.named("jar"), abiTask)
             task.jarFile.set(jarFile)
             task.privateKeyFile.set(layout.projectDirectory.file("keys/private.pem"))
         }
 
-        // `./gradlew build` produces an already-signed jar.
         project.tasks.named("build").configure { build ->
             build.dependsOn(signTask)
         }
@@ -207,14 +163,32 @@ class ApiPlugin : Plugin<Project> {
         project.tasks.register("deployPlugin", DeployPlugin::class.java) { task ->
             task.group = "api plugin"
             task.description = "Uploads the signed plugin jar to a running gateway"
-            // Through verifyTask, this also depends on signTask, so a deploy can never ship a
-            // jar the gateway would reject as tampered with.
             task.dependsOn(verifyTask)
             task.serverUrl.set(ext.serverUrl)
             task.accessToken.set(ext.accessToken)
             task.trustSigner.set(ext.trustSigner)
             task.jarFile.set(jarFile)
+            task.modulesDirectory.set(modulesDirectory)
         }
+    }
+
+    private fun artifactModules(configuration: org.gradle.api.artifacts.Configuration): Map<String, String> =
+        configuration.incoming.artifacts.artifacts.associate { artifact ->
+            val module = componentId(artifact.id.componentIdentifier)
+                ?: "file:${artifact.file.absolutePath}"
+            artifact.file.absolutePath to module
+        }
+
+    private fun dependencyEdges(configuration: org.gradle.api.artifacts.Configuration): List<String> {
+        val edges = linkedSetOf<String>()
+        configuration.incoming.resolutionResult.allComponents.forEach { component ->
+            val from = componentId(component.id) ?: return@forEach
+            component.dependencies.filterIsInstance<ResolvedDependencyResult>().forEach { dependency ->
+                val to = componentId(dependency.selected.id) ?: return@forEach
+                edges += "$from=$to"
+            }
+        }
+        return edges.sorted()
     }
 
     private fun componentId(id: ComponentIdentifier): String? = when (id) {
@@ -222,14 +196,6 @@ class ApiPlugin : Plugin<Project> {
         is ProjectComponentIdentifier -> "project:${id.projectPath}"
         else -> null
     }
-
-    private fun moduleMap(project: Project, configurationName: String): Map<String, String> =
-        project.configurations.getByName(configurationName).incoming.artifacts.artifacts
-            .associate { artifact ->
-                val module = componentId(artifact.id.componentIdentifier)
-                    ?: "file:${artifact.file.absolutePath}"
-                artifact.file.absolutePath to module
-            }
 
     private fun ensureRepositories(project: Project) {
         val existing = project.repositories
@@ -250,5 +216,4 @@ class ApiPlugin : Plugin<Project> {
             project.repositories.mavenLocal()
         }
     }
-
 }

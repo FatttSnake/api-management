@@ -46,12 +46,36 @@ data class StorageProperties(
     @field:NotBlank val pluginDir: String = "data/plugins",
 
     /**
-     * Directory holding the extracted dependency jars shared by plugins
+     * Directory holding plugin dependency modules
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:NotBlank val pluginLibraryDir: String = "data/plugin-libs",
+    @field:NotBlank val pluginModuleDir: String = "data/plugin-modules",
+
+    /**
+     * Maximum accepted dependency module size in bytes
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @field:Min(1) val pluginModuleMaxBytes: Long = 256L * 1024 * 1024,
+
+    /**
+     * Maximum number of installed dependency modules
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @field:Min(1) val pluginModuleMaxCount: Int = 4096,
+
+    /**
+     * Hours an unreferenced dependency module is retained before collection
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @field:Min(0) val pluginModuleGcGraceHours: Long = 24,
 
     /**
      * Maximum accepted plugin jar size in bytes

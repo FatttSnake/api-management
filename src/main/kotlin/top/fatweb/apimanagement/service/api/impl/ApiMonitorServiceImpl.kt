@@ -4,13 +4,13 @@ import com.baomidou.dynamic.datasource.annotation.DS
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper
 import com.baomidou.mybatisplus.core.toolkit.Wrappers
 import org.springframework.stereotype.Service
+import top.fatweb.apimanagement.component.plugin.PluginRegistryCache
 import top.fatweb.apimanagement.component.storage.RedisProvider
 import top.fatweb.apimanagement.converter.api.toVo
 import top.fatweb.apimanagement.entity.api.ApiUsage
 import top.fatweb.apimanagement.mapper.api.ApiUsageMapper
 import top.fatweb.apimanagement.properties.ServerProperties
 import top.fatweb.apimanagement.service.api.IApiMonitorService
-import top.fatweb.apimanagement.service.api.IApiPluginService
 import top.fatweb.apimanagement.util.TimezoneUtil
 import top.fatweb.apimanagement.vo.api.ApiMonitorDashboardVo
 import top.fatweb.apimanagement.vo.api.ApiTopVo
@@ -29,7 +29,7 @@ class ApiMonitorServiceImpl(
     private val serverProperties: ServerProperties,
     private val redisProvider: RedisProvider,
     private val apiUsageMapper: ApiUsageMapper,
-    private val apiPluginService: IApiPluginService
+    private val pluginRegistryCache: PluginRegistryCache
 ) : IApiMonitorService {
     override fun dashboard(): ApiMonitorDashboardVo {
         val prefix = "${serverProperties.security.tokenIssuer}_apimetrics"
@@ -37,13 +37,13 @@ class ApiMonitorServiceImpl(
         val interfaces = countKeys
             .map { it.removePrefix("${prefix}_count:") }
             .toSet()
-            .associateWith { apiPluginService.getByCode(it) }
+            .associateWith { pluginRegistryCache.getByCode(it) }
             .filterValues { it != null }
             .mapValues { it.value!! }
         val plugins = interfaces.values
             .mapNotNull { it.pluginId }
             .toSet()
-            .associateWith { apiPluginService.getByPluginId(it) }
+            .associateWith { pluginRegistryCache.getByPluginId(it) }
             .filterValues { it != null }
             .mapValues { it.value!! }
         val live = countKeys.map { key ->
@@ -91,13 +91,13 @@ class ApiMonitorServiceImpl(
         val interfaces = rows
             .mapNotNull { it["api_code"] as? String }
             .toSet()
-            .associateWith { apiPluginService.getByCode(it) }
+            .associateWith { pluginRegistryCache.getByCode(it) }
             .filterValues { it != null }
             .mapValues { it.value!! }
         val plugins = interfaces.values
             .mapNotNull { it.pluginId }
             .toSet()
-            .associateWith { apiPluginService.getByPluginId(it) }
+            .associateWith { pluginRegistryCache.getByPluginId(it) }
             .filterValues { it != null }
             .mapValues { it.value!! }
 

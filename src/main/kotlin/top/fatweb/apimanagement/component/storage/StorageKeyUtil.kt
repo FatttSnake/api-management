@@ -1,6 +1,6 @@
 package top.fatweb.apimanagement.component.storage
 
-import top.fatweb.apimanagement.sdk.plugin.PluginDescriptor
+import top.fatweb.apimanagement.util.PluginIdUtil
 
 /**
  * File storage key util
@@ -60,7 +60,7 @@ object StorageKeyUtil {
      * @since 1.0.0
      */
     fun pluginKey(pluginId: String, path: String): String {
-        require(PluginDescriptor.PLUGIN_ID_REGEX.matches(pluginId)) { "Invalid plugin ID: '$pluginId'" }
+        require(PluginIdUtil.REGEX.matches(pluginId)) { "Invalid plugin ID: '$pluginId'" }
 
         return "$PLUGIN_DATA_DIR/$pluginId/${validatePath(path)}"
     }
@@ -75,7 +75,7 @@ object StorageKeyUtil {
      * @since 1.0.0
      */
     fun pluginReference(pluginId: String, path: String): String {
-        require(PluginDescriptor.PLUGIN_ID_REGEX.matches(pluginId)) { "Invalid plugin ID: '$pluginId'" }
+        require(PluginIdUtil.REGEX.matches(pluginId)) { "Invalid plugin ID: '$pluginId'" }
 
         return "$pluginId/${validatePath(path)}"
     }
@@ -89,7 +89,7 @@ object StorageKeyUtil {
      * @since 1.0.0
      */
     fun pluginBaseKey(pluginId: String): String {
-        require(PluginDescriptor.PLUGIN_ID_REGEX.matches(pluginId)) { "Invalid plugin ID: '$pluginId'" }
+        require(PluginIdUtil.REGEX.matches(pluginId)) { "Invalid plugin ID: '$pluginId'" }
 
         return "$PLUGIN_DATA_DIR/$pluginId"
     }

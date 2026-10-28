@@ -22,10 +22,11 @@ repositories {
 }
 
 dependencies {
-    // Reuses PluginSigner / PluginDescriptor from the SDK so plugins are signed
-    // in-process (no subprocess) with exactly the same code as the gateway's verifier.
-    implementation(project(":plugin-sdk"))
-    // Parses the gateway's {code, success, msg, data} deploy responses.
+    // Signs plugins in-process with exactly the code the gateway verifies against.
+    implementation(project(":plugin-signing"))
+    // Parses the gateway API ABI manifest and deploy responses.
+    implementation(project(":gateway-api"))
+    implementation(platform("org.springframework.boot:spring-boot-dependencies:${libs.versions.spring.boot.get()}"))
     implementation(libs.jackson.module.kotlin)
 
     testImplementation(libs.kotlin.test.junit5)

@@ -12,7 +12,7 @@ import top.fatweb.apimanagement.exception.ExportTooManyRecordsException
 import top.fatweb.apimanagement.mapper.api.ApiUsageMapper
 import top.fatweb.apimanagement.param.system.apiReport.ApiReportGetParam
 import top.fatweb.apimanagement.service.api.IApiKeyService
-import top.fatweb.apimanagement.service.api.IApiPluginService
+import top.fatweb.apimanagement.component.plugin.PluginRegistryCache
 import top.fatweb.apimanagement.service.api.IApiReportService
 import top.fatweb.apimanagement.service.permission.IUserService
 import top.fatweb.apimanagement.service.system.IStorageBlobService
@@ -90,7 +90,7 @@ private class ReportContext(
 @DS("master")
 class ApiReportServiceImpl(
     private val apiUsageMapper: ApiUsageMapper,
-    private val apiPluginService: IApiPluginService,
+    private val pluginRegistryCache: PluginRegistryCache,
     private val apiKeyService: IApiKeyService,
     private val userService: IUserService,
     private val storageBlobService: IStorageBlobService
@@ -248,12 +248,12 @@ class ApiReportServiceImpl(
             userService.getBasicInfoByIds(relatedUserIds)
         }
         val interfaces = codeSet
-            .associateWith { apiPluginService.getByCode(it) }
+            .associateWith { pluginRegistryCache.getByCode(it) }
             .filterValues { it != null }
             .mapValues { it.value!! }
         val pluginIds = interfaces.values.mapNotNull { it.pluginId }.toSet()
         val plugins = pluginIds
-            .associateWith { apiPluginService.getByPluginId(it) }
+            .associateWith { pluginRegistryCache.getByPluginId(it) }
             .filterValues { it != null }
             .mapValues { it.value!! }
 

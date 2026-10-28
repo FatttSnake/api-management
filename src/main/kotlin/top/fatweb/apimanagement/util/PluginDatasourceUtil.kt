@@ -5,7 +5,6 @@ import top.fatweb.apimanagement.component.plugin.PluginDatasourceSchema
 import top.fatweb.apimanagement.component.plugin.PluginDatasourceSlot
 import top.fatweb.apimanagement.component.plugin.PluginDatasourceType
 import top.fatweb.apimanagement.exception.PluginDatasourceException
-import top.fatweb.apimanagement.sdk.plugin.PluginDescriptor
 import java.net.Inet6Address
 import java.net.InetAddress
 import java.nio.file.Path
@@ -151,7 +150,7 @@ object PluginDatasourceUtil {
      * @since 1.0.0
      */
     fun sqliteFile(directory: String, pluginId: String, name: String): Path {
-        require(PluginDescriptor.PLUGIN_ID_REGEX.matches(pluginId)) { "Invalid plugin ID: '$pluginId'" }
+        require(PluginIdUtil.REGEX.matches(pluginId)) { "Invalid plugin ID: '$pluginId'" }
         require(PluginDatasourceSchema.isValidName(name)) { "Invalid datasource name: '$name'" }
 
         return Path.of(directory, pluginId, "$name$SQLITE_SUFFIX")

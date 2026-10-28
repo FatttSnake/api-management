@@ -24,7 +24,7 @@
 
 API Management 是一个**可自托管的 API 网关与管理平台**。它将「可用 API」视为由**插件**提供的资源：插件以 Jar 包的形式**热插拔**安装到网关后，其中声明的接口会被注册到统一的命名空间下，再以统一的方式对外开放 —— 由平台统一负责**身份认证、访问控制、频控限流、计量计费与审计**，并通过一套完整的 REST 接口进行管理。
 
-后端使用 **Kotlin + Spring Boot** 编写。平台将插件开发所需的稳定 API 抽取为独立子模块 **plugin-sdk**，与主程序一同发布。插件开发相关见项目 [api-management-plugins](https://github.com/FatttSnake/api-management-plugins)。
+后端使用 **Kotlin + Spring Boot** 编写。平台将插件开发所需的稳定 API 抽取为独立子模块 **`gateway-api`**；插件运行时、模块仓库与 Gradle 工具分别位于 **`plugin-runtime`**、**`plugin-signing`**、**`plugin-gradle-plugin`**。插件示例见项目 [api-management-plugins](https://github.com/FatttSnake/api-management-plugins)。
 
 # 特性
 
@@ -35,7 +35,7 @@ API Management 是一个**可自托管的 API 网关与管理平台**。它将�
 - **RBAC 权限体系** —— 用户、分组、角色与细粒度权限点（模块 / 菜单 / 操作 / 范围）；可用 API 在权限树中**按插件分组**展示。
 - **用户自助服务** —— 面向终端用户的「我的 API 账户」「我的密钥」「API 文档」「我的用量」等接口。
 - **可观测与审计** —— API 用量统计、监控、报表与汇总统计（定时聚合），以及操作审计日志、系统日志。
-- **插件 SDK** —— 提供生命周期钩子、**隔离的插件专属数据源**（每个插件可有多个具名数据源，MySQL 或 SQLite）、以及获取当前调用者 / 余额 / 接口配置 / 插件设置的受控上下文。
+- **插件平台** —— 提供生命周期钩子、**隔离的插件专属数据源**（每个插件可有多个具名数据源，MySQL 或 SQLite）、可独立安装并按版本锁定的依赖模块，以及只暴露设置 / 存储 / 调用者 / 余额 / 接口配置的受控 `GatewayContext`。
 - **灵活的存储与邮件** —— 文件存储支持本地磁盘或 **S3**；内置邮件发送（注册、安全通知等）。
 - **双数据库自动迁移** —— MySQL 存放关键业务数据，SQLite 存放日志等大量读写数据，均由 Flyway 自动初始化。
 
@@ -43,16 +43,24 @@ API Management 是一个**可自托管的 API 网关与管理平台**。它将�
 
 ```
 api-management/
-├── build.gradle.kts / settings.gradle.kts        # Gradle 构建（Java 25 toolchain，含 plugin-sdk 与 plugin-gradle-plugin 子模块）
+├── build.gradle.kts / settings.gradle.kts        # Gradle 构建（Java 25 toolchain，含插件相关子模块）
 ├── docs/                                         # 项目文档与素材（logo.svg、plugin-debugging.md / _zh.md 等）
-├── plugin-sdk/                                   # 插件 SDK（独立子模块，供插件开发者依赖）
-│   └── src/main/kotlin/top/fatweb/apimanagement/sdk/
-│       ├── annotation/ApiController.kt           # 声明「一个插件 + 一组 API 路由」
-│       └── plugin/                               # PluginDescriptor / PluginLifecycle / PluginContext / PluginStorage / ApiResponse / PluginSigner
+├── gateway-api/                                  # 稳定插件契约（Kotlin，Java 友好，含 ABI 清单）
+│   └── src/main/kotlin/top/fatweb/apimanagement/api/v1/
+│       └── ApiPlugin / GatewayContext / ApiRoutes / ApiRequest / ApiResponse / 能力接口
+├── plugin-runtime/                               # 类加载、模块仓库、路由注册、安装生命周期
+│   └── src/main/kotlin/top/fatweb/apimanagement/plugin/runtime/
+│       ├── classloader/                          # GatewayApiClassLoader / ModuleClassLoader / PluginClassLoader
+│       ├── module/                               # lock 解析、内容寻址模块存储
+│       ├── route/                                # 路由表、MVC HandlerMapping / HandlerAdapter
+│       └── runtime/                              # 描述符解析、GatewayContext 实现、插件加载器
+├── plugin-signing/                               # 网关与 Gradle 工具共用的 Ed25519 签名/验签
 ├── plugin-gradle-plugin/                         # 插件开发者使用的 Gradle 插件 `top.fatweb.api-plugin`
 │   └── src/main/kotlin/top/fatweb/apimanagement/gradle/
-│       ├── ApiPlugin.kt                          # 应用 apiPlugin DSL、自动加入 SDK 依赖与仓库
-│       └── ApiPluginTasks.kt                     # generatePluginDescriptor / genPluginKeys / signPlugin / verifyPlugin / deployPlugin
+│       ├── ApiPlugin.kt                          # 应用 apiPlugin DSL，将 gateway-api 作为 compileOnly
+│       ├── GeneratePluginLock.kt                 # 解析运行时依赖并生成 api-plugin-deps.json
+│       ├── CheckPluginAbi.kt                     # 对照 gateway-api.abi.json 校验插件字节码
+│       └── ApiPluginTasks.kt                     # descriptor / keys / sign / verify / deployPlugin
 ├── src/main/kotlin/top/fatweb/apimanagement/
 │   ├── ApiManagementApplication.kt               # 启动入口（校验/创建 data 目录、首次运行生成配置模板）
 │   ├── annotation / aspectj                      # 注解与拦截切面（API 访问拦截、参数处理、操作/事件日志）
@@ -177,31 +185,61 @@ knife4j:
 
 # 插件开发
 
-平台的全部「可用 API」均来自插件。插件开发相关见项目 [api-management-plugins](https://github.com/FatttSnake/api-management-plugins)。
+完整架构说明——模块、类加载、安装/启动流程、请求链路与数据模型——见 [docs/plugin-platform_zh.md](docs/plugin-platform_zh.md)。
 
-插件是一个独立的 Gradle 工程，应用本仓库随 SDK 一同发布的 Gradle 插件 **`top.fatweb.api-plugin`**：它加入 SDK 依赖、从 `apiPlugin { }` DSL 生成 `api-plugin.json` 描述符、生成 Ed25519 密钥对、把公钥嵌入 jar 并完成签名——`./gradlew build` 产出**已签名**的插件 jar。
+平台的全部 API 都由插件提供。插件是独立 Gradle 工程，应用 **`top.fatweb.api-plugin`**，唯一编译依赖是 `top.fatweb:api-management-gateway-api`。
 
-把 SDK 与 Gradle 插件发布给插件工程使用（本仓库内执行一次）：
+发布契约与工具（本仓库内执行一次）：
 
 ```shell
-./gradlew :plugin-sdk:publishToMavenLocal :plugin-gradle-plugin:publishToMavenLocal
+./gradlew :gateway-api:publishToMavenLocal :plugin-signing:publishToMavenLocal :plugin-gradle-plugin:publishToMavenLocal
 ```
 
-### 依赖
+`./gradlew build` 产出已签名 jar，包含：
 
-`runtimeClasspath` 依赖会以嵌套 jar 打进插件包的 `META-INF/api-plugin-libs/`，**不需要**再配 shadow/fat jar。网关已提供的库（SDK、Spring、Bean Validation、Jackson、SLF4J、Kotlin、Swagger、Flyway、MyBatis/MyBatis-Plus/Hikari、JDBC 驱动与 BouncyCastle）会被过滤掉，运行时从网关解析。其余依赖由网关解压到 `app.storage.plugin-library-dir`，并按依赖的 SHA-256 在插件间共享类加载器。要保留瘦包可设 `apiPlugin { bundleDependencies = false }`。
+| 条目 | 用途 |
+|---|---|
+| `META-INF/api-plugin.json` | 描述符 format 1：pluginId、版本、mainClass、`requiresGateway`、`requiresGatewayApi` |
+| `META-INF/api-plugin-deps.json` | 精确依赖 lock：GAV、SHA-256、大小、直接依赖边 |
+| `META-INF/plugin.pub.pem` / `META-INF/plugin.sig` | Ed25519 公钥与签名 |
 
-SDK 里带着这些库在网关上的实际版本；`checkPluginClasspath`（`build` 的一部分）会在插件解析到**比网关更新**的版本时失败——provided 依赖请不写版本或写成 `compileOnly`，让 SDK 固定版本。更旧的版本允许。描述符会记录构建插件所用的 SDK 版本，网关拒绝比自身更新的构建；除 BouncyCastle 外，jar 里打包了网关已提供的库也会在安装时被拒绝。
+`checkPluginAbi`（`build` 的一部分）读取网关 API jar 内的 `META-INF/gateway-api.abi.json`，插件引用了网关不存在的类、方法、字段或构造器时直接失败；签名在 ABI 校验之后执行。
 
-Flyway 通过 SDK 提供给需要自管数据源的插件：在 `onStart` 里用 `Flyway.configure(context.classLoader)` 对 `context.datasources` 执行迁移，迁移脚本放在插件 jar 的 `db/migration` 下——插件的类加载器看不到网关的迁移资源。
+## 编程模型
 
-插件的类加载器与网关共享**类**，但不共享**资源**。资源查找只看到插件 jar 与打包进来的依赖；唯一例外是单个 `.class` 查找可以回落到网关，因为 Spring 的 metadata reader 需要读取网关提供的接口与注解的字节码。`getResources` 不会回落，因此 `PathMatchingResourcePatternResolver`、`ServiceLoader` 与子上下文的组件扫描仍只看到插件自己的内容。`PluginContext.classLoader` 就是这个 loader，供插件自建线程使用。这是默认行为边界，不是安全边界：插件仍能加载网关类、通过父上下文拿到网关 Bean，或刻意使用网关的类加载器。
+插件不使用 Spring MVC 注解，也不会拿到 Spring 子上下文。实现 `ApiPlugin`，在 `onStart` 里通过 `GatewayContext` 注册路由：
 
-网关默认提供 BouncyCastle 1.86（`bcprov`、`bcpkix`、`bcutil`）。需要其他版本的插件可设 `apiPlugin { bundleBouncyCastle = true }` 自带一份；由于 provider 是 JVM 全局注册的，这类插件必须把 `Provider` 实例传给 BouncyCastle 的 builder，**不要**调用 `Security.addProvider`——全局注册会在 reload 后钉住插件的类加载器，并可能与网关的 `"BC"` provider 冲突。
+```kotlin
+class EchoPlugin : ApiPlugin {
+    override fun onStart(context: GatewayContext) {
+        context.api().register(
+            RouteDefinition("POST", "/echo/{name}", 1, OperationMetadata("echo", "Echo a name"))
+        ) { request ->
+            ApiResponse.ok(mapOf("message" to "hello, ${request.pathParam("name")}"))
+        }
+    }
+}
+```
+
+Java 插件作者使用同一套类型：`ApiHandler`、`EventSubscriber`、`Subscription` 是 SAM 接口，`ApiResponse`/`ParameterSpec`/`ApiPrincipal` 提供静态工厂，`GatewayContext` 用访问函数（`context.api()`、`context.settings()`）而不是 Kotlin 属性。
+
+`GatewayContext` 是插件能看到的全部网关能力：`api()`、`settings()`、`dataSources()`、`storage()`、`users()`、`audit()`、`events()`、`http()`、`scheduler()`、`json()`、`logger()`、`metadata()`。它不暴露 Spring 容器、Bean、Mapper 或网关的 ObjectMapper。
+
+请求体是原始字节（`request.body()` / `request.bodyText()`）；需要结构化 JSON 时用 `context.json()`，或使用插件自带的库。响应体可以是字节、字符串、Map 或普通 Bean；`ApiResponse.raw(...)` 绕过业务信封。
+
+## 依赖
+
+插件 jar 是瘦包。运行时依赖在构建期解析进 lock，每个模块 jar 单独上传（`deployPlugin` 会先传模块再传插件）。网关按 SHA-256 内容寻址存储在 `app.storage.plugin-module-dir`，相同 GAV + digest 的模块跨插件共享一个类加载器，不同版本并存。
+
+网关只提供 **JDK、Kotlin stdlib 与 `gateway-api`**。Spring、Jackson、MyBatis、Hikari、Flyway、JDBC 驱动等全部是插件自己的普通依赖，由插件自己的模块图加载。Kotlin stdlib 与 `org.jetbrains:annotations` 由平台提供，因此从 lock 中排除。
+
+lock 由 `runtimeClasspath` 生成；运行期不做任何版本解析。模块也可以通过 `GET/POST/DELETE /system/api/plugin/module` 独立管理（上传、列表、删除无引用模块、GC）。
+
+资源查找只看到插件 jar、它的模块与平台的 `gateway-api` 资源。这是默认行为边界，不是安全沙箱：插件需签名可信，同 JVM 内仍可通过反射绕过。
 
 ## 插件配置与数据源
 
-插件在自己的 jar 里放一份 `META-INF/plugin-config.json` 声明它有哪些配置项（类型、默认值、约束、是否密钥项、需要哪些具名数据源、各是什么方言），网关在**挂载时**读取并快照到插件行上，控制台据此渲染配置界面；插件侧只读 `PluginContext.getSetting(key)`，默认值由网关回落。schema 声明过的 key 归管理员，插件 `saveSetting` 写它会抛异常。
+插件在自己的 jar 里放一份 `META-INF/plugin-config.json` 声明它有哪些配置项（类型、默认值、约束、是否密钥项、需要哪些具名数据源、各是什么方言），网关在**挂载时**读取并快照到插件行上，控制台据此渲染配置界面；插件侧通过 `GatewayContext.settings().get(key)` 读取，默认值由网关回落。schema 声明过的 key 归管理员，`settings().save(...)` 写它会抛异常。
 
 | 接口 | 说明 |
 |---|---|
@@ -220,7 +258,7 @@ Flyway 通过 SDK 提供给需要自管数据源的插件：在 `onStart` 里用
 
 `DELETE /system/api/plugin/{pluginId}?purgeData=true` 才会清除插件设置、SQLite 数据库目录与文件区（默认 `false` 即保留，便于重装续用）。插件自己的数据由 `onPurge` 删除：它在数据源、storage、配置都还开着、且没有请求在跑时被调用，正是插件删掉自己建的表（包括网关从不碰的外部 MySQL 库）、释放内容寻址对象的地方。只有「真的卸载」才触发它：升级、reload、被禁用、关闭网关都不触发。没挂载的插件会**先被挂起来**让退出钩子有东西可跑，而**该钩子失败会拒绝这次卸载**（40068），此时什么都还没删，修好原因重跑即可。插件释放掉的内容寻址对象由网关定期回收。
 
-生命周期钩子见 SDK 的 `PluginLifecycle`：`onStart`（每次挂载、路由注册之前）、`onStop`（每次卸载、先等在途请求结束，有超时上限）、`onUninstall`（版本被摘除之时，升级也会走——它**不是删数据的地方**）、`onPurge`（明确要求清除数据的卸载，也是唯一一个失败会拒绝该次卸载的钩子）。
+生命周期钩子见 `gateway-api` 的 `ApiPlugin`：`onStart`（每次挂载、路由激活之前）、`onStop`（每次卸载）、`onUninstall`（版本被摘除之时，升级也会走——它**不是删数据的地方**）、`onPurge`（明确要求清除数据的卸载）。
 
 ## 调试插件
 
@@ -230,9 +268,9 @@ Flyway 通过 SDK 提供给需要自管数据源的插件：在 `onStart` 里用
 ./gradlew bootRun -Pdebug=true
 ```
 
-该开关默认关闭、默认绑 `127.0.0.1:5005`，可用 `debug.port`、`debug.address`、`debug.suspend` 调整。容器与远程主机怎么走、插件工程里怎么配、以及哪些改动不用重新部署就能热替换，见 [docs/plugin-debugging_zh.md](docs/plugin-debugging_zh.md)——这份值得一看，因为该 Agent 是进入这个 JVM 的**无鉴权**通道，而里面装着所有管理员的会话。
+该开关默认关闭、默认绑 `127.0.0.1:5005`，可用 `debug.port`、`debug.address`、`debug.suspend` 调整。从插件工程附着与类加载边界见 [docs/plugin-debugging_zh.md](docs/plugin-debugging_zh.md)——该 Agent 是进入这个 JVM 的**无鉴权**通道，而里面装着所有管理员的会话。
 
-编辑循环本身是一条命令，它负责构建、签名、验签并把 jar 推到运行中的网关：
+编辑循环本身是一条命令，它负责构建、签名、验签、上传依赖模块并把 jar 推到运行中的网关：
 
 ```shell
 ./gradlew deployPlugin -PapiPlugin.serverUrl=http://localhost:8080 -PapiPlugin.accessToken=<token>
@@ -268,7 +306,7 @@ Flyway 通过 SDK 提供给需要自管数据源的插件：在 `onStart` 里用
 
 ## 插件存储与外链
 
-插件通过 `PluginContext.storage` 读写自己的文件区（`PluginStorage`），路径自动限定在该插件自己的命名空间内。位置寻址的文件会原样存储，因此可以签发**免登外链**：
+插件通过 `GatewayContext.storage()` 读写自己的文件区，路径自动限定在该插件自己的命名空间内。位置寻址的文件会原样存储，因此可以签发**免登外链**：
 
 - `local`：网关签发 HMAC 签名 URL（`/public/storage/{插件ID}/{路径}?e=<过期时间戳>&s=<签名>`），密钥复用 `app.security.tokenSecret`，无状态、多实例可用。URL 用的是对外引用而非内部 key，所以内部布局调整不会让已发出的链接失效。
 - `s3`：生成对象存储的预签名 URL，客户端直连 S3，不经网关。
@@ -282,7 +320,7 @@ app:
     external-url-max-ttl: 168                 # 有效期上限，超出的申请会被钳制
 ```
 
-内容寻址对象是压缩存储的，无法直接交给浏览器，因此**不提供外链**，只能通过 `PluginStorage` 的读写接口访问。
+内容寻址对象是压缩存储的，无法直接交给浏览器，因此**不提供外链**，只能通过 `Storage` 能力的读写接口访问。
 
 > 外链是不可吊销的 bearer 凭证：持有者到过期前一直可读。轮换 `app.security.tokenSecret` 会同时使所有外链失效并让所有用户下线。`local` 模式的外链与后台同源，故除图片白名单外的类型一律以 `Content-Disposition: attachment` 下发并附 `nosniff`。
 

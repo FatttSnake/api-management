@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.OrderItem
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page
 import org.springframework.stereotype.Service
 import tools.jackson.databind.json.JsonMapper
+import top.fatweb.apimanagement.component.plugin.PluginRegistryCache
 import top.fatweb.apimanagement.converter.api.toDocVo
 import top.fatweb.apimanagement.converter.api.toDocVoPage
 import top.fatweb.apimanagement.converter.api.toResolvedVo
@@ -14,7 +15,6 @@ import top.fatweb.apimanagement.mapper.api.ApiPluginMapper
 import top.fatweb.apimanagement.param.system.api.ApiDocGetParam
 import top.fatweb.apimanagement.service.api.IApiDocService
 import top.fatweb.apimanagement.service.api.IApiKeyService
-import top.fatweb.apimanagement.service.api.IApiPluginService
 import top.fatweb.apimanagement.util.setPageSort
 import top.fatweb.apimanagement.vo.PageVo
 import top.fatweb.apimanagement.vo.api.ApiDocVo
@@ -30,7 +30,7 @@ import top.fatweb.apimanagement.vo.api.ApiDocVo
 class ApiDocServiceImpl(
     private val objectMapper: JsonMapper,
     private val apiPluginMapper: ApiPluginMapper,
-    private val apiPluginService: IApiPluginService,
+    private val pluginRegistryCache: PluginRegistryCache,
     private val apiKeyService: IApiKeyService
 ) : IApiDocService {
     override fun getPage(apiDocGetParam: ApiDocGetParam?): PageVo<ApiDocVo> {
@@ -59,7 +59,7 @@ class ApiDocServiceImpl(
     }
 
     override fun getDetail(pluginId: String): ApiDocVo {
-        val plugin = apiPluginService.getByPluginId(pluginId)?.takeIf { it.enable == 1 }
+        val plugin = pluginRegistryCache.getByPluginId(pluginId)?.takeIf { it.enable == 1 }
             ?: throw NoRecordFoundException()
 
         val interfaces = apiKeyService.callableApis(pluginIds = listOf(pluginId))

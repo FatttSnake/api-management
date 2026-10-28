@@ -20,10 +20,10 @@ import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.servlet.resource.NoResourceFoundException
+import top.fatweb.apimanagement.api.v1.ApiResponse
 import top.fatweb.apimanagement.entity.common.ResponseCode
 import top.fatweb.apimanagement.entity.common.ResponseResult
 import top.fatweb.apimanagement.exception.*
-import top.fatweb.apimanagement.sdk.plugin.ApiResponse
 
 /**
  * Exception handler
@@ -384,10 +384,6 @@ class ExceptionHandler {
         return if (request.requestURI.startsWith("/api/")) result.toApiResponse() else result
     }
 
-    private fun ResponseResult<*>.toApiResponse() = ApiResponse(
-        code = this.code,
-        success = this.success,
-        msg = this.msg,
-        data = this.data
-    )
+    private fun ResponseResult<*>.toApiResponse(): ApiResponse =
+        if (success) ApiResponse.ok(data, msg) else ApiResponse.fail(code, msg, data)
 }

@@ -11,8 +11,8 @@ import top.fatweb.apimanagement.entity.api.ApiUsage
 import top.fatweb.apimanagement.exception.ApiUsageIdNotGeneratedException
 import top.fatweb.apimanagement.mapper.api.ApiUsageMapper
 import top.fatweb.apimanagement.param.system.apiUsage.ApiUsageGetParam
+import top.fatweb.apimanagement.component.plugin.PluginRegistryCache
 import top.fatweb.apimanagement.service.api.IApiKeyService
-import top.fatweb.apimanagement.service.api.IApiPluginService
 import top.fatweb.apimanagement.service.api.IApiUsageService
 import top.fatweb.apimanagement.util.getLoginUserIdOrThrow
 import top.fatweb.apimanagement.util.saveOrThrowException
@@ -30,7 +30,7 @@ import top.fatweb.apimanagement.vo.api.ApiUsageVo
 @DS("master")
 class ApiUsageServiceImpl(
     private val apiKeyService: IApiKeyService,
-    private val apiPluginService: IApiPluginService
+    private val pluginRegistryCache: PluginRegistryCache
 ) : ServiceImpl<ApiUsageMapper, ApiUsage>(), IApiUsageService {
     override fun getPage(managed: Boolean, apiUsageGetParam: ApiUsageGetParam?): PageVo<ApiUsageVo> {
         val page = Page<ApiUsage>(apiUsageGetParam?.currentPage ?: 1, apiUsageGetParam?.pageSize ?: 20)
@@ -47,7 +47,7 @@ class ApiUsageServiceImpl(
             apiUsageGetParam?.endTime?.let { le(ApiUsage::createTime, it) }
         }
 
-        return page(page, wrapper).toVoPage { apiPluginService.getByCode(it) }
+        return page(page, wrapper).toVoPage { pluginRegistryCache.getByCode(it) }
     }
 
     override fun saveUsage(apiUsage: ApiUsage): Long {
