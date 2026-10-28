@@ -53,8 +53,10 @@ Package: `top.fatweb.apimanagement.api.v1`.
 | `ApiRoutes.kt` | `register(RouteDefinition, ApiHandler)`, valid during `onStart` only |
 | `ApiHandler.kt` | Single-request SAM interface |
 | `RouteDefinition.kt` | HTTP method, plugin-relative path, route API version, `OperationMetadata` |
-| `OperationMetadata.kt` | `operationId`, summary, description, parameters, request/response schemas, tags |
-| `ParameterSpec.kt` / `ParameterLocation.kt` | Parameter name, location (path/query/header/cookie), type, required flag |
+| `OperationMetadata.kt` | `operationId`, summary, description, parameters, request body schema, responses, tags |
+| `ParameterSpec.kt` / `ParameterLocation.kt` | Parameter name, location (path/query/header/cookie), type, format, enum, required flag, description, example |
+| `ResponseSpec.kt` | Response description, response body schema, example |
+| `SchemaSpec.kt` | Recursive JSON Schema node for request and response bodies: type, format, properties, required, items, enum, example, nullable |
 
 Routes are exposed as:
 
@@ -573,6 +575,9 @@ Entities:
 `component/plugin/runtime/PluginOpenApiBuilder.kt`:
 
 - Builds OpenAPI 3.1 JSON from `RegisteredRoute` + `OperationMetadata`.
+- Parameters carry `type`, `format`, `enum`, `required`, `description` and `example`.
+- Responses carry `description`, a `content.application/json` schema and `example`; an operation without responses falls back to `200 OK`.
+- Request and response body schemas are declared with `SchemaSpec` and rendered to JSON Schema, so plugins never hand-write schema JSON.
 - Writes it to `t_b_api_plugin.openapi`.
 - `ApiDocServiceImpl` reads that field to serve the user-facing API docs page.
 

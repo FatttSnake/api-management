@@ -53,8 +53,10 @@ flowchart LR
 | `ApiRoutes.kt` | `register(RouteDefinition, ApiHandler)`，只在 `onStart` 期间有效 |
 | `ApiHandler.kt` | 单请求处理 SAM 接口 |
 | `RouteDefinition.kt` | HTTP method、插件相对路径、route API 版本、`OperationMetadata` |
-| `OperationMetadata.kt` | `operationId`、summary、description、参数、请求/响应 schema、tags |
-| `ParameterSpec.kt` / `ParameterLocation.kt` | 参数名、位置（path/query/header/cookie）、类型、是否必填 |
+| `OperationMetadata.kt` | `operationId`、summary、description、参数、请求体 schema、响应、tags |
+| `ParameterSpec.kt` / `ParameterLocation.kt` | 参数名、位置（path/query/header/cookie）、类型、format、枚举、是否必填、说明、示例 |
+| `ResponseSpec.kt` | 响应说明、响应体 schema、示例 |
+| `SchemaSpec.kt` | 请求体/响应体的递归 JSON Schema 节点：类型、format、properties、required、items、枚举、示例、可空 |
 
 路由最终暴露为：
 
@@ -573,6 +575,9 @@ erDiagram
 `component/plugin/runtime/PluginOpenApiBuilder.kt`：
 
 - 从 `RegisteredRoute` + `OperationMetadata` 生成 OpenAPI 3.1 JSON。
+- 参数带 `type`、`format`、`enum`、`required`、`description`、`example`。
+- 响应带 `description`、`content.application/json` schema、`example`；未声明响应时回落为 `200 OK`。
+- 请求体与响应体 schema 用 `SchemaSpec` 声明并渲染为 JSON Schema，插件不需要手写 schema JSON。
 - 写入 `t_b_api_plugin.openapi`。
 - `ApiDocServiceImpl` 读取该字段提供用户 API 文档页。
 

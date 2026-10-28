@@ -2,6 +2,9 @@ package top.fatweb.apimanagement.component.plugin.runtime
 
 import org.springframework.stereotype.Component
 import tools.jackson.databind.json.JsonMapper
+import top.fatweb.apimanagement.api.v1.ParameterSpec
+import top.fatweb.apimanagement.api.v1.ResponseSpec
+import top.fatweb.apimanagement.api.v1.SchemaSpec
 import top.fatweb.apimanagement.plugin.runtime.route.RegisteredRoute
 
 /**
@@ -28,28 +31,20 @@ class PluginOpenApiBuilder(
         routes.forEach { route ->
             val definition = route.definition
             val path = "/api/$pluginId/v${definition.apiVersion}${definition.path}"
-            val operation = linkedMapOf(
+            val operation = linkedMapOf<String, Any>(
                 "operationId" to definition.operation.operationId,
                 "summary" to definition.operation.summary,
                 "description" to definition.operation.description,
                 "responses" to responsesOf(definition.operation.responses)
             )
             if (definition.operation.parameters.isNotEmpty()) {
-                operation["parameters"] = definition.operation.parameters.map { parameter ->
-                    linkedMapOf(
-                        "name" to parameter.name,
-                        "in" to parameter.location.name.lowercase(),
-                        "required" to parameter.required,
-                        "description" to parameter.description,
-                        "schema" to mapOf("type" to parameter.type)
-                    )
-                }
+                operation["parameters"] = parametersOf(definition.operation.parameters)
             }
             definition.operation.requestBodySchema?.let { schema ->
                 operation["requestBody"] = mapOf(
                     "content" to mapOf(
                         "application/json" to mapOf(
-                            "schema" to parseSchema(schema)
+                            "schema" to schemaOf(schema)
                         )
                     )
                 )
@@ -67,23 +62,64 @@ class PluginOpenApiBuilder(
         return jsonMapper.writeValueAsString(document)
     }
 
-    private fun responsesOf(schemas: Map<String, String>): Map<String, Any> {
-        if (schemas.isEmpty()) {
+    private fun parametersOf(parameters: List<ParameterSpec>): List<Map<String, Any>> =
+        parameters.map { parameter ->
+            val schema = linkedMapOf<String, Any>("type" to parameter.type)
+            parameter.format?.takeIf { it.isNotBlank() }?.let { schema["format"] = it }
+            if (parameter.enumValues.isNotEmpty()) {
+                schema["enum"] = parameter.enumValues
+            }
+
+            val node = linkedMapOf<String, Any>(
+                "name" to parameter.name,
+                "in" to parameter.location.name.lowercase(),
+                "required" to parameter.required,
+                "schema" to schema
+            )
+            if (parameter.description.isNotBlank()) {
+                node["description"] = parameter.description
+            }
+            parameter.example?.let { node["example"] = it }
+            node
+        }
+
+    private fun responsesOf(responses: Map<String, ResponseSpec>): Map<String, Any> {
+        if (responses.isEmpty()) {
             return mapOf("200" to mapOf("description" to "OK"))
         }
-        return schemas.mapValues { (_, schema) ->
-            mapOf(
-                "description" to "OK",
-                "content" to mapOf(
-                    "application/json" to mapOf(
-                        "schema" to parseSchema(schema)
-                    )
-                )
-            )
+        return responses.mapValues { (_, response) ->
+            val mediaType = linkedMapOf<String, Any>()
+            response.schema?.let { mediaType["schema"] = schemaOf(it) }
+            response.example?.let { mediaType["example"] = it }
+
+            val node = linkedMapOf<String, Any>("description" to response.description)
+            if (mediaType.isNotEmpty()) {
+                node["content"] = mapOf("application/json" to mediaType)
+            }
+            node
         }
     }
 
-    private fun parseSchema(schema: String): Any =
-        runCatching { jsonMapper.readValue(schema, Map::class.java) }
-            .getOrElse { mapOf("type" to "object") }
+    private fun schemaOf(spec: SchemaSpec): Map<String, Any> {
+        val node = linkedMapOf<String, Any>(
+            "type" to if (spec.nullable) listOf(spec.type, "null") else spec.type
+        )
+        if (spec.description.isNotBlank()) {
+            node["description"] = spec.description
+        }
+        spec.format?.takeIf { it.isNotBlank() }?.let { node["format"] = it }
+        if (spec.enumValues.isNotEmpty()) {
+            node["enum"] = spec.enumValues
+        }
+        spec.example?.let { node["examples"] = listOf(it) }
+        if (spec.properties.isNotEmpty()) {
+            node["properties"] = spec.properties.mapValues { (_, property) -> schemaOf(property) }
+        }
+        if (spec.required.isNotEmpty()) {
+            node["required"] = spec.required
+        }
+        spec.items?.let { node["items"] = schemaOf(it) }
+
+        return node
+    }
 }

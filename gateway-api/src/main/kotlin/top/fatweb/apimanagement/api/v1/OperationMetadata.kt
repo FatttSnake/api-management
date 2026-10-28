@@ -7,8 +7,8 @@ package top.fatweb.apimanagement.api.v1
  * @property summary short display summary
  * @property description longer description
  * @property parameters declared parameters
- * @property requestBodySchema JSON Schema for the request body, or null
- * @property responses JSON Schema by HTTP status code
+ * @property requestBodySchema schema for the request body, or null
+ * @property responses response specs by HTTP status code
  * @property tags OpenAPI tags
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
@@ -18,8 +18,8 @@ data class OperationMetadata @JvmOverloads constructor(
     val summary: String = "",
     val description: String = "",
     val parameters: List<ParameterSpec> = emptyList(),
-    val requestBodySchema: String? = null,
-    val responses: Map<String, String> = emptyMap(),
+    val requestBodySchema: SchemaSpec? = null,
+    val responses: Map<String, ResponseSpec> = emptyMap(),
     val tags: List<String> = emptyList()
 ) {
     init {
