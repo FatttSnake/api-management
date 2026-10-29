@@ -23,7 +23,6 @@ data class RoleUpdateParam(
     @field:Schema(description = "角色 ID", required = true)
     @field:NotNull(message = "Role id can not be null")
     val id: Long?,
-
     /**
      * Name
      *
@@ -33,7 +32,6 @@ data class RoleUpdateParam(
     @field:Schema(description = "角色名称", required = true, example = "Role_1")
     @field:NotBlank(message = "Name can not be blank")
     var name: String?,
-
     /**
      * Enable
      *
@@ -42,7 +40,6 @@ data class RoleUpdateParam(
      */
     @field:Schema(description = "启用", allowableValues = ["true", "false"], defaultValue = "true", example = "true")
     val enable: Boolean = true,
-
     /**
      * List of power IDs
      *
@@ -50,5 +47,5 @@ data class RoleUpdateParam(
      * @since 1.0.0
      */
     @field:Schema(description = "权限 ID 列表")
-    val powerIds: List<Long>?
+    val powerIds: List<Long>?,
 )

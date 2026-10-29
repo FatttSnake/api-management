@@ -15,14 +15,11 @@ import java.lang.reflect.Type
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-class Jackson3ConverterFactory private constructor(
-    private val mapper: JsonMapper
-) : Converter.Factory() {
-
+class Jackson3ConverterFactory private constructor(private val mapper: JsonMapper) : Converter.Factory() {
     override fun responseBodyConverter(
         type: Type,
         annotations: Array<out Annotation>,
-        retrofit: Retrofit
+        retrofit: Retrofit,
     ): Converter<ResponseBody, *> {
         val javaType = mapper.constructType(type)
         return Converter<ResponseBody, Any> { body ->
@@ -34,11 +31,9 @@ class Jackson3ConverterFactory private constructor(
         type: Type,
         parameterAnnotations: Array<out Annotation>,
         methodAnnotations: Array<out Annotation>,
-        retrofit: Retrofit
-    ): Converter<*, RequestBody> {
-        return Converter<Any, RequestBody> { value ->
-            mapper.writeValueAsBytes(value).toRequestBody(MEDIA_TYPE)
-        }
+        retrofit: Retrofit,
+    ): Converter<*, RequestBody> = Converter<Any, RequestBody> { value ->
+        mapper.writeValueAsBytes(value).toRequestBody(MEDIA_TYPE)
     }
 
     companion object {

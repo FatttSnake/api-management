@@ -23,7 +23,7 @@ fun ApiTransaction.toVo() = ApiTransactionVo(
     amount = this.amount,
     balanceAfter = this.balanceAfter,
     remark = this.remark,
-    createTime = this.createTime
+    createTime = this.createTime,
 )
 
 /**
@@ -39,5 +39,5 @@ fun IPage<ApiTransaction>.toVoPage() = PageVo(
     pages = this.pages,
     size = this.size,
     current = this.current,
-    records = this.records.map(ApiTransaction::toVo)
+    records = this.records.map(ApiTransaction::toVo),
 )

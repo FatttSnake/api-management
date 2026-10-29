@@ -1,6 +1,7 @@
 package top.fatweb.apimanagement.api.v1
 
-import java.util.*
+import java.util.Collections
+import java.util.TreeMap
 
 /**
  * Immutable request snapshot handed to an [ApiHandler].
@@ -31,9 +32,8 @@ class ApiRequest(
     val principal: ApiPrincipal? = null,
     val traceId: String = "",
     val interfaceInfo: InterfaceInfo,
-    val body: ByteArray = ByteArray(0)
+    val body: ByteArray = ByteArray(0),
 ) {
-
     /**
      * Path parameters.
      *

@@ -14,10 +14,12 @@ import java.net.http.HttpRequest as JdkHttpRequest
  */
 @Component
 class PluginHttpClient {
-    private val client: HttpClient = HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(10))
-        .followRedirects(HttpClient.Redirect.NORMAL)
-        .build()
+    private val client: HttpClient =
+        HttpClient
+            .newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .build()
 
     /**
      * Executes an outbound request.
@@ -30,22 +32,30 @@ class PluginHttpClient {
      */
     @Throws(java.io.IOException::class)
     fun execute(request: HttpCapability.HttpRequest): HttpCapability.HttpResponse {
-        val publisher = if (request.body.isEmpty()) {
-            JdkHttpRequest.BodyPublishers.noBody()
-        } else {
-            JdkHttpRequest.BodyPublishers.ofByteArray(request.body)
-        }
-        val builder = JdkHttpRequest.newBuilder(request.uri)
-            .method(request.method, publisher)
+        val publisher =
+            if (request.body.isEmpty()) {
+                JdkHttpRequest.BodyPublishers.noBody()
+            } else {
+                JdkHttpRequest.BodyPublishers.ofByteArray(request.body)
+            }
+        val builder =
+            JdkHttpRequest
+                .newBuilder(request.uri)
+                .method(request.method, publisher)
         request.headers.forEach { (name, values) ->
             values.forEach { value -> builder.header(name, value) }
         }
         request.timeout?.let(builder::timeout)
-        val response = client.send(builder.build(), java.net.http.HttpResponse.BodyHandlers.ofByteArray())
+        val response =
+            client.send(
+                builder.build(),
+                java.net.http.HttpResponse.BodyHandlers
+                    .ofByteArray(),
+            )
         return HttpCapability.HttpResponse(
             status = response.statusCode(),
             headers = response.headers().map(),
-            body = response.body()
+            body = response.body(),
         )
     }
 

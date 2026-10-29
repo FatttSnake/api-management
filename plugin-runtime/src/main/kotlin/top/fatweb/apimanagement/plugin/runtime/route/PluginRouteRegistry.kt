@@ -2,7 +2,6 @@ package top.fatweb.apimanagement.plugin.runtime.route
 
 import org.springframework.http.server.PathContainer
 import org.springframework.web.util.pattern.PathPattern
-import java.util.concurrent.CopyOnWriteArrayList
 import java.util.Locale
 
 /**
@@ -15,10 +14,16 @@ import java.util.Locale
  * @since 1.0.0
  */
 class PluginRouteRegistry {
-    private val routes = CopyOnWriteArrayList<RegisteredRoute>()
+    private val lock = Any()
+
+    @Volatile
+    private var routes: List<RegisteredRoute> = emptyList()
 
     /**
      * Registers routes for a plugin, replacing any routes it already had.
+     *
+     * The table is swapped as a whole, so a request either sees the old routes or the new
+     * ones and never the gap between them.
      *
      * @param pluginId plugin ID
      * @param newRoutes routes
@@ -28,8 +33,9 @@ class PluginRouteRegistry {
      */
     fun replace(pluginId: String, newRoutes: List<RegisteredRoute>) {
         validate(pluginId, newRoutes)
-        unregisterPlugin(pluginId)
-        routes.addAll(newRoutes)
+        synchronized(lock) {
+            routes = routes.filterNot { it.pluginId == pluginId } + newRoutes
+        }
     }
 
     /**
@@ -40,7 +46,9 @@ class PluginRouteRegistry {
      * @since 1.0.0
      */
     fun unregisterPlugin(pluginId: String) {
-        routes.removeIf { it.pluginId == pluginId }
+        synchronized(lock) {
+            routes = routes.filterNot { it.pluginId == pluginId }
+        }
     }
 
     /**
@@ -50,17 +58,7 @@ class PluginRouteRegistry {
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun all(): List<RegisteredRoute> = routes.toList()
-
-    /**
-     * Returns routes for one plugin.
-     *
-     * @param pluginId plugin ID
-     * @return routes
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    fun forPlugin(pluginId: String): List<RegisteredRoute> = routes.filter { it.pluginId == pluginId }
+    fun all(): List<RegisteredRoute> = routes
 
     /**
      * Matches a request.
@@ -79,22 +77,24 @@ class PluginRouteRegistry {
         val container = PathContainer.parsePath(remaining)
         val normalizedMethod = method.uppercase(Locale.ROOT)
 
-        val candidates = routes.asSequence()
-            .filter { it.pluginId == pluginId }
-            .filter { it.definition.method == normalizedMethod }
-            .filter { it.definition.apiVersion <= requestedVersion }
-            .mapNotNull { route ->
-                route.pattern.matchAndExtract(container)?.let { info ->
-                    Candidate(route, info.uriVariables)
-                }
-            }
-            .sortedWith(
-                compareByDescending<Candidate> { it.route.definition.apiVersion }
-                    .thenComparator { left, right ->
-                        PathPattern.SPECIFICITY_COMPARATOR.compare(right.route.pattern, left.route.pattern)
+        val snapshot = routes
+
+        val candidates =
+            snapshot
+                .asSequence()
+                .filter { it.pluginId == pluginId }
+                .filter { it.definition.method == normalizedMethod }
+                .filter { it.definition.apiVersion <= requestedVersion }
+                .mapNotNull { route ->
+                    route.pattern.matchAndExtract(container)?.let { info ->
+                        Candidate(route, info.uriVariables)
                     }
-            )
-            .toList()
+                }.sortedWith(
+                    compareByDescending<Candidate> { it.route.definition.apiVersion }
+                        .thenComparator { left, right ->
+                            PathPattern.SPECIFICITY_COMPARATOR.compare(right.route.pattern, left.route.pattern)
+                        },
+                ).toList()
 
         val best = candidates.firstOrNull() ?: return null
         return RouteMatch(best.route, requestedVersion, best.pathParameters)
@@ -105,9 +105,10 @@ class PluginRouteRegistry {
         require(apiCodes.size == apiCodes.toSet().size) {
             "Duplicate operationId in plugin $pluginId"
         }
-        val identifiers = newRoutes.map {
-            "${it.definition.method} ${it.definition.apiVersion} ${it.definition.path}"
-        }
+        val identifiers =
+            newRoutes.map {
+                "${it.definition.method} ${it.definition.apiVersion} ${it.definition.path}"
+            }
         require(identifiers.size == identifiers.toSet().size) {
             "Duplicate route in plugin $pluginId"
         }
@@ -118,10 +119,7 @@ class PluginRouteRegistry {
         }
     }
 
-    private class Candidate(
-        val route: RegisteredRoute,
-        val pathParameters: Map<String, String>
-    )
+    private class Candidate(val route: RegisteredRoute, val pathParameters: Map<String, String>)
 
     private companion object {
         val PATH = Regex("^/api/([^/]+)/v(\\d+)(/.*)?$")

@@ -16,10 +16,7 @@ import top.fatweb.apimanagement.plugin.runtime.route.RegisteredRoute
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-internal class RouteCollector(
-    private val pluginId: String,
-    private val classLoader: ClassLoader
-) : ApiRoutes {
+internal class RouteCollector(private val pluginId: String, private val classLoader: ClassLoader) : ApiRoutes {
     private val routes = mutableListOf<RegisteredRoute>()
     private var open = true
 
@@ -52,9 +49,10 @@ internal class RouteCollector(
         require(codes.size == codes.toSet().size) {
             "Duplicate operationId in plugin $pluginId"
         }
-        val identities = routes.map { route ->
-            "${route.definition.method} ${route.definition.apiVersion} ${route.definition.path}"
-        }
+        val identities =
+            routes.map { route ->
+                "${route.definition.method} ${route.definition.apiVersion} ${route.definition.path}"
+            }
         require(identities.size == identities.toSet().size) {
             "Duplicate route in plugin $pluginId"
         }

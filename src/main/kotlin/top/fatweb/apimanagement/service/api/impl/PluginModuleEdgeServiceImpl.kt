@@ -15,5 +15,6 @@ import top.fatweb.apimanagement.service.api.IPluginModuleEdgeService
  */
 @Service
 @DS("master")
-class PluginModuleEdgeServiceImpl : ServiceImpl<PluginModuleEdgeMapper, PluginModuleEdge>(),
+class PluginModuleEdgeServiceImpl :
+    ServiceImpl<PluginModuleEdgeMapper, PluginModuleEdge>(),
     IPluginModuleEdgeService

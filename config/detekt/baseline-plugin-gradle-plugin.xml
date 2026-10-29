@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:CheckPluginAbi.kt:CheckPluginAbi$@TaskAction fun run</ID>
+    <ID>CyclomaticComplexMethod:CheckPluginAbi.kt:CheckPluginAbi.ClassRefs.Companion$fun read: ClassRefs</ID>
+    <ID>LongMethod:ApiPlugin.kt:ApiPlugin$override fun apply</ID>
+    <ID>SwallowedException:DeployPlugin.kt:DeployPlugin$e: IOException</ID>
+  </CurrentIssues>
+</SmellBaseline>

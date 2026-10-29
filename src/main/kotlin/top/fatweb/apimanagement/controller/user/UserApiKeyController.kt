@@ -2,12 +2,22 @@ package top.fatweb.apimanagement.controller.user
 
 import io.swagger.v3.oas.annotations.Operation
 import jakarta.validation.Valid
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PatchMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
+import org.springframework.web.bind.annotation.RequestBody
 import top.fatweb.apimanagement.annotation.BaseController
 import top.fatweb.apimanagement.annotation.ProcessParam
 import top.fatweb.apimanagement.entity.common.ResponseCode
 import top.fatweb.apimanagement.entity.common.ResponseResult
-import top.fatweb.apimanagement.param.system.apiKey.*
+import top.fatweb.apimanagement.param.system.apiKey.ApiKeyAddParam
+import top.fatweb.apimanagement.param.system.apiKey.ApiKeyDeleteParam
+import top.fatweb.apimanagement.param.system.apiKey.ApiKeyGetParam
+import top.fatweb.apimanagement.param.system.apiKey.ApiKeyUpdateParam
+import top.fatweb.apimanagement.param.system.apiKey.ApiKeyUpdateStatusParam
 import top.fatweb.apimanagement.service.api.IApiKeyService
 import top.fatweb.apimanagement.vo.PageVo
 import top.fatweb.apimanagement.vo.api.ApiKeyAvailableGroupVo
@@ -23,9 +33,7 @@ import top.fatweb.apimanagement.vo.api.ApiKeyWithSecretVo
  * @since 1.0.0
  */
 @BaseController(path = ["/user/api/key"], name = "我的 API Key", description = "用户自助 API Key 管理接口")
-class UserApiKeyController(
-    private val apiKeyService: IApiKeyService
-) {
+class UserApiKeyController(private val apiKeyService: IApiKeyService) {
     /**
      * Get my API key by ID
      *
@@ -64,7 +72,8 @@ class UserApiKeyController(
     @PostMapping
     fun add(@ProcessParam @Valid @RequestBody apiKeyAddParam: ApiKeyAddParam): ResponseResult<ApiKeyWithSecretVo> =
         ResponseResult.databaseSuccess(
-            ResponseCode.API_PLATFORM_KEY_CREATE_SUCCESS, data = apiKeyService.add(false, apiKeyAddParam)
+            ResponseCode.API_PLATFORM_KEY_CREATE_SUCCESS,
+            data = apiKeyService.add(false, apiKeyAddParam),
         )
 
     /**
@@ -109,10 +118,10 @@ class UserApiKeyController(
      */
     @Operation(summary = "重新生成我的 SecretKey")
     @PostMapping("/{id}/regenerate")
-    fun regenerate(@PathVariable id: Long): ResponseResult<ApiKeyWithSecretVo> =
-        ResponseResult.databaseSuccess(
-            ResponseCode.API_PLATFORM_KEY_REGENERATE_SUCCESS, data = apiKeyService.regenerate(false, id)
-        )
+    fun regenerate(@PathVariable id: Long): ResponseResult<ApiKeyWithSecretVo> = ResponseResult.databaseSuccess(
+        ResponseCode.API_PLATFORM_KEY_REGENERATE_SUCCESS,
+        data = apiKeyService.regenerate(false, id),
+    )
 
     /**
      * Delete my API key by ID

@@ -1,0 +1,45 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ClassOrdering:ApiAccessInterceptor.kt:ApiAccessInterceptor$Companion</ID>
+    <ID>ClassOrdering:ApiKeyServiceImpl.kt:ApiKeyServiceImpl$Companion</ID>
+    <ID>ClassOrdering:ExternalLinkSigner.kt:ExternalLinkSigner$Companion</ID>
+    <ID>ClassOrdering:LocalFileStorageProvider.kt:LocalFileStorageProvider$Companion</ID>
+    <ID>ClassOrdering:PluginConfigSchemaUtilTests.kt:PluginConfigSchemaUtilTests$private val mysqlDatasource = """ [ { "name": "main", "dbType": "mysql", "required": true, "host": "db.host", "port": "db.port", "database": "db.name", "username": "db.user", "password": "db.password", "params": "db.params" } ] """.trimIndent()</ID>
+    <ID>ClassOrdering:PluginDatasourceFactory.kt:PluginDatasourceFactory$Companion</ID>
+    <ID>ClassOrdering:PluginInFlightTrackerTests.kt:PluginInFlightTrackerTests$Companion</ID>
+    <ID>ClassOrdering:PublicStorageController.kt:PublicStorageController$Companion</ID>
+    <ID>ClassOrdering:S3FileStorageProvider.kt:S3FileStorageProvider$Companion</ID>
+    <ID>ClassOrdering:StorageBlobCron.kt:StorageBlobCron$Companion</ID>
+    <ID>ClassOrdering:User.kt:User$constructor</ID>
+    <ID>ComplexCondition:JwtAuthenticationTokenFilter.kt:JwtAuthenticationTokenFilter$!StringUtils.hasText(tokenWithPrefix) || "/error/thrown" == servletPath || servletPath.startsWith(StorageRoutes.PUBLIC_STORAGE_PATH) || !tokenWithPrefix.startsWith(serverProperties.security.tokenPrefix)</ID>
+    <ID>CyclomaticComplexMethod:ApiAccessInterceptor.kt:ApiAccessInterceptor$override fun afterCompletion</ID>
+    <ID>CyclomaticComplexMethod:ApiAccessInterceptor.kt:ApiAccessInterceptor$private fun admitAccount</ID>
+    <ID>CyclomaticComplexMethod:EventLogInterceptor.kt:EventLogInterceptor$private fun resolveKeyLog: KeyLog</ID>
+    <ID>CyclomaticComplexMethod:ExceptionHandler.kt:ExceptionHandler$@ExceptionHandler(value = [Exception::class]) fun exceptionHandler: Any</ID>
+    <ID>CyclomaticComplexMethod:PluginConfigSchemaUtil.kt:PluginConfigSchemaUtil$private fun parseDatasource: PluginDatasourceSchema</ID>
+    <ID>CyclomaticComplexMethod:PluginConfigSchemaUtil.kt:PluginConfigSchemaUtil$private fun parseField: PluginConfigField</ID>
+    <ID>CyclomaticComplexMethod:PluginEndpointRegistrar.kt:PluginEndpointRegistrar$fun register</ID>
+    <ID>CyclomaticComplexMethod:PluginPlatformServiceImpl.kt:PluginPlatformServiceImpl$override fun getInterfacePage: PageVo&lt;ApiGroupVo></ID>
+    <ID>CyclomaticComplexMethod:PluginPlatformServiceImpl.kt:PluginPlatformServiceImpl$private fun installLocked: ApiPlugin</ID>
+    <ID>CyclomaticComplexMethod:SysLogInterceptor.kt:SysLogInterceptor$override fun afterCompletion</ID>
+    <ID>CyclomaticComplexMethod:UserServiceImpl.kt:UserServiceImpl$@Transactional override fun update</ID>
+    <ID>EmptyFunctionBlock:ApiManagementApplicationTests.kt:ApiManagementApplicationTests${ }</ID>
+    <ID>EmptyFunctionBlock:EventLogInterceptor.kt:EventLogInterceptor${ }</ID>
+    <ID>EmptyFunctionBlock:ParameterProcessInterceptor.kt:ParameterProcessInterceptor${ }</ID>
+    <ID>ForEachOnRange:StrUtil.kt:0 until length</ID>
+    <ID>LargeClass:PluginPlatformServiceImpl.kt:PluginPlatformServiceImpl : ServiceImplIPluginPlatformServiceApplicationRunner</ID>
+    <ID>LongMethod:ExceptionHandler.kt:ExceptionHandler$@ExceptionHandler(value = [Exception::class]) fun exceptionHandler: Any</ID>
+    <ID>LongMethod:UserServiceImpl.kt:UserServiceImpl$@Transactional override fun update</ID>
+    <ID>NestedBlockDepth:SysLogInterceptor.kt:SysLogInterceptor$override fun afterCompletion</ID>
+    <ID>SwallowedException:PluginConfigSchemaUtil.kt:PluginConfigSchemaUtil$e: Exception</ID>
+    <ID>SwallowedException:PluginDatasourceFactory.kt:PluginDatasourceFactory$e: Exception</ID>
+    <ID>TooManyFunctions:IUserService.kt:IUserService : IService</ID>
+    <ID>TooManyFunctions:PluginConfigSchemaUtil.kt:PluginConfigSchemaUtil</ID>
+    <ID>TooManyFunctions:PluginDatasourceUtil.kt:PluginDatasourceUtil</ID>
+    <ID>TooManyFunctions:PluginPlatformServiceImpl.kt:PluginPlatformServiceImpl : ServiceImplIPluginPlatformServiceApplicationRunner</ID>
+    <ID>TooManyFunctions:SettingsOperator.kt:SettingsOperator</ID>
+    <ID>TooManyFunctions:TOTPUtil.kt:TOTPUtil</ID>
+  </CurrentIssues>
+</SmellBaseline>

@@ -29,11 +29,11 @@ import java.time.Duration
 @BaseController(
     path = ["/system/api/plugin/module"],
     name = "API 插件依赖模块",
-    description = "API 插件依赖模块相关接口"
+    description = "API 插件依赖模块相关接口",
 )
 class PluginModuleController(
     private val pluginModuleService: IPluginModuleService,
-    private val serverProperties: ServerProperties
+    private val serverProperties: ServerProperties,
 ) {
     /**
      * Lists installed modules.
@@ -45,9 +45,7 @@ class PluginModuleController(
     @Operation(summary = "获取 API 插件依赖模块列表")
     @GetMapping
     @PreAuthorize("hasAnyAuthority('system:plugin:plugin:query')")
-    fun getModules(
-        @ProcessParam @Valid param: PluginModuleGetParam?
-    ): ResponseResult<PageVo<PluginModuleVo>> =
+    fun getModules(@ProcessParam @Valid param: PluginModuleGetParam?): ResponseResult<PageVo<PluginModuleVo>> =
         ResponseResult.databaseSuccess(data = pluginModuleService.getPage(param))
 
     /**
@@ -61,11 +59,10 @@ class PluginModuleController(
     @Operation(summary = "上传 API 插件依赖模块")
     @PostMapping("/install")
     @PreAuthorize("hasAnyAuthority('system:plugin:plugin:install')")
-    fun install(@RequestPart("file") file: MultipartFile): ResponseResult<String> =
-        ResponseResult.databaseSuccess(
-            ResponseCode.DATABASE_INSERT_SUCCESS,
-            data = pluginModuleService.stage(file.bytes)
-        )
+    fun install(@RequestPart("file") file: MultipartFile): ResponseResult<String> = ResponseResult.databaseSuccess(
+        ResponseCode.DATABASE_INSERT_SUCCESS,
+        data = pluginModuleService.stage(file.bytes),
+    )
 
     /**
      * Deletes an unreferenced module.
@@ -93,11 +90,11 @@ class PluginModuleController(
     @Operation(summary = "回收 API 插件依赖模块")
     @PostMapping("/gc")
     @PreAuthorize("hasAnyAuthority('system:plugin:plugin:install')")
-    fun gc(): ResponseResult<Int> =
-        ResponseResult.databaseSuccess(
-            ResponseCode.DATABASE_DELETE_SUCCESS,
-            data = pluginModuleService.gc(
-                Duration.ofHours(serverProperties.storage.pluginModuleGcGraceHours)
-            )
-        )
+    fun gc(): ResponseResult<Int> = ResponseResult.databaseSuccess(
+        ResponseCode.DATABASE_DELETE_SUCCESS,
+        data =
+        pluginModuleService.gc(
+            Duration.ofHours(serverProperties.storage.pluginModuleGcGraceHours),
+        ),
+    )
 }

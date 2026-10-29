@@ -12,5 +12,5 @@ package top.fatweb.apimanagement.api.v1
 data class ResponseSpec @JvmOverloads constructor(
     val description: String = "OK",
     val schema: SchemaSpec? = null,
-    val example: Any? = null
+    val example: Any? = null,
 )

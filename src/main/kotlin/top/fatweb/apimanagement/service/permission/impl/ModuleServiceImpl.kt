@@ -13,4 +13,6 @@ import top.fatweb.apimanagement.service.permission.IModuleService
  * @since 1.0.0
  */
 @Service
-class ModuleServiceImpl : ServiceImpl<ModuleMapper, Module>(), IModuleService
+class ModuleServiceImpl :
+    ServiceImpl<ModuleMapper, Module>(),
+    IModuleService

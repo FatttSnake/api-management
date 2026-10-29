@@ -31,10 +31,9 @@ class ParameterProcessInterceptor {
         execution(* *(.., @org.springframework.web.bind.annotation.RequestBody (*), ..)) ||
         execution(* *(.., @org.springframework.web.bind.annotation.RequestParam (*), ..)) ||
         execution(* *(.., @org.springframework.web.bind.annotation.PathVariable (*), ..))
-        """
+        """,
     )
     fun processPointcut() {
-
     }
 
     /**
@@ -52,47 +51,49 @@ class ParameterProcessInterceptor {
         val parameters = method.parameters
         val args = joinPoint.args
 
-        val processedArgs = parameters.mapIndexed { index, parameter ->
-            val arg = args[index]
-            val needProcess = parameter.isAnnotationPresent(ProcessParam::class.java)
+        val processedArgs =
+            parameters
+                .mapIndexed { index, parameter ->
+                    val arg = args[index]
+                    val needProcess = parameter.isAnnotationPresent(ProcessParam::class.java)
 
-            if (arg != null && needProcess) {
-                val parameterAnnotation = parameter.getAnnotation(ParamProcessor::class.java)
-                val classAnnotation = arg.javaClass.getAnnotation(ParamProcessor::class.java)
-                val effectiveAnnotation = parameterAnnotation ?: classAnnotation
-                processArgument(arg = arg, annotation = effectiveAnnotation)
-            } else {
-                arg
-            }
-        }.toTypedArray()
+                    if (arg != null && needProcess) {
+                        val parameterAnnotation = parameter.getAnnotation(ParamProcessor::class.java)
+                        val classAnnotation = arg.javaClass.getAnnotation(ParamProcessor::class.java)
+                        val effectiveAnnotation = parameterAnnotation ?: classAnnotation
+                        processArgument(arg = arg, annotation = effectiveAnnotation)
+                    } else {
+                        arg
+                    }
+                }.toTypedArray()
 
         return processedArgs
     }
 
-    private fun processArgument(arg: Any?, annotation: ParamProcessor?): Any? =
-        when (arg) {
-            null -> null
-            is String -> if (annotation == null) {
+    private fun processArgument(arg: Any?, annotation: ParamProcessor?): Any? = when (arg) {
+        null -> null
+        is String ->
+            if (annotation == null) {
                 arg
             } else {
                 processString(value = arg, strategies = annotation.strategy.toList())
             }
 
-            is Collection<*> -> {
-                val processed = arg.map { processArgument(arg = it, annotation = annotation) }
+        is Collection<*> -> {
+            val processed = arg.map { processArgument(arg = it, annotation = annotation) }
 
-                if (arg is Set<*>) processed.toSet() else processed
-            }
-            is Map<*, *> -> arg.mapValues { processArgument(arg = it.value, annotation = annotation) }
-            is Array<*> -> arg.map { processArgument(arg = it, annotation = annotation) }
-            else -> {
-                if (isCustomClass(arg)) {
-                    processObject(obj = arg, annotation = annotation)
-                } else {
-                    arg
-                }
+            if (arg is Set<*>) processed.toSet() else processed
+        }
+        is Map<*, *> -> arg.mapValues { processArgument(arg = it.value, annotation = annotation) }
+        is Array<*> -> arg.map { processArgument(arg = it, annotation = annotation) }
+        else -> {
+            if (isCustomClass(arg)) {
+                processObject(obj = arg, annotation = annotation)
+            } else {
+                arg
             }
         }
+    }
 
     private fun processString(value: String, strategies: List<ProcessStrategy>): String =
         strategies.fold(value) { acc, processStrategy ->
@@ -107,8 +108,7 @@ class ParameterProcessInterceptor {
             }
         }
 
-    private fun isCustomClass(obj: Any): Boolean =
-        obj.javaClass.name.startsWith("top.fatweb.apimanagement.param.")
+    private fun isCustomClass(obj: Any): Boolean = obj.javaClass.name.startsWith("top.fatweb.apimanagement.param.")
 
     private fun processObject(obj: Any, annotation: ParamProcessor?): Any {
         val fields = getAllFields(obj.javaClass)

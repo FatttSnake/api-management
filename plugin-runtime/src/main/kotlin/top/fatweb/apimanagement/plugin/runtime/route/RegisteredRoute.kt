@@ -19,7 +19,7 @@ class RegisteredRoute(
     val pluginId: String,
     val definition: RouteDefinition,
     val handler: ApiHandler,
-    val classLoader: ClassLoader
+    val classLoader: ClassLoader,
 ) {
     /**
      * Stable interface code.
@@ -35,9 +35,10 @@ class RegisteredRoute(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    val pattern: PathPattern = PathPatternParser.defaultInstance.parse(
-        if (definition.path.isEmpty()) "/" else definition.path
-    )
+    val pattern: PathPattern =
+        PathPatternParser.defaultInstance.parse(
+            definition.path.ifEmpty { "/" },
+        )
 
     init {
         require(pluginId.isNotBlank()) { "pluginId must not be blank" }

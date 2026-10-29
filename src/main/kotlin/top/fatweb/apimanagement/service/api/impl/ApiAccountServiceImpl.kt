@@ -13,7 +13,6 @@ import top.fatweb.apimanagement.converter.api.toVoPage
 import top.fatweb.apimanagement.entity.api.ApiAccount
 import top.fatweb.apimanagement.entity.api.ApiTransaction
 import top.fatweb.apimanagement.entity.system.EventLog
-import top.fatweb.apimanagement.exception.ApiAccountNotFoundException
 import top.fatweb.apimanagement.mapper.api.ApiAccountMapper
 import top.fatweb.apimanagement.param.system.api.ApiAccountGetParam
 import top.fatweb.apimanagement.param.system.apiAccount.ApiTopUpParam
@@ -39,17 +38,25 @@ import java.math.BigDecimal
 @DS("master")
 class ApiAccountServiceImpl(
     private val userService: IUserService,
-    private val apiTransactionService: IApiTransactionService
-) : ServiceImpl<ApiAccountMapper, ApiAccount>(), IApiAccountService {
+    private val apiTransactionService: IApiTransactionService,
+) : ServiceImpl<ApiAccountMapper, ApiAccount>(),
+    IApiAccountService {
     override fun get(apiAccountGetParam: ApiAccountGetParam?): PageVo<ApiAccountVo> {
         val page = Page<ApiAccount>(apiAccountGetParam?.currentPage ?: 1, apiAccountGetParam?.pageSize ?: 20)
         setPageSort(apiAccountGetParam, page, OrderItem.desc("create_time"))
 
-        val wrapper = KtQueryWrapper(ApiAccount()).apply {
-            apiAccountGetParam?.enable?.let { eq(ApiAccount::enable, if (it) 1 else 0) }
-        }
+        val wrapper =
+            KtQueryWrapper(ApiAccount()).apply {
+                apiAccountGetParam?.enable?.let { eq(ApiAccount::enable, if (it) 1 else 0) }
+            }
         val accountPage = page(page, wrapper)
-        val userMap = userService.getBasicInfoByIds(accountPage.records.map { it.userId!! }.toSet().toList())
+        val userMap =
+            userService.getBasicInfoByIds(
+                accountPage.records
+                    .map { it.userId!! }
+                    .toSet()
+                    .toList(),
+            )
 
         return accountPage.toVoPage { userId -> userMap[userId] }
     }
@@ -71,17 +78,20 @@ class ApiAccountServiceImpl(
         }
 
         val account = getOrCreate(targetUserId)
-        val amount = apiTopUpParam.amount ?: throw ApiAccountNotFoundException()
+        val amount =
+            apiTopUpParam.amount
+                ?: throw IllegalArgumentException("Top-up amount is required")
         updateOrThrowException { baseMapper.topUp(account.id!!, amount) > 0 }
 
-        val transaction = ApiTransaction().apply {
-            this.userId = targetUserId
-            this.orderNo = apiTopUpParam.orderNo
-            this.type = ApiTransaction.Type.TOPUP
-            this.amount = amount
-            this.balanceAfter = getBalance(targetUserId)
-            this.remark = apiTopUpParam.remark
-        }
+        val transaction =
+            ApiTransaction().apply {
+                this.userId = targetUserId
+                this.orderNo = apiTopUpParam.orderNo
+                this.type = ApiTransaction.Type.TOPUP
+                this.amount = amount
+                this.balanceAfter = getBalance(targetUserId)
+                this.remark = apiTopUpParam.remark
+            }
         saveOrThrowException { apiTransactionService.save(transaction) }
         return transaction.toVo()
     }
@@ -94,18 +104,18 @@ class ApiAccountServiceImpl(
         return baseMapper.deduct(account.id!!, cost) > 0
     }
 
-    override fun checkBalance(userId: Long, cost: BigDecimal): Boolean {
-        return cost.signum() <= 0 || getBalance(userId) >= cost
-    }
+    override fun checkBalance(userId: Long, cost: BigDecimal): Boolean =
+        cost.signum() <= 0 || getBalance(userId) >= cost
 
     private fun getOrCreate(userId: Long): ApiAccount {
         getOne(KtQueryWrapper(ApiAccount()).eq(ApiAccount::userId, userId))?.let { return it }
 
-        val account = ApiAccount().apply {
-            this.userId = userId
-            this.balance = BigDecimal.ZERO
-            this.enable = 1
-        }
+        val account =
+            ApiAccount().apply {
+                this.userId = userId
+                this.balance = BigDecimal.ZERO
+                this.enable = 1
+            }
         saveOrThrowException { save(account) }
         return account
     }

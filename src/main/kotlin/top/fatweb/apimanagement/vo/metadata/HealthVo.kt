@@ -19,7 +19,6 @@ data class HealthVo(
      */
     @field:Schema(description = "状态")
     val status: String?,
-
     /**
      * Timestamp
      *
@@ -27,5 +26,5 @@ data class HealthVo(
      * @since 1.0.0
      */
     @field:Schema(description = "时间戳", example = "1900-01-01T00:00:00.000Z")
-    val timestamp: LocalDateTime?
+    val timestamp: LocalDateTime?,
 )

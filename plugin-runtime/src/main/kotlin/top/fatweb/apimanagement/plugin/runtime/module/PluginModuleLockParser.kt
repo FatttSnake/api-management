@@ -1,8 +1,6 @@
 package top.fatweb.apimanagement.plugin.runtime.module
 
-import tools.jackson.databind.DeserializationFeature
-import tools.jackson.databind.json.JsonMapper
-import tools.jackson.module.kotlin.KotlinModule
+import top.fatweb.apimanagement.plugin.runtime.PLUGIN_JSON_MAPPER
 import java.nio.charset.StandardCharsets
 
 /**
@@ -12,14 +10,7 @@ import java.nio.charset.StandardCharsets
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-class PluginModuleLockParser(
-    private val maxModules: Int = PluginModuleLock.DEFAULT_MAX_MODULES
-) {
-    private val mapper: JsonMapper = JsonMapper.builder()
-        .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-        .addModules(KotlinModule.Builder().build())
-        .build()
-
+class PluginModuleLockParser(private val maxModules: Int = PluginModuleLock.DEFAULT_MAX_MODULES) {
     /**
      * Parses and validates a lock.
      *
@@ -30,26 +21,29 @@ class PluginModuleLockParser(
      * @since 1.0.0
      */
     fun parse(bytes: ByteArray): PluginModuleLock {
-        val json = try {
-            mapper.readValue(bytes, LockJson::class.java)
-        } catch (ex: Exception) {
-            throw PluginModuleLockException("Cannot parse dependency lock: ${ex.message}")
-        }
-        val lock = PluginModuleLock(
-            format = json.format,
-            constraints = json.constraints,
-            modules = json.modules.map { module ->
-                LockedModule(
-                    group = module.group,
-                    name = module.name,
-                    version = module.version,
-                    sha256 = module.sha256,
-                    size = module.size,
-                    source = module.source,
-                    dependencies = module.dependencies
-                )
+        val json =
+            try {
+                PLUGIN_JSON_MAPPER.readValue(bytes, LockJson::class.java)
+            } catch (ex: Exception) {
+                throw PluginModuleLockException("Cannot parse dependency lock: ${ex.message}")
             }
-        )
+        val lock =
+            PluginModuleLock(
+                format = json.format,
+                constraints = json.constraints,
+                modules =
+                json.modules.map { module ->
+                    LockedModule(
+                        group = module.group,
+                        name = module.name,
+                        version = module.version,
+                        sha256 = module.sha256,
+                        size = module.size,
+                        source = module.source,
+                        dependencies = module.dependencies,
+                    )
+                },
+            )
         lock.validate(maxModules)
         return lock
     }
@@ -68,7 +62,7 @@ class PluginModuleLockParser(
     private data class LockJson(
         val format: Int = 0,
         val constraints: Map<String, String> = emptyMap(),
-        val modules: List<ModuleJson> = emptyList()
+        val modules: List<ModuleJson> = emptyList(),
     )
 
     private data class ModuleJson(
@@ -78,6 +72,6 @@ class PluginModuleLockParser(
         val sha256: String = "",
         val size: Long = 0,
         val source: String? = null,
-        val dependencies: List<String> = emptyList()
+        val dependencies: List<String> = emptyList(),
     )
 }

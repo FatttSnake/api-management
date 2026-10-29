@@ -1,6 +1,7 @@
 package top.fatweb.apimanagement.component.storage
 
 import org.junit.jupiter.api.io.TempDir
+import top.fatweb.apimanagement.properties.SecurityProperties
 import top.fatweb.apimanagement.properties.ServerProperties
 import top.fatweb.apimanagement.properties.StorageProperties
 import top.fatweb.apimanagement.util.sha256HexString
@@ -35,12 +36,15 @@ class LocalFileStorageProviderTests {
     private val png = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3)
 
     private fun providerAt(root: Path, baseUrl: String? = null): LocalFileStorageProvider {
-        val properties = ServerProperties(
-            storage = StorageProperties(
-                local = StorageProperties.LocalStorageProperties(root = root.toString()),
-                publicBaseUrl = baseUrl
+        val properties =
+            ServerProperties(
+                security = SecurityProperties(tokenSecret = "test"),
+                storage =
+                StorageProperties(
+                    local = StorageProperties.LocalStorageProperties(root = root.toString()),
+                    publicBaseUrl = baseUrl,
+                ),
             )
-        )
 
         return LocalFileStorageProvider(properties, ExternalLinkSigner(properties), PublicBaseUrlResolver(properties))
     }
@@ -93,7 +97,7 @@ class LocalFileStorageProviderTests {
             "plugin-data/alpha//etc/passwd",
             "plugin-data/alpha/C:\\Windows\\win.ini",
             "../alpha/escape.txt",
-            "/etc/passwd"
+            "/etc/passwd",
         ).forEach { key ->
             assertFailsWith<IllegalArgumentException>("expected '$key' to be rejected") {
                 provider.saveAt(key, png)
@@ -133,15 +137,16 @@ class LocalFileStorageProviderTests {
     @Test
     fun `externalUrlAt signs a link the gateway can verify`(@TempDir tempDir: Path) {
         val provider = providerAt(tempDir, baseUrl = "https://cdn.example.test/")
-        val verifier = ExternalLinkSigner(ServerProperties())
+        val verifier = ExternalLinkSigner(ServerProperties(security = SecurityProperties(tokenSecret = "test")))
 
-        val url = assertNotNull(
-            provider.externalUrlAt(
-                StorageKeyUtil.pluginKey("alpha", "avatar/1.png"),
-                StorageKeyUtil.pluginReference("alpha", "avatar/1.png"),
-                Duration.ofHours(1)
+        val url =
+            assertNotNull(
+                provider.externalUrlAt(
+                    StorageKeyUtil.pluginKey("alpha", "avatar/1.png"),
+                    StorageKeyUtil.pluginReference("alpha", "avatar/1.png"),
+                    Duration.ofHours(1),
+                ),
             )
-        )
 
         // The reference, not the storage key, and exactly one slash at the join despite
         // the trailing slash in the configured base URL.
@@ -176,8 +181,8 @@ class LocalFileStorageProviderTests {
             providerAt(tempDir).externalUrlAt(
                 "plugin-data/alpha/avatar/1.png",
                 "alpha/avatar/1.png",
-                Duration.ofHours(1)
-            )
+                Duration.ofHours(1),
+            ),
         )
     }
 
@@ -210,16 +215,17 @@ class LocalFileStorageProviderTests {
         // The end-to-end shape the controller relies on: mint, then rebuild both the
         // reference and the key out of the URL exactly the way the controller does.
         val provider = providerAt(tempDir, baseUrl = "http://localhost:8080")
-        val verifier = ExternalLinkSigner(ServerProperties())
+        val verifier = ExternalLinkSigner(ServerProperties(security = SecurityProperties(tokenSecret = "test")))
         provider.saveAt(StorageKeyUtil.pluginKey("alpha", "avatar/1.png"), png)
 
-        val url = assertNotNull(
-            provider.externalUrlAt(
-                StorageKeyUtil.pluginKey("alpha", "avatar/1.png"),
-                StorageKeyUtil.pluginReference("alpha", "avatar/1.png"),
-                Duration.ofHours(1)
+        val url =
+            assertNotNull(
+                provider.externalUrlAt(
+                    StorageKeyUtil.pluginKey("alpha", "avatar/1.png"),
+                    StorageKeyUtil.pluginReference("alpha", "avatar/1.png"),
+                    Duration.ofHours(1),
+                ),
             )
-        )
 
         val reference = url.substringAfter("/public/storage/").substringBefore('?')
         val expiresAt = Regex("e=(\\d+)").find(url)!!.groupValues[1].toLong()

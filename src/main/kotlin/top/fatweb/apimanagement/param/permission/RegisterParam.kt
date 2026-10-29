@@ -24,7 +24,6 @@ data class RegisterParam(
     @field:NotBlank(message = "Username can not be blank")
     @field:Pattern(regexp = "[a-zA-Z-_][0-9a-zA-Z-_]{2,38}", message = "Illegal username")
     var username: String?,
-
     /**
      * Email
      *
@@ -35,7 +34,6 @@ data class RegisterParam(
     @field:NotBlank(message = "Email can not be blank")
     @field:Pattern(regexp = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$", message = "Illegal email address")
     var email: String?,
-
     /**
      * Password
      *
@@ -45,5 +43,5 @@ data class RegisterParam(
     @field:Schema(description = "密码", required = true)
     @field:NotBlank(message = "Password can not be blank")
     @field:Pattern(regexp = "^[a-fA-F0-9]{128}$", message = "Password must be encrypted by SHA512")
-    val password: String?
+    val password: String?,
 ) : CaptchaCodeParam()

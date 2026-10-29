@@ -16,9 +16,7 @@ import top.fatweb.apimanagement.properties.ServerProperties
  * @since 1.0.0
  */
 @Component
-class PublicBaseUrlResolver(
-    private val serverProperties: ServerProperties
-) {
+class PublicBaseUrlResolver(private val serverProperties: ServerProperties) {
     /**
      * Resolve the public base URL
      *
@@ -33,8 +31,9 @@ class PublicBaseUrlResolver(
             ?.takeIf { it.isNotEmpty() }
             ?.let { return it.trimEnd('/') }
 
-        val request = (RequestContextHolder.getRequestAttributes() as? ServletRequestAttributes)?.request
-            ?: return null
+        val request =
+            (RequestContextHolder.getRequestAttributes() as? ServletRequestAttributes)?.request
+                ?: return null
 
         val secure = request.isSecure
         val port = request.serverPort

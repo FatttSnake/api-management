@@ -14,13 +14,13 @@ import top.fatweb.apimanagement.http.TurnstileApi
 @Configuration
 class RetrofitConfig {
     @Bean
-    fun turnstileApi(
-        jacksonConverterFactory: Jackson3ConverterFactory
-    ): TurnstileApi {
-        val retrofit = Retrofit.Builder()
-            .baseUrl("https://challenges.cloudflare.com/turnstile/v0/")
-            .addConverterFactory(jacksonConverterFactory)
-            .build()
+    fun turnstileApi(jacksonConverterFactory: Jackson3ConverterFactory): TurnstileApi {
+        val retrofit =
+            Retrofit
+                .Builder()
+                .baseUrl("https://challenges.cloudflare.com/turnstile/v0/")
+                .addConverterFactory(jacksonConverterFactory)
+                .build()
 
         return retrofit.create(TurnstileApi::class.java)
     }

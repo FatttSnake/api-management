@@ -20,7 +20,6 @@ data class GroupUpdateStatusParam(
     @field:Schema(description = "用户组 ID", required = true)
     @field:NotNull(message = "ID can not be null")
     val id: Long?,
-
     /**
      * Enable
      *
@@ -28,5 +27,5 @@ data class GroupUpdateStatusParam(
      * @since 1.0.0
      */
     @field:Schema(description = "启用", allowableValues = ["true", "false"], defaultValue = "true", example = "true")
-    val enable: Boolean = true
+    val enable: Boolean = true,
 )

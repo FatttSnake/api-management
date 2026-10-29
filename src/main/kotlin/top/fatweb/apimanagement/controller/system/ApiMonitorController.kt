@@ -15,9 +15,7 @@ import top.fatweb.apimanagement.vo.api.ApiMonitorDashboardVo
  * @since 1.0.0
  */
 @BaseController(path = ["/system/api/monitor"], name = "API 监控", description = "API 监控相关接口")
-class ApiMonitorController(
-    private val apiMonitorService: IApiMonitorService
-) {
+class ApiMonitorController(private val apiMonitorService: IApiMonitorService) {
     /**
      * Get API monitor dashboard
      *

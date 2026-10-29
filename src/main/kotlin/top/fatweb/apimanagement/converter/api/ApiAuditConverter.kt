@@ -22,7 +22,7 @@ import top.fatweb.apimanagement.vo.permission.UserWithInfoVo
 fun EventLog.toAuditVo(
     resolveUser: ((Long) -> UserWithInfoVo?)? = null,
     resolveKey: ((Long) -> ApiKeyVo?)? = null,
-    resolveTargetUser: ((Long) -> UserWithInfoVo?)? = null
+    resolveTargetUser: ((Long) -> UserWithInfoVo?)? = null,
 ) = ApiAuditVo(
     id = this.id,
     event = this.event,
@@ -31,7 +31,7 @@ fun EventLog.toAuditVo(
     detail = this.detail,
     userVo = this.operateUserId?.let { userId -> resolveUser?.invoke(userId) },
     keyVo = this.apiKeyId?.let { keyId -> resolveKey?.invoke(keyId) },
-    targetUserVo = this.targetUserId?.let { targetId -> resolveTargetUser?.invoke(targetId) }
+    targetUserVo = this.targetUserId?.let { targetId -> resolveTargetUser?.invoke(targetId) },
 )
 
 /**
@@ -49,17 +49,18 @@ fun EventLog.toAuditVo(
 fun IPage<EventLog>.toAuditPage(
     resolveUser: ((Long) -> UserWithInfoVo?)? = null,
     resolveKey: ((Long) -> ApiKeyVo?)? = null,
-    resolveTargetUser: ((Long) -> UserWithInfoVo?)? = null
+    resolveTargetUser: ((Long) -> UserWithInfoVo?)? = null,
 ) = PageVo(
     total = this.total,
     pages = this.pages,
     size = this.size,
     current = this.current,
-    records = this.records.map { log ->
+    records =
+    this.records.map { log ->
         log.toAuditVo(
             resolveUser = resolveUser,
             resolveKey = resolveKey,
-            resolveTargetUser = resolveTargetUser
+            resolveTargetUser = resolveTargetUser,
         )
-    }
+    },
 )

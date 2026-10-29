@@ -22,7 +22,6 @@ data class ApiPluginGetParam(
      */
     @field:Schema(description = "查询插件名称", example = "Echo 插件")
     var searchName: String?,
-
     /**
      * Enable status
      *
@@ -33,7 +32,7 @@ data class ApiPluginGetParam(
         description = "启用状态",
         allowableValues = ["true", "false"],
         defaultValue = "true",
-        example = "true"
+        example = "true",
     )
-    var enable: Boolean?
+    var enable: Boolean?,
 ) : PageSortParam()

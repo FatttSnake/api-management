@@ -17,21 +17,23 @@ import top.fatweb.apimanagement.param.PageSortParam
  * @since 1.0.0
  */
 fun <T : Page<*>> setPageSort(pageSortParam: PageSortParam?, page: T, defaultOrder: OrderItem? = null) {
-    if (pageSortParam?.sortField != null || pageSortParam?.sortOrder != null) {
+    // The field is a column name, not SQL: anything outside that shape falls back to the
+    // caller's default order instead of reaching the query
+    val field = pageSortParam?.sortField?.takeIf { SORT_FIELD.matches(it) }
+    if (field != null) {
         page.addOrder(
-            if (pageSortParam.sortOrder?.startsWith(
-                    "desc", true
-                ) == true
-            ) OrderItem.desc(upperToUnderLetter(pageSortParam.sortField)) else OrderItem.asc(
-                upperToUnderLetter(
-                    pageSortParam.sortField
-                )
-            )
+            if (pageSortParam.sortOrder?.startsWith("desc", true) == true) {
+                OrderItem.desc(upperToUnderLetter(field))
+            } else {
+                OrderItem.asc(upperToUnderLetter(field))
+            },
         )
     } else {
         defaultOrder?.let { page.addOrder(defaultOrder) }
     }
 }
+
+private val SORT_FIELD = Regex("^[A-Za-z][A-Za-z0-9_]{0,63}$")
 
 /**
  * Execute database exists query operation, throw exception when not found
@@ -41,9 +43,9 @@ fun <T : Page<*>> setPageSort(pageSortParam: PageSortParam?, page: T, defaultOrd
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-fun existsOrThrowException(exception: RuntimeException = NoRecordFoundException(), func: () -> Boolean) {
+fun existsOrThrowException(exception: RuntimeException? = null, func: () -> Boolean) {
     if (!func()) {
-        throw exception
+        throw exception ?: NoRecordFoundException()
     }
 }
 
@@ -55,9 +57,8 @@ fun existsOrThrowException(exception: RuntimeException = NoRecordFoundException(
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-fun <T> queryOrThrowException(exception: RuntimeException? = null, func: () -> T?): T {
-    return func() ?: throw exception ?: NoRecordFoundException()
-}
+fun <T> queryOrThrowException(exception: RuntimeException? = null, func: () -> T?): T =
+    func() ?: throw exception ?: NoRecordFoundException()
 
 /**
  * Execute database insert operation, throw exception when failure

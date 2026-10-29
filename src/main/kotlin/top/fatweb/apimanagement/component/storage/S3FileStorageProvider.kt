@@ -12,7 +12,15 @@ import software.amazon.awssdk.http.HttpStatusCode
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.S3Configuration
-import software.amazon.awssdk.services.s3.model.*
+import software.amazon.awssdk.services.s3.model.Delete
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest
+import software.amazon.awssdk.services.s3.model.GetObjectRequest
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier
+import software.amazon.awssdk.services.s3.model.PutObjectRequest
+import software.amazon.awssdk.services.s3.model.S3Exception
 import software.amazon.awssdk.services.s3.presigner.S3Presigner
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest
 import top.fatweb.apimanagement.properties.ServerProperties
@@ -33,9 +41,7 @@ import java.time.Duration
  */
 @Component
 @ConditionalOnProperty(name = ["app.storage.mode"], havingValue = "s3")
-class S3FileStorageProvider(
-    serverProperties: ServerProperties
-) : FileStorageProvider {
+class S3FileStorageProvider(serverProperties: ServerProperties) : FileStorageProvider {
     private companion object {
         const val OBJECTS_DIR = "objects"
 
@@ -55,13 +61,14 @@ class S3FileStorageProvider(
 
     private val s3Properties = serverProperties.storage.s3!!
 
-    private val s3 = S3Client
-        .builder()
-        .endpointOverride(URI(s3Properties.endpoint))
-        .region(Region.of(s3Properties.region))
-        .credentialsProvider(credentialsProvider())
-        .forcePathStyle(s3Properties.pathStyle == S3PathStyle.Path)
-        .build()
+    private val s3 =
+        S3Client
+            .builder()
+            .endpointOverride(URI(s3Properties.endpoint))
+            .region(Region.of(s3Properties.region))
+            .credentialsProvider(credentialsProvider())
+            .forcePathStyle(s3Properties.pathStyle == S3PathStyle.Path)
+            .build()
 
     private val keyPrefix =
         if (s3Properties.prefix.trim('/').isEmpty()) "" else "${s3Properties.prefix.trim('/')}/"
@@ -73,22 +80,23 @@ class S3FileStorageProvider(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    private val presignRegion: String = run {
-        s3Properties.signingRegion?.trim()?.takeIf { it.isNotEmpty() } ?: run {
-            val configured = s3Properties.region.trim()
-            if (configured.isEmpty() || configured.equals("auto", true)) {
-                logger.warn(
-                    "app.storage.s3.region='{}' cannot sign URLs, presigned URLs will use 'us-east-1'. " +
-                        "Set app.storage.s3.signing-region when the object store uses another region.",
-                    configured
-                )
+    private val presignRegion: String =
+        run {
+            s3Properties.signingRegion?.trim()?.takeIf { it.isNotEmpty() } ?: run {
+                val configured = s3Properties.region.trim()
+                if (configured.isEmpty() || configured.equals("auto", true)) {
+                    logger.warn(
+                        "app.storage.s3.region='{}' cannot sign URLs, presigned URLs will use 'us-east-1'. " +
+                            "Set app.storage.s3.signing-region when the object store uses another region.",
+                        configured,
+                    )
 
-                "us-east-1"
-            } else {
-                configured
+                    "us-east-1"
+                } else {
+                    configured
+                }
             }
         }
-    }
 
     /**
      * Built lazily so a presign configuration problem cannot fail plugin install
@@ -106,15 +114,13 @@ class S3FileStorageProvider(
                 S3Configuration
                     .builder()
                     .pathStyleAccessEnabled(s3Properties.pathStyle == S3PathStyle.Path)
-                    .build()
-            )
-            .build()
+                    .build(),
+            ).build()
     }
 
-    private fun credentialsProvider() =
-        StaticCredentialsProvider.create(
-            AwsBasicCredentials.create(s3Properties.accessKey, s3Properties.secretKey)
-        )
+    private fun credentialsProvider() = StaticCredentialsProvider.create(
+        AwsBasicCredentials.create(s3Properties.accessKey, s3Properties.secretKey),
+    )
 
     private fun String.contentKey(): String {
         require(StorageKeyUtil.CONTENT_KEY_REGEX.matches(this)) { "Invalid content key: '$this'" }
@@ -134,138 +140,141 @@ class S3FileStorageProvider(
             return key
         }
 
-        val putObjectRequest = PutObjectRequest
-            .builder()
-            .bucket(s3Properties.bucket)
-            .key(key.contentKey())
-            .build()
+        val putObjectRequest =
+            PutObjectRequest
+                .builder()
+                .bucket(s3Properties.bucket)
+                .key(key.contentKey())
+                .build()
         s3.putObject(putObjectRequest, RequestBody.fromBytes(content.compress(::ZstdOutputStream)))
 
         return key
     }
 
-    override fun save(content: String): String =
-        save(content.toByteArray())
+    override fun save(content: String): String = save(content.toByteArray())
 
-    override fun load(key: String): ByteArray? =
-        try {
-            val getObjectRequest = GetObjectRequest
+    override fun load(key: String): ByteArray? = try {
+        val getObjectRequest =
+            GetObjectRequest
                 .builder()
                 .bucket(s3Properties.bucket)
                 .key(key.contentKey())
                 .build()
-            s3.getObject(getObjectRequest).readBytes().decompress(::ZstdInputStream)
-        } catch (e: S3Exception) {
-            if (e.statusCode() == HttpStatusCode.NOT_FOUND) {
-                null
-            } else {
-                throw e
-            }
+        s3.getObject(getObjectRequest).readBytes().decompress(::ZstdInputStream)
+    } catch (e: S3Exception) {
+        if (e.statusCode() == HttpStatusCode.NOT_FOUND) {
+            null
+        } else {
+            throw e
         }
+    }
 
-    override fun exists(key: String): Boolean =
-        try {
-            val headObjectRequest = HeadObjectRequest
+    override fun exists(key: String): Boolean = try {
+        val headObjectRequest =
+            HeadObjectRequest
                 .builder()
                 .bucket(s3Properties.bucket)
                 .key(key.contentKey())
                 .build()
-            s3.headObject(headObjectRequest)
+        s3.headObject(headObjectRequest)
 
-            true
-        } catch (e: S3Exception) {
-            if (e.statusCode() == HttpStatusCode.NOT_FOUND) {
-                false
-            } else {
-                throw e
-            }
+        true
+    } catch (e: S3Exception) {
+        if (e.statusCode() == HttpStatusCode.NOT_FOUND) {
+            false
+        } else {
+            throw e
         }
+    }
 
     override fun delete(key: String): Boolean {
         if (!exists(key)) {
             return false
         }
 
-        val deleteObjectRequest = DeleteObjectRequest
-            .builder()
-            .bucket(s3Properties.bucket)
-            .key(key.contentKey())
-            .build()
+        val deleteObjectRequest =
+            DeleteObjectRequest
+                .builder()
+                .bucket(s3Properties.bucket)
+                .key(key.contentKey())
+                .build()
         s3.deleteObject(deleteObjectRequest)
 
         return true
     }
 
-    override fun size(key: String): Long? =
-        try {
-            val headObjectRequest = HeadObjectRequest
+    override fun size(key: String): Long? = try {
+        val headObjectRequest =
+            HeadObjectRequest
                 .builder()
                 .bucket(s3Properties.bucket)
                 .key(key.contentKey())
                 .build()
 
-            s3.headObject(headObjectRequest).contentLength()
-        } catch (e: S3Exception) {
-            if (e.statusCode() == HttpStatusCode.NOT_FOUND) {
-                null
-            } else {
-                throw e
-            }
+        s3.headObject(headObjectRequest).contentLength()
+    } catch (e: S3Exception) {
+        if (e.statusCode() == HttpStatusCode.NOT_FOUND) {
+            null
+        } else {
+            throw e
         }
+    }
 
     override fun saveAt(key: String, content: ByteArray) {
-        val putObjectRequest = PutObjectRequest
-            .builder()
-            .bucket(s3Properties.bucket)
-            .key(key.locationKey())
-            .build()
+        val putObjectRequest =
+            PutObjectRequest
+                .builder()
+                .bucket(s3Properties.bucket)
+                .key(key.locationKey())
+                .build()
         s3.putObject(putObjectRequest, RequestBody.fromBytes(content))
     }
 
-    override fun loadAt(key: String): ByteArray? =
-        try {
-            val getObjectRequest = GetObjectRequest
+    override fun loadAt(key: String): ByteArray? = try {
+        val getObjectRequest =
+            GetObjectRequest
                 .builder()
                 .bucket(s3Properties.bucket)
                 .key(key.locationKey())
                 .build()
-            s3.getObject(getObjectRequest).readBytes()
-        } catch (e: S3Exception) {
-            if (e.statusCode() == HttpStatusCode.NOT_FOUND) {
-                null
-            } else {
-                throw e
-            }
+        s3.getObject(getObjectRequest).readBytes()
+    } catch (e: S3Exception) {
+        if (e.statusCode() == HttpStatusCode.NOT_FOUND) {
+            null
+        } else {
+            throw e
         }
+    }
 
-    override fun existsAt(key: String): Boolean =
-        try {
-            val headObjectRequest = HeadObjectRequest
+    override fun existsAt(key: String): Boolean = try {
+        val headObjectRequest =
+            HeadObjectRequest
                 .builder()
                 .bucket(s3Properties.bucket)
                 .key(key.locationKey())
                 .build()
-            s3.headObject(headObjectRequest)
+        s3.headObject(headObjectRequest)
 
-            true
-        } catch (e: S3Exception) {
-            if (e.statusCode() == HttpStatusCode.NOT_FOUND) {
-                false
-            } else {
-                throw e
-            }
+        true
+    } catch (e: S3Exception) {
+        if (e.statusCode() == HttpStatusCode.NOT_FOUND) {
+            false
+        } else {
+            throw e
         }
+    }
 
     override fun deleteAt(key: String): Boolean {
         if (!existsAt(key)) {
             return false
         }
 
-        val deleteObjectRequest = DeleteObjectRequest
-            .builder()
-            .bucket(s3Properties.bucket)
-            .key(key.locationKey())
-            .build()
+        val deleteObjectRequest =
+            DeleteObjectRequest
+                .builder()
+                .bucket(s3Properties.bucket)
+                .key(key.locationKey())
+                .build()
         s3.deleteObject(deleteObjectRequest)
 
         return true
@@ -279,25 +288,27 @@ class S3FileStorageProvider(
         var token: String? = null
 
         do {
-            val page = s3.listObjectsV2(
-                ListObjectsV2Request
-                    .builder()
-                    .bucket(s3Properties.bucket)
-                    .prefix(prefix)
-                    .continuationToken(token)
-                    .maxKeys(DELETE_BATCH_SIZE)
-                    .build()
-            )
+            val page =
+                s3.listObjectsV2(
+                    ListObjectsV2Request
+                        .builder()
+                        .bucket(s3Properties.bucket)
+                        .prefix(prefix)
+                        .continuationToken(token)
+                        .maxKeys(DELETE_BATCH_SIZE)
+                        .build(),
+                )
 
             val keys = page.contents().map { ObjectIdentifier.builder().key(it.key()).build() }
             if (keys.isNotEmpty()) {
-                val result = s3.deleteObjects(
-                    DeleteObjectsRequest
-                        .builder()
-                        .bucket(s3Properties.bucket)
-                        .delete(Delete.builder().objects(keys).build())
-                        .build()
-                )
+                val result =
+                    s3.deleteObjects(
+                        DeleteObjectsRequest
+                            .builder()
+                            .bucket(s3Properties.bucket)
+                            .delete(Delete.builder().objects(keys).build())
+                            .build(),
+                    )
                 // S3 reports per-key failures inside an HTTP 200, so they have to be
                 // read off the response rather than caught.
                 result.errors().forEach { logger.warn("Failed to delete '{}': {}", it.key(), it.message()) }
@@ -308,7 +319,11 @@ class S3FileStorageProvider(
         } while (page.isTruncated == true && ++pages < MAX_PREFIX_DELETE_PAGES)
 
         if (pages >= MAX_PREFIX_DELETE_PAGES) {
-            logger.warn("Stopped deleting prefix '{}' after {} pages, the rest has to be removed manually", prefix, pages)
+            logger.warn(
+                "Stopped deleting prefix '{}' after {} pages, the rest has to be removed manually",
+                prefix,
+                pages,
+            )
         }
 
         return deleted
@@ -317,17 +332,18 @@ class S3FileStorageProvider(
     override fun externalUrlAt(key: String, reference: String, ttl: Duration): String? =
         // The client talks to the object store directly, so the URL is signed against
         // the stored key and the gateway's own download route is not involved at all.
-        presigner.presignGetObject(
-            GetObjectPresignRequest
-                .builder()
-                .signatureDuration(ttl)
-                .getObjectRequest(
-                    GetObjectRequest
-                        .builder()
-                        .bucket(s3Properties.bucket)
-                        .key(key.locationKey())
-                        .build()
-                )
-                .build()
-        ).url().toString()
+        presigner
+            .presignGetObject(
+                GetObjectPresignRequest
+                    .builder()
+                    .signatureDuration(ttl)
+                    .getObjectRequest(
+                        GetObjectRequest
+                            .builder()
+                            .bucket(s3Properties.bucket)
+                            .key(key.locationKey())
+                            .build(),
+                    ).build(),
+            ).url()
+            .toString()
 }

@@ -30,19 +30,21 @@ import java.util.Collections
 class PluginApiHandlerAdapter(
     private val jsonMapper: JsonMapper,
     private val principalResolver: PluginPrincipalResolver = PluginPrincipalResolver { null },
-    private val interfaceResolver: PluginInterfaceResolver = PluginInterfaceResolver { invocation ->
-        InterfaceInfo(
-            code = invocation.apiCode,
-            pluginId = invocation.pluginId,
-            apiVersion = invocation.definition.apiVersion,
-            name = invocation.definition.operation.summary,
-            path = invocation.definition.path,
-            method = invocation.definition.method
-        )
-    },
-    private val traceIdResolver: PluginTraceIdResolver = PluginTraceIdResolver { request ->
-        request.getHeader("X-Trace-Id") ?: request.getHeader("X-Request-Id") ?: ""
-    }
+    private val interfaceResolver: PluginInterfaceResolver =
+        PluginInterfaceResolver { invocation ->
+            InterfaceInfo(
+                code = invocation.apiCode,
+                pluginId = invocation.pluginId,
+                apiVersion = invocation.definition.apiVersion,
+                name = invocation.definition.operation.summary,
+                path = invocation.definition.path,
+                method = invocation.definition.method,
+            )
+        },
+    private val traceIdResolver: PluginTraceIdResolver =
+        PluginTraceIdResolver { request ->
+            request.getHeader("X-Trace-Id") ?: request.getHeader("X-Request-Id") ?: ""
+        },
 ) : HandlerAdapter {
     private val logger = LoggerFactory.getLogger(PluginApiHandlerAdapter::class.java)
 
@@ -66,50 +68,45 @@ class PluginApiHandlerAdapter(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    override fun handle(
-        request: HttpServletRequest,
-        response: HttpServletResponse,
-        handler: Any
-    ): ModelAndView? {
+    override fun handle(request: HttpServletRequest, response: HttpServletResponse, handler: Any): ModelAndView? {
         val invocation = handler as PluginInvocation
-        val apiRequest = toApiRequest(request, invocation)
         val previous = Thread.currentThread().contextClassLoader
         Thread.currentThread().contextClassLoader = invocation.classLoader
-        val apiResponse = try {
-            invocation.route.handler.handle(apiRequest)
-        } catch (ex: ApiException) {
-            ApiResponse.fail(ex.code, ex.message ?: "", ex.data).withHttpStatus(ex.httpStatus)
-        } catch (ex: Exception) {
-            logger.error(
-                "Plugin {} failed to handle {} {}",
-                invocation.pluginId,
-                request.method,
-                request.requestURI,
-                ex
-            )
-            ApiResponse.fail(500, "Internal error").withHttpStatus(500)
-        } catch (ex: LinkageError) {
-            logger.error(
-                "Plugin {} has a linkage failure handling {} {}",
-                invocation.pluginId,
-                request.method,
-                request.requestURI,
-                ex
-            )
-            ApiResponse.fail(500, "Internal error").withHttpStatus(500)
-        } finally {
-            Thread.currentThread().contextClassLoader = previous
-        }
+        val apiResponse =
+            try {
+                invocation.route.handler.handle(toApiRequest(request, invocation))
+            } catch (ex: ApiException) {
+                ApiResponse.fail(ex.code, ex.message ?: "", ex.data).withHttpStatus(ex.httpStatus)
+            } catch (ex: Exception) {
+                logger.error(
+                    "Plugin {} failed to handle {} {}",
+                    invocation.pluginId,
+                    request.method,
+                    request.requestURI,
+                    ex,
+                )
+                ApiResponse.fail(500, "Internal error").withHttpStatus(500)
+            } catch (ex: LinkageError) {
+                logger.error(
+                    "Plugin {} has a linkage failure handling {} {}",
+                    invocation.pluginId,
+                    request.method,
+                    request.requestURI,
+                    ex,
+                )
+                ApiResponse.fail(500, "Internal error").withHttpStatus(500)
+            } finally {
+                Thread.currentThread().contextClassLoader = previous
+            }
         write(response, apiResponse)
         return null
     }
 
-    private fun toApiRequest(
-        request: HttpServletRequest,
-        invocation: PluginInvocation
-    ): ApiRequest {
-        val headers = Collections.list(request.headerNames)
-            .associateWith { name -> request.getHeaders(name).toList() }
+    private fun toApiRequest(request: HttpServletRequest, invocation: PluginInvocation): ApiRequest {
+        val headers =
+            Collections
+                .list(request.headerNames)
+                .associateWith { name -> request.getHeaders(name).toList() }
         return ApiRequest(
             method = request.method,
             path = request.requestURI,
@@ -120,8 +117,19 @@ class PluginApiHandlerAdapter(
             principal = principalResolver.resolve(request),
             traceId = traceIdResolver.resolve(request),
             interfaceInfo = interfaceResolver.resolve(invocation),
-            body = request.inputStream.readBytes()
+            body = readBody(request),
         )
+    }
+
+    private fun readBody(request: HttpServletRequest): ByteArray {
+        if (request.contentLengthLong > MAX_REQUEST_BODY_BYTES) {
+            throw ApiException(413, 413, "Request body is too large")
+        }
+        val bytes = request.inputStream.readNBytes(MAX_REQUEST_BODY_BYTES + 1)
+        if (bytes.size > MAX_REQUEST_BODY_BYTES) {
+            throw ApiException(413, 413, "Request body is too large")
+        }
+        return bytes
     }
 
     private fun write(response: HttpServletResponse, apiResponse: ApiResponse) {
@@ -132,33 +140,31 @@ class PluginApiHandlerAdapter(
             response.outputStream.write(apiResponse.rawBody ?: ByteArray(0))
         } else {
             response.contentType = "application/json;charset=UTF-8"
-            val bytes = try {
-                jsonMapper.writeValueAsBytes(
-                    Envelope(
-                        code = apiResponse.code,
-                        success = apiResponse.success,
-                        msg = apiResponse.message,
-                        data = apiResponse.data
+            val bytes =
+                try {
+                    jsonMapper.writeValueAsBytes(
+                        Envelope(
+                            code = apiResponse.code,
+                            success = apiResponse.success,
+                            msg = apiResponse.message,
+                            data = apiResponse.data,
+                        ),
                     )
-                )
-            } catch (ex: Exception) {
-                logger.error("Cannot serialize plugin response", ex)
-                response.status = 500
-                INTERNAL_ERROR
-            }
+                } catch (ex: Exception) {
+                    logger.error("Cannot serialize plugin response", ex)
+                    response.status = 500
+                    INTERNAL_ERROR
+                }
             response.outputStream.write(bytes)
         }
         response.outputStream.flush()
     }
 
-    private data class Envelope(
-        val code: Int,
-        val success: Boolean,
-        val msg: String,
-        val data: Any?
-    )
+    private data class Envelope(val code: Int, val success: Boolean, val msg: String, val data: Any?)
 
     private companion object {
+        const val MAX_REQUEST_BODY_BYTES = 200 * 1024 * 1024
+
         val INTERNAL_ERROR: ByteArray =
             """{"code":500,"success":false,"msg":"Internal error"}""".toByteArray()
     }

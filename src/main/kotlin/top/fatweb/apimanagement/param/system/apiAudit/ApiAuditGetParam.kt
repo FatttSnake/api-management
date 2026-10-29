@@ -25,10 +25,9 @@ data class ApiAuditGetParam(
      */
     @field:Schema(
         description = "事件类型",
-        allowableValues = ["KEY_CREATE", "KEY_UPDATE", "KEY_DELETE", "KEY_STATUS", "KEY_REGENERATE", "KEY_TOPUP"]
+        allowableValues = ["KEY_CREATE", "KEY_UPDATE", "KEY_DELETE", "KEY_STATUS", "KEY_REGENERATE", "KEY_TOPUP"],
     )
     var event: EventLog.Event?,
-
     /**
      * Start time
      *
@@ -38,7 +37,6 @@ data class ApiAuditGetParam(
     @field:Schema(description = "开始时间", example = "2026-01-01T00:00:00.000Z")
     @field:DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     var startTime: LocalDateTime?,
-
     /**
      * End time
      *
@@ -47,5 +45,5 @@ data class ApiAuditGetParam(
      */
     @field:Schema(description = "结束时间", example = "2026-12-31T00:00:00.000Z")
     @field:DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
-    var endTime: LocalDateTime?
+    var endTime: LocalDateTime?,
 ) : PageSortParam()

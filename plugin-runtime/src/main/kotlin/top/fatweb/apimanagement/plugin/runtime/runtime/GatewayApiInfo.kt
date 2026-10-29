@@ -29,9 +29,10 @@ object GatewayApiInfo {
     }
 
     private fun readVersion(): String {
-        val stream = GatewayApiInfo::class.java.classLoader
-            .getResourceAsStream("META-INF/gateway-api.properties")
-            ?: error("META-INF/gateway-api.properties is missing from gateway-api")
+        val stream =
+            GatewayApiInfo::class.java.classLoader
+                .getResourceAsStream("META-INF/gateway-api.properties")
+                ?: error("META-INF/gateway-api.properties is missing from gateway-api")
         return stream.use { input ->
             val properties = Properties()
             properties.load(input)

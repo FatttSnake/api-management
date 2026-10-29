@@ -12,7 +12,13 @@ import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.jdbc.BadSqlGrammarException
 import org.springframework.jdbc.UncategorizedSQLException
 import org.springframework.security.access.AccessDeniedException
-import org.springframework.security.authentication.*
+import org.springframework.security.authentication.AccountExpiredException
+import org.springframework.security.authentication.BadCredentialsException
+import org.springframework.security.authentication.CredentialsExpiredException
+import org.springframework.security.authentication.DisabledException
+import org.springframework.security.authentication.InsufficientAuthenticationException
+import org.springframework.security.authentication.InternalAuthenticationServiceException
+import org.springframework.security.authentication.LockedException
 import org.springframework.security.web.csrf.InvalidCsrfTokenException
 import org.springframework.security.web.csrf.MissingCsrfTokenException
 import org.springframework.web.HttpRequestMethodNotSupportedException
@@ -23,7 +29,48 @@ import org.springframework.web.servlet.resource.NoResourceFoundException
 import top.fatweb.apimanagement.api.v1.ApiResponse
 import top.fatweb.apimanagement.entity.common.ResponseCode
 import top.fatweb.apimanagement.entity.common.ResponseResult
-import top.fatweb.apimanagement.exception.*
+import top.fatweb.apimanagement.exception.AccountNeedInitException
+import top.fatweb.apimanagement.exception.AccountNeedResetPasswordException
+import top.fatweb.apimanagement.exception.AlreadyHasTwoFactorException
+import top.fatweb.apimanagement.exception.ApiAccountNotFoundException
+import top.fatweb.apimanagement.exception.ApiDisabledException
+import top.fatweb.apimanagement.exception.ApiKeyDisabledException
+import top.fatweb.apimanagement.exception.ApiKeyExpiredException
+import top.fatweb.apimanagement.exception.ApiKeyInvalidException
+import top.fatweb.apimanagement.exception.ApiKeyIpNotAllowedException
+import top.fatweb.apimanagement.exception.ApiKeyPermissionDeniedException
+import top.fatweb.apimanagement.exception.ApiKeyRequiredException
+import top.fatweb.apimanagement.exception.ApiKeySecretMismatchException
+import top.fatweb.apimanagement.exception.ApiPermissionDeniedException
+import top.fatweb.apimanagement.exception.ApiUsageIdNotGeneratedException
+import top.fatweb.apimanagement.exception.DatabaseInsertException
+import top.fatweb.apimanagement.exception.DatabaseUpdateException
+import top.fatweb.apimanagement.exception.ExportTooManyRecordsException
+import top.fatweb.apimanagement.exception.InsufficientBalanceException
+import top.fatweb.apimanagement.exception.InvalidCaptchaCodeException
+import top.fatweb.apimanagement.exception.LoginFailedException
+import top.fatweb.apimanagement.exception.MatchSensitiveWordException
+import top.fatweb.apimanagement.exception.NeedTwoFactorException
+import top.fatweb.apimanagement.exception.NoEmailConfigException
+import top.fatweb.apimanagement.exception.NoRecordFoundException
+import top.fatweb.apimanagement.exception.NoTwoFactorFoundException
+import top.fatweb.apimanagement.exception.NoVerificationRequiredException
+import top.fatweb.apimanagement.exception.PluginDatasourceException
+import top.fatweb.apimanagement.exception.PluginInstallException
+import top.fatweb.apimanagement.exception.PluginNotTrustedException
+import top.fatweb.apimanagement.exception.PluginPurgeFailedException
+import top.fatweb.apimanagement.exception.PluginSignatureInvalidException
+import top.fatweb.apimanagement.exception.PluginVersionConflictException
+import top.fatweb.apimanagement.exception.QuotaExceededException
+import top.fatweb.apimanagement.exception.RecordAlreadyExistsException
+import top.fatweb.apimanagement.exception.RequestTooFrequentException
+import top.fatweb.apimanagement.exception.RetrieveCodeErrorOrExpiredException
+import top.fatweb.apimanagement.exception.StorageLinkInvalidException
+import top.fatweb.apimanagement.exception.TokenHasExpiredException
+import top.fatweb.apimanagement.exception.TokenRefreshErrorException
+import top.fatweb.apimanagement.exception.TwoFactorVerificationCodeErrorException
+import top.fatweb.apimanagement.exception.UserNotFoundException
+import top.fatweb.apimanagement.exception.VerificationCodeErrorOrExpiredException
 
 /**
  * Exception handler
@@ -51,336 +98,347 @@ class ExceptionHandler {
      */
     @ExceptionHandler(value = [Exception::class])
     fun exceptionHandler(e: Exception, request: HttpServletRequest): Any {
-        val result = when (e) {
-            /* Request */
-            is HttpRequestMethodNotSupportedException, is NoResourceFoundException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.SYSTEM_REQUEST_ILLEGAL, e.localizedMessage, null)
-            }
+        val result =
+            when (e) {
+                // Request
+                is HttpRequestMethodNotSupportedException, is NoResourceFoundException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.SYSTEM_REQUEST_ILLEGAL, e.localizedMessage, null)
+                }
 
-            is HttpMessageNotReadableException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.SYSTEM_REQUEST_ILLEGAL, e.localizedMessage.split(":")[0], null)
-            }
+                is HttpMessageNotReadableException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.SYSTEM_REQUEST_ILLEGAL, e.localizedMessage.split(":")[0], null)
+                }
 
-            is MethodArgumentNotValidException -> {
-                logger.debug(e.localizedMessage, e)
-                val errorMessage = e.allErrors.joinToString(". ") { error -> error.defaultMessage.toString() }
-                ResponseResult.fail(ResponseCode.SYSTEM_ARGUMENT_NOT_VALID, errorMessage, null)
-            }
+                is MethodArgumentNotValidException -> {
+                    logger.debug(e.localizedMessage, e)
+                    val errorMessage = e.allErrors.joinToString(". ") { error -> error.defaultMessage.toString() }
+                    ResponseResult.fail(ResponseCode.SYSTEM_ARGUMENT_NOT_VALID, errorMessage, null)
+                }
 
-            is RequestTooFrequentException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.SYSTEM_REQUEST_TOO_FREQUENT, e.localizedMessage, null)
-            }
+                is RequestTooFrequentException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.SYSTEM_REQUEST_TOO_FREQUENT, e.localizedMessage, null)
+                }
 
-            /* Authentication */
-            is InsufficientAuthenticationException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.PERMISSION_UNAUTHORIZED, e.localizedMessage, null)
-            }
+                // Authentication
+                is InsufficientAuthenticationException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.PERMISSION_UNAUTHORIZED, e.localizedMessage, null)
+                }
 
-            is LockedException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.PERMISSION_USER_LOCKED, "User account has been locked", null)
-            }
+                is LockedException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.PERMISSION_USER_LOCKED, "User account has been locked", null)
+                }
 
-            is AccountExpiredException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.PERMISSION_USER_EXPIRED, "User account has expired", null)
-            }
+                is AccountExpiredException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.PERMISSION_USER_EXPIRED, "User account has expired", null)
+                }
 
-            is CredentialsExpiredException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(
-                    ResponseCode.PERMISSION_USER_CREDENTIALS_EXPIRED,
-                    "User credentials have expired",
-                    null
-                )
-            }
+                is CredentialsExpiredException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(
+                        ResponseCode.PERMISSION_USER_CREDENTIALS_EXPIRED,
+                        "User credentials have expired",
+                        null,
+                    )
+                }
 
-            is DisabledException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.PERMISSION_USER_DISABLE, "User has been disabled", null)
-            }
+                is DisabledException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.PERMISSION_USER_DISABLE, "User has been disabled", null)
+                }
 
-            is TokenExpiredException, is TokenHasExpiredException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.PERMISSION_TOKEN_HAS_EXPIRED, e.localizedMessage, null)
-            }
+                is TokenExpiredException, is TokenHasExpiredException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.PERMISSION_TOKEN_HAS_EXPIRED, e.localizedMessage, null)
+                }
 
-            is InternalAuthenticationServiceException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.PERMISSION_USERNAME_NOT_FOUND, "Username not found", null)
-            }
+                is InternalAuthenticationServiceException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.PERMISSION_USERNAME_NOT_FOUND, "Username not found", null)
+                }
 
-            is BadCredentialsException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(
-                    ResponseCode.PERMISSION_LOGIN_USERNAME_PASSWORD_ERROR,
-                    "Wrong user name or password",
-                    null
-                )
-            }
+                is BadCredentialsException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(
+                        ResponseCode.PERMISSION_LOGIN_USERNAME_PASSWORD_ERROR,
+                        "Wrong user name or password",
+                        null,
+                    )
+                }
 
-            is SignatureVerificationException, is JWTDecodeException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.PERMISSION_TOKEN_ILLEGAL, "Token illegal", null)
-            }
+                is SignatureVerificationException, is JWTDecodeException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.PERMISSION_TOKEN_ILLEGAL, "Token illegal", null)
+                }
 
-            is InvalidCsrfTokenException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.PERMISSION_INVALID_CSRF_TOKEN, e.localizedMessage, null)
-            }
+                is InvalidCsrfTokenException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.PERMISSION_INVALID_CSRF_TOKEN, e.localizedMessage, null)
+                }
 
-            is MissingCsrfTokenException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.PERMISSION_MISSING_CSRF_TOKEN, e.localizedMessage, null)
-            }
+                is MissingCsrfTokenException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.PERMISSION_MISSING_CSRF_TOKEN, e.localizedMessage, null)
+                }
 
-            is AccessDeniedException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.PERMISSION_ACCESS_DENIED, "Access Denied", null)
-            }
+                is AccessDeniedException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.PERMISSION_ACCESS_DENIED, "Access Denied", null)
+                }
 
-            is UserNotFoundException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.PERMISSION_USER_NOT_FOUND, e.localizedMessage, null)
-            }
+                is UserNotFoundException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.PERMISSION_USER_NOT_FOUND, e.localizedMessage, null)
+                }
 
-            is LoginFailedException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.PERMISSION_LOGIN_FAILED, e.localizedMessage, null)
-            }
+                is LoginFailedException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.PERMISSION_LOGIN_FAILED, e.localizedMessage, null)
+                }
 
-            is TokenRefreshErrorException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.PERMISSION_TOKEN_REFRESH_ERROR, e.localizedMessage, null)
-            }
+                is TokenRefreshErrorException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.PERMISSION_TOKEN_REFRESH_ERROR, e.localizedMessage, null)
+                }
 
-            is NoVerificationRequiredException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.PERMISSION_NO_VERIFICATION_REQUIRED, e.localizedMessage, null)
-            }
+                is NoVerificationRequiredException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.PERMISSION_NO_VERIFICATION_REQUIRED, e.localizedMessage, null)
+                }
 
-            is VerificationCodeErrorOrExpiredException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.PERMISSION_VERIFY_CODE_ERROR_OR_EXPIRED, e.localizedMessage, null)
-            }
+                is VerificationCodeErrorOrExpiredException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.PERMISSION_VERIFY_CODE_ERROR_OR_EXPIRED, e.localizedMessage, null)
+                }
 
-            is AccountNeedInitException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.PERMISSION_ACCOUNT_NEED_INIT, e.localizedMessage, null)
-            }
+                is AccountNeedInitException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.PERMISSION_ACCOUNT_NEED_INIT, e.localizedMessage, null)
+                }
 
-            is RetrieveCodeErrorOrExpiredException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.PERMISSION_RETRIEVE_CODE_ERROR_OR_EXPIRED, e.localizedMessage, null)
-            }
+                is RetrieveCodeErrorOrExpiredException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(
+                        ResponseCode.PERMISSION_RETRIEVE_CODE_ERROR_OR_EXPIRED,
+                        e.localizedMessage,
+                        null,
+                    )
+                }
 
-            is AccountNeedResetPasswordException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.PERMISSION_ACCOUNT_NEED_RESET_PASSWORD, e.localizedMessage, null)
-            }
+                is AccountNeedResetPasswordException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.PERMISSION_ACCOUNT_NEED_RESET_PASSWORD, e.localizedMessage, null)
+                }
 
-            is InvalidCaptchaCodeException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.SYSTEM_INVALID_CAPTCHA_CODE, e.localizedMessage, null)
-            }
+                is InvalidCaptchaCodeException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.SYSTEM_INVALID_CAPTCHA_CODE, e.localizedMessage, null)
+                }
 
-            is NeedTwoFactorException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.PERMISSION_NEED_TWO_FACTOR, e.localizedMessage, null)
-            }
+                is NeedTwoFactorException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.PERMISSION_NEED_TWO_FACTOR, e.localizedMessage, null)
+                }
 
-            is AlreadyHasTwoFactorException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.PERMISSION_ALREADY_HAS_TWO_FACTOR, e.localizedMessage, null)
-            }
+                is AlreadyHasTwoFactorException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.PERMISSION_ALREADY_HAS_TWO_FACTOR, e.localizedMessage, null)
+                }
 
-            is NoTwoFactorFoundException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.PERMISSION_NO_TWO_FACTOR_FOUND, e.localizedMessage, null)
-            }
+                is NoTwoFactorFoundException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.PERMISSION_NO_TWO_FACTOR_FOUND, e.localizedMessage, null)
+                }
 
-            is TwoFactorVerificationCodeErrorException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(
-                    ResponseCode.PERMISSION_TWO_FACTOR_VERIFICATION_CODE_ERROR,
-                    e.localizedMessage,
-                    null
-                )
-            }
+                is TwoFactorVerificationCodeErrorException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(
+                        ResponseCode.PERMISSION_TWO_FACTOR_VERIFICATION_CODE_ERROR,
+                        e.localizedMessage,
+                        null,
+                    )
+                }
 
-            /* SQL */
+                // SQL
 
-            is DatabaseInsertException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.databaseFail(ResponseCode.DATABASE_INSERT_FAILED, e.localizedMessage, null)
-            }
+                is DatabaseInsertException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.databaseFail(ResponseCode.DATABASE_INSERT_FAILED, e.localizedMessage, null)
+                }
 
-            is DatabaseUpdateException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.databaseFail(ResponseCode.DATABASE_UPDATE_FAILED, e.localizedMessage, null)
-            }
+                is DatabaseUpdateException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.databaseFail(ResponseCode.DATABASE_UPDATE_FAILED, e.localizedMessage, null)
+                }
 
-            is BadSqlGrammarException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.DATABASE_EXECUTE_ERROR, "Incorrect SQL syntax", null)
-            }
+                is BadSqlGrammarException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.DATABASE_EXECUTE_ERROR, "Incorrect SQL syntax", null)
+                }
 
-            is DuplicateKeyException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.DATABASE_DUPLICATE_KEY, "Duplicate key", null)
-            }
-
-            is NoRecordFoundException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.DATABASE_NO_RECORD_FOUND, e.localizedMessage, null)
-            }
-
-            is UncategorizedSQLException -> {
-                if (e.localizedMessage.contains("SQLITE_CONSTRAINT_UNIQUE")) {
+                is DuplicateKeyException -> {
                     logger.debug(e.localizedMessage, e)
                     ResponseResult.fail(ResponseCode.DATABASE_DUPLICATE_KEY, "Duplicate key", null)
-                } else {
+                }
+
+                is NoRecordFoundException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.DATABASE_NO_RECORD_FOUND, e.localizedMessage, null)
+                }
+
+                is UncategorizedSQLException -> {
+                    if (e.localizedMessage.contains("SQLITE_CONSTRAINT_UNIQUE")) {
+                        logger.debug(e.localizedMessage, e)
+                        ResponseResult.fail(ResponseCode.DATABASE_DUPLICATE_KEY, "Duplicate key", null)
+                    } else {
+                        logger.error(e.localizedMessage, e)
+                        ResponseResult.fail(ResponseCode.DATABASE_EXECUTE_ERROR, e.localizedMessage, null)
+                    }
+                }
+
+                is RecordAlreadyExistsException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.DATABASE_RECORD_ALREADY_EXISTS, e.localizedMessage, null)
+                }
+
+                // Other
+                is MatchSensitiveWordException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.SYSTEM_MATCH_SENSITIVE_WORD, e.localizedMessage, null)
+                }
+
+                is NoEmailConfigException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.SYSTEM_NO_EMAIL_CONFIG, e.localizedMessage, null)
+                }
+
+                is ExportTooManyRecordsException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.SYSTEM_EXPORT_TOO_MANY_RECORDS, e.localizedMessage, null)
+                }
+
+                is StorageLinkInvalidException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.SYSTEM_STORAGE_LINK_INVALID, e.localizedMessage, null)
+                }
+
+                is IllegalArgumentException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.SYSTEM_ARGUMENT_NOT_VALID, e.localizedMessage, null)
+                }
+
+                // API Platform
+                is ApiKeyInvalidException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.API_PLATFORM_KEY_INVALID, e.localizedMessage, null)
+                }
+
+                is ApiKeySecretMismatchException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.API_PLATFORM_KEY_SECRET_MISMATCH, e.localizedMessage, null)
+                }
+
+                is ApiKeyDisabledException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.API_PLATFORM_KEY_DISABLED, e.localizedMessage, null)
+                }
+
+                is ApiKeyExpiredException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.API_PLATFORM_KEY_EXPIRED, e.localizedMessage, null)
+                }
+
+                is ApiKeyIpNotAllowedException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.API_PLATFORM_KEY_IP_NOT_ALLOWED, e.localizedMessage, null)
+                }
+
+                is ApiKeyPermissionDeniedException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.API_PLATFORM_KEY_PERMISSION_DENIED, e.localizedMessage, null)
+                }
+
+                is ApiKeyRequiredException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.API_PLATFORM_KEY_REQUIRED, e.localizedMessage, null)
+                }
+
+                is ApiPermissionDeniedException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.API_PLATFORM_ACCESS_DENIED, e.localizedMessage, null)
+                }
+
+                is ApiDisabledException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.API_PLATFORM_DISABLED, e.localizedMessage, null)
+                }
+
+                is QuotaExceededException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.API_PLATFORM_QUOTA_EXCEEDED, e.localizedMessage, null)
+                }
+
+                is InsufficientBalanceException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.API_PLATFORM_INSUFFICIENT_BALANCE, e.localizedMessage, null)
+                }
+
+                is ApiAccountNotFoundException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.API_PLATFORM_ACCOUNT_NOT_FOUND, e.localizedMessage, null)
+                }
+
+                is ApiUsageIdNotGeneratedException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.databaseFail(
+                        ResponseCode.API_PLATFORM_USAGE_ID_NOT_GENERATED,
+                        e.localizedMessage,
+                        null,
+                    )
+                }
+
+                is PluginInstallException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.API_PLATFORM_PLUGIN_INSTALL_FAILED, e.localizedMessage, null)
+                }
+
+                is PluginNotTrustedException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.API_PLATFORM_PLUGIN_NOT_TRUSTED, e.localizedMessage, null)
+                }
+
+                is PluginSignatureInvalidException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.API_PLATFORM_PLUGIN_SIGNATURE_INVALID, e.localizedMessage, null)
+                }
+
+                is PluginVersionConflictException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.API_PLATFORM_PLUGIN_VERSION_CONFLICT, e.localizedMessage, null)
+                }
+
+                is PluginDatasourceException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.API_PLATFORM_PLUGIN_DATASOURCE_INVALID, e.localizedMessage, null)
+                }
+
+                is PluginPurgeFailedException -> {
+                    logger.debug(e.localizedMessage, e)
+                    ResponseResult.fail(ResponseCode.API_PLATFORM_PLUGIN_PURGE_FAILED, e.localizedMessage, null)
+                }
+
+                else -> {
+                    // The class name and message can describe internals; the log keeps them, the
+                    // response does not
                     logger.error(e.localizedMessage, e)
-                    ResponseResult.fail(ResponseCode.DATABASE_EXECUTE_ERROR, e.localizedMessage, null)
+                    ResponseResult.fail(ResponseCode.SYSTEM_ERROR, "Internal server error", null)
                 }
             }
-
-            is RecordAlreadyExistsException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.DATABASE_RECORD_ALREADY_EXISTS, e.localizedMessage, null)
-            }
-
-            /* Other */
-            is MatchSensitiveWordException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.SYSTEM_MATCH_SENSITIVE_WORD, e.localizedMessage, null)
-            }
-
-            is NoEmailConfigException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.SYSTEM_NO_EMAIL_CONFIG, e.localizedMessage, null)
-            }
-
-            is ExportTooManyRecordsException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.SYSTEM_EXPORT_TOO_MANY_RECORDS, e.localizedMessage, null)
-            }
-
-            is StorageLinkInvalidException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.SYSTEM_STORAGE_LINK_INVALID, e.localizedMessage, null)
-            }
-
-            is IllegalArgumentException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.SYSTEM_ARGUMENT_NOT_VALID, e.localizedMessage, null)
-            }
-
-            /* API Platform */
-            is ApiKeyInvalidException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_PLATFORM_KEY_INVALID, e.localizedMessage, null)
-            }
-
-            is ApiKeySecretMismatchException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_PLATFORM_KEY_SECRET_MISMATCH, e.localizedMessage, null)
-            }
-
-            is ApiKeyDisabledException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_PLATFORM_KEY_DISABLED, e.localizedMessage, null)
-            }
-
-            is ApiKeyExpiredException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_PLATFORM_KEY_EXPIRED, e.localizedMessage, null)
-            }
-
-            is ApiKeyIpNotAllowedException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_PLATFORM_KEY_IP_NOT_ALLOWED, e.localizedMessage, null)
-            }
-
-            is ApiKeyPermissionDeniedException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_PLATFORM_KEY_PERMISSION_DENIED, e.localizedMessage, null)
-            }
-
-            is ApiKeyRequiredException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_PLATFORM_KEY_REQUIRED, e.localizedMessage, null)
-            }
-
-            is ApiPermissionDeniedException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_PLATFORM_ACCESS_DENIED, e.localizedMessage, null)
-            }
-
-            is ApiDisabledException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_PLATFORM_DISABLED, e.localizedMessage, null)
-            }
-
-            is QuotaExceededException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_PLATFORM_QUOTA_EXCEEDED, e.localizedMessage, null)
-            }
-
-            is InsufficientBalanceException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_PLATFORM_INSUFFICIENT_BALANCE, e.localizedMessage, null)
-            }
-
-            is ApiAccountNotFoundException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_PLATFORM_ACCOUNT_NOT_FOUND, e.localizedMessage, null)
-            }
-
-            is ApiUsageIdNotGeneratedException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.databaseFail(ResponseCode.API_PLATFORM_USAGE_ID_NOT_GENERATED, e.localizedMessage, null)
-            }
-
-            is PluginInstallException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_PLATFORM_PLUGIN_INSTALL_FAILED, e.localizedMessage, null)
-            }
-
-            is PluginNotTrustedException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_PLATFORM_PLUGIN_NOT_TRUSTED, e.localizedMessage, null)
-            }
-
-            is PluginSignatureInvalidException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_PLATFORM_PLUGIN_SIGNATURE_INVALID, e.localizedMessage, null)
-            }
-
-            is PluginVersionConflictException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_PLATFORM_PLUGIN_VERSION_CONFLICT, e.localizedMessage, null)
-            }
-
-            is PluginDatasourceException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_PLATFORM_PLUGIN_DATASOURCE_INVALID, e.localizedMessage, null)
-            }
-
-            is PluginPurgeFailedException -> {
-                logger.debug(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.API_PLATFORM_PLUGIN_PURGE_FAILED, e.localizedMessage, null)
-            }
-
-            else -> {
-                logger.error(e.localizedMessage, e)
-                ResponseResult.fail(ResponseCode.SYSTEM_ERROR, e.toString(), null)
-            }
-        }
         return if (request.requestURI.startsWith("/api/")) result.toApiResponse() else result
     }
 

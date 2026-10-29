@@ -6,6 +6,7 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.MapProperty
+import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
@@ -28,6 +29,7 @@ import java.security.MessageDigest
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
+@CacheableTask
 abstract class GeneratePluginLock : DefaultTask() {
     /**
      * Resolved runtime classpath.
@@ -82,42 +84,45 @@ abstract class GeneratePluginLock : DefaultTask() {
         modulesDir.mkdirs()
 
         val modulesByPath = artifactModules.get()
-        val artifacts = classpath.files
-            .asSequence()
-            .filter { it.isFile }
-            .mapNotNull { file ->
-                val coordinate = modulesByPath[file.absolutePath] ?: return@mapNotNull null
-                if (isExcluded(coordinate)) null else coordinate to file
-            }
-            .associate { (coordinate, file) -> coordinate to Artifact(coordinate, file) }
+        val artifacts =
+            classpath.files
+                .asSequence()
+                .filter { it.isFile }
+                .mapNotNull { file ->
+                    val coordinate = modulesByPath[file.absolutePath] ?: return@mapNotNull null
+                    if (isExcluded(coordinate)) null else coordinate to file
+                }.associate { (coordinate, file) -> coordinate to Artifact(coordinate, file) }
 
         val byDigest = artifacts.values.associateBy { it.sha256 }
         byDigest.values.forEach { module ->
             Files.copy(
                 module.file.toPath(),
                 modulesDir.resolve("${module.sha256}.jar").toPath(),
-                StandardCopyOption.REPLACE_EXISTING
+                StandardCopyOption.REPLACE_EXISTING,
             )
         }
 
         val edges = parseEdges()
-        val modules = artifacts.values
-            .sortedBy { it.coordinate }
-            .map { module ->
-                val dependencies = edges[module.coordinate].orEmpty()
-                    .mapNotNull { artifacts[it]?.sha256 }
-                    .filter { it != module.sha256 }
-                    .distinct()
-                    .sorted()
-                ModuleJson(
-                    group = module.group,
-                    name = module.name,
-                    version = module.version,
-                    sha256 = module.sha256,
-                    size = module.file.length(),
-                    dependencies = dependencies
-                )
-            }
+        val modules =
+            artifacts.values
+                .sortedBy { it.coordinate }
+                .map { module ->
+                    val dependencies =
+                        edges[module.coordinate]
+                            .orEmpty()
+                            .mapNotNull { artifacts[it]?.sha256 }
+                            .filter { it != module.sha256 }
+                            .distinct()
+                            .sorted()
+                    ModuleJson(
+                        group = module.group,
+                        name = module.name,
+                        version = module.version,
+                        sha256 = module.sha256,
+                        size = module.file.length(),
+                        dependencies = dependencies,
+                    )
+                }
         val constraints = linkedMapOf<String, String>()
         artifacts.keys.sorted().forEach { coordinate ->
             val parts = coordinate.split(':')
@@ -128,15 +133,15 @@ abstract class GeneratePluginLock : DefaultTask() {
         out.parentFile.mkdirs()
         out.writeText(
             jacksonObjectMapper().writeValueAsString(
-                LockJson(format = 1, constraints = constraints, modules = modules)
-            )
+                LockJson(format = 1, constraints = constraints, modules = modules),
+            ),
         )
         logger.lifecycle(
             "Locked {} plugin module{} ({} file{})",
             modules.size,
             if (modules.size == 1) "" else "s",
             byDigest.size,
-            if (byDigest.size == 1) "" else "s"
+            if (byDigest.size == 1) "" else "s",
         )
     }
 
@@ -180,11 +185,7 @@ abstract class GeneratePluginLock : DefaultTask() {
         val sha256: String = sha256(file)
     }
 
-    private data class LockJson(
-        val format: Int,
-        val constraints: Map<String, String>,
-        val modules: List<ModuleJson>
-    )
+    private data class LockJson(val format: Int, val constraints: Map<String, String>, val modules: List<ModuleJson>)
 
     private data class ModuleJson(
         val group: String,
@@ -192,7 +193,7 @@ abstract class GeneratePluginLock : DefaultTask() {
         val version: String,
         val sha256: String,
         val size: Long,
-        val dependencies: List<String>
+        val dependencies: List<String>,
     )
 
     private companion object {

@@ -1,9 +1,8 @@
 package top.fatweb.apimanagement.plugin.runtime.route
 
 import jakarta.servlet.http.HttpServletRequest
-import org.springframework.core.Ordered
-import org.springframework.web.servlet.handler.AbstractHandlerMapping
 import org.springframework.web.servlet.HandlerInterceptor
+import org.springframework.web.servlet.handler.AbstractHandlerMapping
 
 /**
  * Spring MVC handler mapping for plugin routes.
@@ -19,7 +18,7 @@ import org.springframework.web.servlet.HandlerInterceptor
  */
 class PluginApiHandlerMapping(
     private val registry: PluginRouteRegistry,
-    interceptors: List<HandlerInterceptor> = emptyList()
+    interceptors: List<HandlerInterceptor> = emptyList(),
 ) : AbstractHandlerMapping() {
     init {
         order = HIGHEST_PRECEDENCE + 10
@@ -37,6 +36,6 @@ class PluginApiHandlerMapping(
     override fun getHandlerInternal(request: HttpServletRequest): Any? {
         val path = request.requestURI.substring(request.contextPath.length)
         val match = registry.match(request.method, path) ?: return null
-        return PluginInvocation(match, request.method)
+        return PluginInvocation(match)
     }
 }

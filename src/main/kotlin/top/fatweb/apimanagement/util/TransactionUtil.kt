@@ -20,7 +20,9 @@ fun onCommitted(action: () -> Unit) {
         return
     }
 
-    TransactionSynchronizationManager.registerSynchronization(object : TransactionSynchronization {
-        override fun afterCommit() = action()
-    })
+    TransactionSynchronizationManager.registerSynchronization(
+        object : TransactionSynchronization {
+            override fun afterCommit() = action()
+        },
+    )
 }

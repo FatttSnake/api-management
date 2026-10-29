@@ -15,17 +15,13 @@ import java.time.ZoneOffset
  * @since 1.0.0
  */
 @HiddenController
-class MetadataController(
-    private val settingsService: ISettingsService
-) {
+class MetadataController(private val settingsService: ISettingsService) {
     @GetMapping("/health")
-    fun health() =
-        HealthVo(
-            status = "UP",
-            timestamp = LocalDateTime.now(ZoneOffset.UTC)
-        )
+    fun health() = HealthVo(
+        status = "UP",
+        timestamp = LocalDateTime.now(ZoneOffset.UTC),
+    )
 
     @GetMapping("/config")
-    fun config() =
-        ConfigVo.fromBaseSettingsVo(settingsService.getBase())
+    fun config() = ConfigVo.fromBaseSettingsVo(settingsService.getBase())
 }

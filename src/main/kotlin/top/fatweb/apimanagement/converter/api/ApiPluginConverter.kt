@@ -2,8 +2,6 @@ package top.fatweb.apimanagement.converter.api
 
 import com.baomidou.mybatisplus.core.metadata.IPage
 import top.fatweb.apimanagement.entity.api.ApiPlugin
-import top.fatweb.apimanagement.param.system.api.ApiPluginUpdateParam
-import top.fatweb.apimanagement.param.system.api.ApiPluginUpdateStatusParam
 import top.fatweb.apimanagement.vo.PageVo
 import top.fatweb.apimanagement.vo.api.ApiPluginVo
 
@@ -36,7 +34,7 @@ fun ApiPlugin.toVo() = ApiPluginVo(
     requiresGateway = this.requiresGateway,
     requiresGatewayApi = this.requiresGatewayApi,
     createTime = this.createTime,
-    updateTime = this.updateTime
+    updateTime = this.updateTime,
 )
 
 /**
@@ -52,34 +50,5 @@ fun IPage<ApiPlugin>.toVoPage() = PageVo(
     pages = this.pages,
     size = this.size,
     current = this.current,
-    records = this.records.map(ApiPlugin::toVo)
+    records = this.records.map(ApiPlugin::toVo),
 )
-
-/**
- * Convert to ApiPlugin object
- *
- * @return ApiPlugin object
- * @author FatttSnake, fatttsnake@gmail.com
- * @since 1.0.0
- * @see ApiPlugin
- */
-fun ApiPluginUpdateParam.toEntity() = ApiPlugin().apply {
-    id = this@toEntity.id
-    enable = this@toEntity.enable?.let { if (it) 1 else 0 }
-    defaultPrice = this@toEntity.defaultPrice
-    defaultRateLimit = this@toEntity.defaultRateLimit
-    defaultAccessMode = this@toEntity.defaultAccessMode
-}
-
-/**
- * Convert to ApiPlugin object
- *
- * @return ApiPlugin object
- * @author FatttSnake, fatttsnake@gmail.com
- * @since 1.0.0
- * @see ApiPlugin
- */
-fun ApiPluginUpdateStatusParam.toEntity() = ApiPlugin().apply {
-    id = this@toEntity.id
-    enable = if (this@toEntity.enable == true) 1 else 0
-}

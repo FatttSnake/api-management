@@ -28,6 +28,7 @@ import top.fatweb.apimanagement.api.v1.Users
  * @property loggerFactory creates a logger for a plugin ID
  * @property gatewayVersion gateway version
  * @property gatewayApiVersion gateway API version
+ * @property close releases the resources the capabilities own, such as datasource pools
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
@@ -43,5 +44,6 @@ class PluginRuntimeServices(
     val json: JsonCodec,
     val loggerFactory: (String) -> PluginLogger,
     val gatewayVersion: String,
-    val gatewayApiVersion: String
+    val gatewayApiVersion: String,
+    val close: () -> Unit = {},
 )

@@ -31,6 +31,6 @@ interface ApiPluginMapper : BaseMapper<ApiPlugin> {
         page: IPage<ApiPlugin>,
         @Param("searchName") searchName: String?,
         @Param("unrestricted") unrestricted: Boolean,
-        @Param("codes") codes: Collection<String>?
+        @Param("codes") codes: Collection<String>?,
     ): IPage<ApiPlugin>
 }

@@ -1,6 +1,11 @@
 package top.fatweb.apimanagement.entity.permission
 
-import com.baomidou.mybatisplus.annotation.*
+import com.baomidou.mybatisplus.annotation.FieldFill
+import com.baomidou.mybatisplus.annotation.TableField
+import com.baomidou.mybatisplus.annotation.TableId
+import com.baomidou.mybatisplus.annotation.TableLogic
+import com.baomidou.mybatisplus.annotation.TableName
+import com.baomidou.mybatisplus.annotation.Version
 import java.io.Serializable
 import java.time.LocalDateTime
 
@@ -86,7 +91,6 @@ class Group : Serializable {
     @TableField(exist = false)
     var roles: List<Role>? = null
 
-    override fun toString(): String {
-        return "Group(id=$id, name=$name, enable=$enable, createTime=$createTime, updateTime=$updateTime, deleted=$deleted, version=$version, roles=$roles)"
-    }
+    override fun toString(): String =
+        "Group(id=$id, name=$name, enable=$enable, createTime=$createTime, updateTime=$updateTime, deleted=$deleted, version=$version, roles=$roles)"
 }

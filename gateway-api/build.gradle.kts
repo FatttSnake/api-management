@@ -7,20 +7,14 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import java.lang.Boolean as JavaBoolean
-import java.lang.Byte as JavaByte
-import java.lang.Character as JavaChar
-import java.lang.Double as JavaDouble
-import java.lang.Float as JavaFloat
-import java.lang.Integer as JavaInteger
-import java.lang.Long as JavaLong
-import java.lang.Short as JavaShort
-import java.lang.Void as JavaVoid
+import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import java.net.URLClassLoader
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.ktlint)
+    alias(libs.plugins.detekt)
     `java-library`
     `maven-publish`
 }
@@ -73,55 +67,62 @@ abstract class GenerateGatewayApiAbi : DefaultTask() {
     fun run() {
         val root = classesDirectory.get().asFile
         val loader = URLClassLoader(arrayOf(root.toURI().toURL()), GenerateGatewayApiAbi::class.java.classLoader)
-        try {
-            val classes = root.walkTopDown()
-                .filter { it.isFile && it.name.endsWith(".class") }
-                .map { it.relativeTo(root).invariantSeparatorsPath.removeSuffix(".class").replace('/', '.') }
-                .filterNot { it == "module-info" || it.endsWith("package-info") }
-                .sorted()
-                .mapNotNull { name ->
-                    val type = Class.forName(name, false, loader)
-                    if (!Modifier.isPublic(type.modifiers)) {
-                        return@mapNotNull null
-                    }
-                    mapOf(
-                        "name" to type.name,
-                        "kind" to kindOf(type),
-                        "constructors" to type.declaredConstructors
-                            .filter { isVisible(it.modifiers) && !it.isSynthetic }
-                            .map { constructorDescriptor(it.parameterTypes) }
-                            .sorted(),
-                        "methods" to type.declaredMethods
-                            .filter { isVisible(it.modifiers) && !it.isSynthetic && !it.isBridge }
-                            .map { method ->
-                                mapOf(
-                                    "name" to method.name,
-                                    "descriptor" to methodDescriptor(method),
-                                    "generic" to method.toGenericString(),
-                                    "static" to Modifier.isStatic(method.modifiers),
-                                    "abstract" to Modifier.isAbstract(method.modifiers)
-                                )
-                            }
-                            .sortedWith(
-                                compareBy(
-                                    { it.getValue("name") as String },
-                                    { it.getValue("descriptor") as String }
-                                )
-                            ),
-                        "fields" to type.declaredFields
-                            .filter { isVisible(it.modifiers) && !it.isSynthetic }
-                            .map { field ->
-                                mapOf(
-                                    "name" to field.name,
-                                    "descriptor" to typeDescriptor(field.type),
-                                    "static" to Modifier.isStatic(field.modifiers),
-                                    "final" to Modifier.isFinal(field.modifiers)
-                                )
-                            }
-                            .sortedBy { it.getValue("name") as String }
-                    )
-                }
-                .toList()
+        loader.use { loader ->
+            val classes =
+                root
+                    .walkTopDown()
+                    .filter { it.isFile && it.name.endsWith(".class") }
+                    .map {
+                        it
+                            .relativeTo(root)
+                            .invariantSeparatorsPath
+                            .removeSuffix(".class")
+                            .replace('/', '.')
+                    }.filterNot { it == "module-info" || it.endsWith("package-info") }
+                    .sorted()
+                    .mapNotNull { name ->
+                        val type = Class.forName(name, false, loader)
+                        if (!Modifier.isPublic(type.modifiers)) {
+                            return@mapNotNull null
+                        }
+                        mapOf(
+                            "name" to type.name,
+                            "kind" to kindOf(type),
+                            "constructors" to
+                                type.declaredConstructors
+                                    .filter { isVisible(it.modifiers) && !it.isSynthetic }
+                                    .map { constructorDescriptor(it.parameterTypes) }
+                                    .sorted(),
+                            "methods" to
+                                type.declaredMethods
+                                    .filter { isVisible(it.modifiers) && !it.isSynthetic && !it.isBridge }
+                                    .map { method ->
+                                        mapOf(
+                                            "name" to method.name,
+                                            "descriptor" to methodDescriptor(method),
+                                            "generic" to method.toGenericString(),
+                                            "static" to Modifier.isStatic(method.modifiers),
+                                            "abstract" to Modifier.isAbstract(method.modifiers),
+                                        )
+                                    }.sortedWith(
+                                        compareBy(
+                                            { it.getValue("name") as String },
+                                            { it.getValue("descriptor") as String },
+                                        ),
+                                    ),
+                            "fields" to
+                                type.declaredFields
+                                    .filter { isVisible(it.modifiers) && !it.isSynthetic }
+                                    .map { field ->
+                                        mapOf(
+                                            "name" to field.name,
+                                            "descriptor" to field.type.descriptorString(),
+                                            "static" to Modifier.isStatic(field.modifiers),
+                                            "final" to Modifier.isFinal(field.modifiers),
+                                        )
+                                    }.sortedBy { it.getValue("name") as String },
+                        )
+                    }.toList()
 
             val output = outputFile.get().asFile
             output.parentFile.mkdirs()
@@ -132,16 +133,14 @@ abstract class GenerateGatewayApiAbi : DefaultTask() {
                             "format" to 1,
                             "artifact" to "top.fatweb:api-management-gateway-api",
                             "version" to apiVersion.get(),
-                            "classes" to classes
-                        )
-                    )
-                )
+                            "classes" to classes,
+                        ),
+                    ),
+                ),
             )
             val versionOutput = versionFile.get().asFile
             versionOutput.parentFile.mkdirs()
             versionOutput.writeText("version=${apiVersion.get()}\n")
-        } finally {
-            loader.close()
         }
     }
 
@@ -153,40 +152,26 @@ abstract class GenerateGatewayApiAbi : DefaultTask() {
         else -> "class"
     }
 
-    private fun isVisible(modifiers: Int): Boolean =
-        Modifier.isPublic(modifiers) || Modifier.isProtected(modifiers)
+    private fun isVisible(modifiers: Int): Boolean = Modifier.isPublic(modifiers) || Modifier.isProtected(modifiers)
 
     private fun constructorDescriptor(parameters: Array<Class<*>>): String =
-        "(" + parameters.joinToString("") { typeDescriptor(it) } + ")V"
+        "(" + parameters.joinToString("") { it.descriptorString() } + ")V"
 
-    private fun methodDescriptor(method: java.lang.reflect.Method): String =
-        "(" + method.parameterTypes.joinToString("") { typeDescriptor(it) } + ")" +
-            typeDescriptor(method.returnType)
+    private fun methodDescriptor(method: Method): String =
+        "(" + method.parameterTypes.joinToString("") { it.descriptorString() } + ")" +
+            method.returnType.descriptorString()
+}
 
-    private fun typeDescriptor(type: Class<*>): String = when {
-        type == JavaVoid.TYPE -> "V"
-        type == JavaBoolean.TYPE -> "Z"
-        type == JavaByte.TYPE -> "B"
-        type == JavaChar.TYPE -> "C"
-        type == JavaShort.TYPE -> "S"
-        type == JavaInteger.TYPE -> "I"
-        type == JavaLong.TYPE -> "J"
-        type == JavaFloat.TYPE -> "F"
-        type == JavaDouble.TYPE -> "D"
-        type.isArray -> "[" + typeDescriptor(type.componentType)
-        else -> "L" + type.name.replace('.', '/') + ";"
+val generateGatewayApiAbi =
+    tasks.register<GenerateGatewayApiAbi>("generateGatewayApiAbi") {
+        group = "build"
+        description = "Writes the public ABI manifest embedded in the gateway API jar"
+        classesDirectory.set(layout.buildDirectory.dir("classes/kotlin/main"))
+        outputFile.set(layout.buildDirectory.file("generated/abi/gateway-api.abi.json"))
+        versionFile.set(layout.buildDirectory.file("generated/abi/gateway-api.properties"))
+        apiVersion.set(project.version.toString())
+        dependsOn(tasks.named("compileKotlin"))
     }
-}
-
-val generateGatewayApiAbi = tasks.register<GenerateGatewayApiAbi>("generateGatewayApiAbi") {
-    group = "build"
-    description = "Writes the public ABI manifest embedded in the gateway API jar"
-    classesDirectory.set(layout.buildDirectory.dir("classes/kotlin/main"))
-    outputFile.set(layout.buildDirectory.file("generated/abi/gateway-api.abi.json"))
-    versionFile.set(layout.buildDirectory.file("generated/abi/gateway-api.properties"))
-    apiVersion.set(project.version.toString())
-    dependsOn(tasks.named("compileKotlin"))
-}
 
 tasks.named<ProcessResources>("processResources") {
     dependsOn(generateGatewayApiAbi)

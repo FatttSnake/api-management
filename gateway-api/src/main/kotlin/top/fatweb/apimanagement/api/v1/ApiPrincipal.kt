@@ -14,7 +14,7 @@ data class ApiPrincipal @JvmOverloads constructor(
     val type: PrincipalType = PrincipalType.ANONYMOUS,
     val userId: Long? = null,
     val accessKeyId: Long? = null,
-    val name: String = ""
+    val name: String = "",
 ) {
     companion object {
         /**

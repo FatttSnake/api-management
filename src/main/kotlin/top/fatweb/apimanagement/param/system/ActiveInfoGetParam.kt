@@ -22,9 +22,9 @@ data class ActiveInfoGetParam(
         description = "范围",
         allowableValues = ["WEEK", "MONTH", "QUARTER", "YEAR", "TWO_YEARS", "THREE_YEARS", "FIVE_YEARS", "ALL"],
         defaultValue = "WEEK",
-        example = "WEEK"
+        example = "WEEK",
     )
-    val scope: Scope = Scope.WEEK
+    val scope: Scope = Scope.WEEK,
 ) {
     enum class Scope(@field:EnumValue @field:JsonValue val code: String) {
         WEEK("WEEK"),
@@ -41,6 +41,6 @@ data class ActiveInfoGetParam(
 
         FIVE_YEARS("FIVE_YEARS"),
 
-        ALL("ALL")
+        ALL("ALL"),
     }
 }

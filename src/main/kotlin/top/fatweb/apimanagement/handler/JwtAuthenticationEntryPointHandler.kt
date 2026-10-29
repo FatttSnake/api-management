@@ -17,7 +17,7 @@ class JwtAuthenticationEntryPointHandler : AuthenticationEntryPoint {
     override fun commence(
         request: HttpServletRequest,
         response: HttpServletResponse,
-        authException: AuthenticationException
+        authException: AuthenticationException,
     ) {
         request.setAttribute("filter.error", authException)
         request.getRequestDispatcher("/error/thrown")?.forward(request, response)

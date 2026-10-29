@@ -31,7 +31,5 @@ class Power : Serializable {
     @TableField("type_id")
     var typeId: Int? = null
 
-    override fun toString(): String {
-        return "Power(id=$id, typeId=$typeId)"
-    }
+    override fun toString(): String = "Power(id=$id, typeId=$typeId)"
 }

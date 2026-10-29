@@ -15,5 +15,6 @@ import top.fatweb.apimanagement.service.api.IPluginModuleRefService
  */
 @Service
 @DS("master")
-class PluginModuleRefServiceImpl : ServiceImpl<PluginModuleRefMapper, PluginModuleRef>(),
+class PluginModuleRefServiceImpl :
+    ServiceImpl<PluginModuleRefMapper, PluginModuleRef>(),
     IPluginModuleRefService

@@ -26,7 +26,7 @@ class InitConfig(
     private val serverProperties: ServerProperties,
     private val passwordEncoder: PasswordEncoder,
     private val userService: IUserService,
-    private val userInfoService: IUserInfoService
+    private val userInfoService: IUserInfoService,
 ) {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
@@ -35,32 +35,41 @@ class InitConfig(
         if (!userService.exists(KtQueryWrapper(User()).eq(User::id, 0))) {
             userInfoService.remove(KtQueryWrapper(UserInfo()).eq(UserInfo::userId, 0))
 
-            val rawPassword = serverProperties.admin.password ?: let {
-                logger.warn("No default administrator password is set, a randomly generated password will be used")
-                generateRandomPassword(10)
-            }
+            val rawPassword =
+                serverProperties.admin.password ?: let {
+                    logger.warn("No default administrator password is set, a randomly generated password will be used")
+                    generateRandomPassword(10)
+                }
             val encodedPassword = passwordEncoder.encode(Sha512DigestUtils.shaHex(rawPassword))
 
-            val user = User().apply {
-                id = 0
-                username = serverProperties.admin.username
-                password = encodedPassword
-                locking = 0
-                enable = 1
-            }
-            val userInfo = UserInfo().apply {
-                userId = 0
-                nickname = serverProperties.admin.nickname
-                avatar =
-                    GitHubAvatar.newAvatarBuilder().build().createAsBase64((Long.MIN_VALUE..Long.MAX_VALUE).random())
-                email = serverProperties.admin.email
-            }
+            val user =
+                User().apply {
+                    id = 0
+                    username = serverProperties.admin.username
+                    password = encodedPassword
+                    locking = 0
+                    enable = 1
+                }
+            val userInfo =
+                UserInfo().apply {
+                    userId = 0
+                    nickname = serverProperties.admin.nickname
+                    avatar =
+                        GitHubAvatar.newAvatarBuilder().build().createAsBase64(
+                            (Long.MIN_VALUE..Long.MAX_VALUE).random(),
+                        )
+                    email = serverProperties.admin.email
+                }
 
             if (userService.save(user) && userInfoService.save(userInfo)) {
-                logger.warn("First startup, create administrator - username: admin, password: $rawPassword")
-                logger.warn("This information will only be shown once. Please change your password promptly after logging in.")
+                logger.warn("First startup, created administrator - username: {}", user.username)
+                if (serverProperties.admin.password == null) {
+                    // Only the generated password has to be shown to be usable; a configured
+                    // one is already known and must not end up in the log
+                    logger.warn("Generated administrator password: {}", rawPassword)
+                    logger.warn("This information will only be shown once. Please change the password promptly.")
+                }
             }
         }
-
     }
 }

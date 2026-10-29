@@ -6,7 +6,11 @@ import top.fatweb.apimanagement.converter.permission.toVo
 import top.fatweb.apimanagement.entity.permission.Power
 import top.fatweb.apimanagement.entity.permission.PowerSet
 import top.fatweb.apimanagement.mapper.permission.PowerMapper
-import top.fatweb.apimanagement.service.permission.*
+import top.fatweb.apimanagement.service.permission.IMenuService
+import top.fatweb.apimanagement.service.permission.IModuleService
+import top.fatweb.apimanagement.service.permission.IOperationService
+import top.fatweb.apimanagement.service.permission.IPowerService
+import top.fatweb.apimanagement.service.permission.IScopeService
 
 /**
  * Power service implement
@@ -19,12 +23,14 @@ class PowerServiceImpl(
     private val moduleService: IModuleService,
     private val menuService: IMenuService,
     private val scopeService: IScopeService,
-    private val operationService: IOperationService
-) : ServiceImpl<PowerMapper, Power>(), IPowerService {
-    override fun getList() = PowerSet().apply {
-        moduleList = moduleService.list()
-        menuList = menuService.list()
-        scopeLists = scopeService.list()
-        operationList = operationService.list()
-    }.toVo()
+    private val operationService: IOperationService,
+) : ServiceImpl<PowerMapper, Power>(),
+    IPowerService {
+    override fun getList() = PowerSet()
+        .apply {
+            moduleList = moduleService.list()
+            menuList = menuService.list()
+            scopeLists = scopeService.list()
+            operationList = operationService.list()
+        }.toVo()
 }

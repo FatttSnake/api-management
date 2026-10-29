@@ -21,7 +21,6 @@ data class PluginModuleVo(
      */
     @field:JsonSerialize(using = ToStringSerializer::class)
     val id: Long?,
-
     /**
      * Maven group
      *
@@ -29,7 +28,6 @@ data class PluginModuleVo(
      * @since 1.0.0
      */
     val groupId: String?,
-
     /**
      * Maven artifact
      *
@@ -37,7 +35,6 @@ data class PluginModuleVo(
      * @since 1.0.0
      */
     val artifactId: String?,
-
     /**
      * Version
      *
@@ -45,7 +42,6 @@ data class PluginModuleVo(
      * @since 1.0.0
      */
     val version: String?,
-
     /**
      * SHA-256 digest
      *
@@ -53,7 +49,6 @@ data class PluginModuleVo(
      * @since 1.0.0
      */
     val sha256: String?,
-
     /**
      * Size in bytes
      *
@@ -61,7 +56,6 @@ data class PluginModuleVo(
      * @since 1.0.0
      */
     val size: Long?,
-
     /**
      * Source repository
      *
@@ -69,7 +63,6 @@ data class PluginModuleVo(
      * @since 1.0.0
      */
     val source: String?,
-
     /**
      * Install time
      *
@@ -77,7 +70,6 @@ data class PluginModuleVo(
      * @since 1.0.0
      */
     val installTime: LocalDateTime?,
-
     /**
      * Create time
      *
@@ -85,12 +77,11 @@ data class PluginModuleVo(
      * @since 1.0.0
      */
     val createTime: LocalDateTime?,
-
     /**
      * Update time
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    val updateTime: LocalDateTime?
+    val updateTime: LocalDateTime?,
 )

@@ -17,6 +17,10 @@ app:
 #    refresh-token-cookie-same-site: Lax # Controls when the cookie is sent with cross-site requests [Strict, Lax, None]
 #    refresh-token-cookie-path: /token # The URL path for which the cookie is valid
 #    secret-key-prefix: "Basic " # Secret key prefix
+#    trust-proxy-headers: false # Trust X-Real-IP / X-Forwarded-For; enable only behind a proxy that overwrites them
+#    allowed-origin-patterns: # Origins allowed to call the management API with credentials
+#      - http://localhost:*
+#      - http://127.0.0.1:*
   storage:
     mode: local # File storage mode [local, s3]
 #    public-base-url: https://api.example.com # Public base URL of external storage links (falls back to the request URL)

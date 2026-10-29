@@ -9,7 +9,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
-import java.util.*
+import java.util.UUID
 import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.readBytes
@@ -102,7 +102,7 @@ object ByteUtil {
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
          */
-        YiB
+        YiB,
     }
 
     /**
@@ -119,59 +119,26 @@ object ByteUtil {
         }
 
         var size = byteSize.toDouble()
-        if (floor(size / BASE) <= 0) {
-            return format(size, ByteUnit.B)
+        var unitIndex = 0
+        while (unitIndex < ByteUnit.entries.lastIndex && floor(size / BASE) > 0) {
+            size /= BASE
+            unitIndex++
         }
 
-        size /= BASE
-        if (floor(size / BASE) <= 0) {
-            return format(size, ByteUnit.KiB)
-        }
-
-        size /= BASE
-        if (floor(size / BASE) <= 0) {
-            return format(size, ByteUnit.MiB)
-        }
-
-        size /= BASE
-        if (floor(size / BASE) <= 0) {
-            return format(size, ByteUnit.GiB)
-        }
-
-        size /= BASE
-        if (floor(size / BASE) <= 0) {
-            return format(size, ByteUnit.TiB)
-        }
-
-        size /= BASE
-        if (floor(size / BASE) <= 0) {
-            return format(size, ByteUnit.PiB)
-        }
-
-        size /= BASE
-        if (floor(size / BASE) <= 0) {
-            return format(size, ByteUnit.EiB)
-        }
-
-        size /= BASE
-        if (floor(size / BASE) <= 0) {
-            return format(size, ByteUnit.ZiB)
-        }
-
-        size /= BASE
-        return format(size, ByteUnit.YiB)
+        return format(size, ByteUnit.entries[unitIndex])
     }
 
     private fun format(size: Double, unit: ByteUnit): String {
-        val precision = if (size * 1000 % 10 > 0) {
-            3
-        } else if (size * 100 % 10 > 0) {
-            2
-        } else if (size * 10 % 10 > 0) {
-            1
-        } else {
-            0
-        }
+        val precision =
+            if (size * 1000 % 10 > 0) {
+                3
+            } else if (size * 100 % 10 > 0) {
+                2
+            } else if (size * 10 % 10 > 0) {
+                1
+            } else {
+                0
+            }
 
         val formatStr = "%.${precision}f"
 
@@ -186,8 +153,7 @@ object ByteUtil {
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-fun ByteArray.sha256(): ByteArray =
-    MessageDigest.getInstance("SHA-256").digest(this)
+fun ByteArray.sha256(): ByteArray = MessageDigest.getInstance("SHA-256").digest(this)
 
 /**
  * Computes the SHA-256 hash of this [ByteArray] and returns it as a hexadecimal string
@@ -196,8 +162,7 @@ fun ByteArray.sha256(): ByteArray =
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-fun ByteArray.sha256HexString(): String =
-    sha256().toHexString()
+fun ByteArray.sha256HexString(): String = sha256().toHexString()
 
 /**
  * Compresses the data in this [ByteArray] using the specified output stream factory
@@ -252,32 +217,31 @@ fun ByteArray.decompress(streamFactory: (InputStream) -> InputStream): ByteArray
 fun ByteArray.saveToFile(
     base: String,
     vararg subpaths: String,
-    compressStreamFactory: ((OutputStream) -> OutputStream)? = null
-): Path =
-    Path(base = base, *subpaths).apply {
-        parent?.createDirectories()
+    compressStreamFactory: ((OutputStream) -> OutputStream)? = null,
+): Path = Path(base = base, *subpaths).apply {
+    parent?.createDirectories()
 
-        val tempPath = Path("data", "temp", "${UUID.randomUUID()}.tmp")
-        tempPath.parent.createDirectories()
+    val tempPath = Path("data", "temp", "${UUID.randomUUID()}.tmp")
+    tempPath.parent.createDirectories()
 
+    try {
+        tempPath.writeBytes(
+            compressStreamFactory
+                ?.let { this@saveToFile.compress(it) }
+                ?: this@saveToFile,
+        )
         try {
-            tempPath.writeBytes(
-                compressStreamFactory
-                    ?.let { this@saveToFile.compress(it) }
-                    ?: this@saveToFile
-            )
-            try {
-                Files.move(tempPath, this, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-            } catch (_: AtomicMoveNotSupportedException) {
-                Files.move(tempPath, this, StandardCopyOption.REPLACE_EXISTING)
-            }
-        } catch (e: Exception) {
-            runCatching {
-                Files.deleteIfExists(tempPath)
-            }
-            throw e
+            Files.move(tempPath, this, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+        } catch (_: AtomicMoveNotSupportedException) {
+            Files.move(tempPath, this, StandardCopyOption.REPLACE_EXISTING)
         }
+    } catch (e: Exception) {
+        runCatching {
+            Files.deleteIfExists(tempPath)
+        }
+        throw e
     }
+}
 
 /**
  * Safely saves this [ByteArray] to a file, wrapping the result in a [Result]
@@ -296,7 +260,7 @@ fun ByteArray.saveToFile(
 fun ByteArray.saveToFileSafe(
     base: String,
     vararg subpaths: String,
-    compressStreamFactory: ((OutputStream) -> OutputStream)? = null
+    compressStreamFactory: ((OutputStream) -> OutputStream)? = null,
 ): Result<Path> = runCatching {
     saveToFile(base = base, *subpaths, compressStreamFactory = compressStreamFactory)
 }
@@ -311,14 +275,11 @@ fun ByteArray.saveToFileSafe(
  * @since 1.0.0
  * @see ByteArray
  */
-fun Path.readFile(
-    decompressStreamFactory: ((InputStream) -> InputStream)? = null
-): ByteArray =
-    decompressStreamFactory
-        ?.let {
-            readBytes().decompress(it)
-        }
-        ?: readBytes()
+fun Path.readFile(decompressStreamFactory: ((InputStream) -> InputStream)? = null): ByteArray = decompressStreamFactory
+    ?.let {
+        readBytes().decompress(it)
+    }
+    ?: readBytes()
 
 /**
  * Safely reads the contents of the file at this [Path] as a [ByteArray], wrapping the result in a [Result]
@@ -331,8 +292,7 @@ fun Path.readFile(
  * @see Result
  * @see ByteArray
  */
-fun Path.readFileSafe(
-    decompressStreamFactory: ((InputStream) -> InputStream)? = null
-): Result<ByteArray> = runCatching {
-    readFile(decompressStreamFactory)
-}
+fun Path.readFileSafe(decompressStreamFactory: ((InputStream) -> InputStream)? = null): Result<ByteArray> =
+    runCatching {
+        readFile(decompressStreamFactory)
+    }

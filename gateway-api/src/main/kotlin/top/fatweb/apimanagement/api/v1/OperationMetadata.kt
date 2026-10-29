@@ -20,7 +20,7 @@ data class OperationMetadata @JvmOverloads constructor(
     val parameters: List<ParameterSpec> = emptyList(),
     val requestBodySchema: SchemaSpec? = null,
     val responses: Map<String, ResponseSpec> = emptyMap(),
-    val tags: List<String> = emptyList()
+    val tags: List<String> = emptyList(),
 ) {
     init {
         require(operationId.isNotBlank()) { "operationId must not be blank" }

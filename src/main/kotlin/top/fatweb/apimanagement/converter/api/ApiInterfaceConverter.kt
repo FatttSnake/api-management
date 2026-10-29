@@ -2,8 +2,6 @@ package top.fatweb.apimanagement.converter.api
 
 import top.fatweb.apimanagement.entity.api.ApiInterface
 import top.fatweb.apimanagement.entity.api.ApiPlugin
-import top.fatweb.apimanagement.param.system.api.ApiInterfaceUpdateParam
-import top.fatweb.apimanagement.param.system.api.ApiInterfaceUpdateStatusParam
 import top.fatweb.apimanagement.vo.api.ApiInterfaceVo
 import java.math.BigDecimal
 
@@ -31,7 +29,7 @@ fun ApiInterface.toVo() = ApiInterfaceVo(
     enable = this.enable?.let { it == 1 },
     accessMode = this.accessMode,
     createTime = this.createTime,
-    updateTime = this.updateTime
+    updateTime = this.updateTime,
 )
 
 /**
@@ -63,36 +61,5 @@ fun ApiInterface.toResolvedVo(plugin: ApiPlugin?) = ApiInterfaceVo(
     enable = this.enable?.let { it == 1 },
     accessMode = this.accessMode ?: plugin?.defaultAccessMode ?: ApiInterface.AccessMode.RESTRICTED,
     createTime = this.createTime,
-    updateTime = this.updateTime
+    updateTime = this.updateTime,
 )
-
-/**
- * Convert to ApiInterface object
- *
- * @return ApiInterface object
- * @author FatttSnake, fatttsnake@gmail.com
- * @since 1.0.0
- * @see ApiInterface
- */
-fun ApiInterfaceUpdateParam.toEntity() = ApiInterface().apply {
-    id = this@toEntity.id
-    price = this@toEntity.price
-    billingMode = this@toEntity.billingMode
-    needKey = this@toEntity.needKey?.let { if (it) 1 else 0 }
-    rateLimit = this@toEntity.rateLimit
-    enable = this@toEntity.enable?.let { if (it) 1 else 0 }
-    accessMode = this@toEntity.accessMode
-}
-
-/**
- * Convert to ApiInterface object
- *
- * @return ApiInterface object
- * @author FatttSnake, fatttsnake@gmail.com
- * @since 1.0.0
- * @see ApiInterface
- */
-fun ApiInterfaceUpdateStatusParam.toEntity() = ApiInterface().apply {
-    id = this@toEntity.id
-    enable = if (this@toEntity.enable == true) 1 else 0
-}

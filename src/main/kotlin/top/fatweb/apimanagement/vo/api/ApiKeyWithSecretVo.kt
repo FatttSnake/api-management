@@ -19,7 +19,6 @@ data class ApiKeyWithSecretVo(
      * @since 1.0.0
      */
     val apiKey: ApiKeyVo,
-
     /**
      * One-time secret key
      *
@@ -27,5 +26,5 @@ data class ApiKeyWithSecretVo(
      * @since 1.0.0
      */
     @field:Schema(description = "SecretKey（仅此一次返回，请妥善保存）")
-    val secretKey: String?
+    val secretKey: String?,
 )

@@ -1,13 +1,13 @@
 package top.fatweb.apimanagement.plugin.runtime.runtime
 
 import top.fatweb.apimanagement.api.v1.ApiPlugin
+import top.fatweb.apimanagement.api.v1.version.VersionRange
+import top.fatweb.apimanagement.api.v1.version.VersionRangeException
 import top.fatweb.apimanagement.plugin.runtime.classloader.GatewayApiClassLoader
 import top.fatweb.apimanagement.plugin.runtime.classloader.PluginClassLoader
 import top.fatweb.apimanagement.plugin.runtime.classloader.PluginModuleRegistry
 import top.fatweb.apimanagement.plugin.runtime.module.PluginModuleLock
 import top.fatweb.apimanagement.plugin.runtime.module.PluginModuleLockParser
-import top.fatweb.apimanagement.api.v1.version.VersionRange
-import top.fatweb.apimanagement.api.v1.version.VersionRangeException
 import java.nio.file.Path
 import java.util.jar.JarFile
 
@@ -29,7 +29,7 @@ class PluginRuntimeLoader(
     private val platform: GatewayApiClassLoader,
     private val moduleRegistry: PluginModuleRegistry,
     private val descriptorParser: PluginDescriptorParser = PluginDescriptorParser(),
-    private val lockParser: PluginModuleLockParser = PluginModuleLockParser()
+    private val lockParser: PluginModuleLockParser = PluginModuleLockParser(),
 ) {
     /**
      * Loads a plugin.
@@ -42,29 +42,32 @@ class PluginRuntimeLoader(
      * @since 1.0.0
      */
     fun load(pluginJar: Path, services: PluginRuntimeServices): LoadedPlugin {
-        val descriptorBytes = readEntry(pluginJar, DESCRIPTOR_ENTRY)
-            ?: throw PluginLoadException("Plugin jar has no $DESCRIPTOR_ENTRY")
+        val descriptorBytes =
+            readEntry(pluginJar, DESCRIPTOR_ENTRY)
+                ?: throw PluginLoadException("Plugin jar has no $DESCRIPTOR_ENTRY")
         val descriptor = descriptorParser.parse(descriptorBytes)
         checkRequirements(descriptor, services)
-        val lock = readEntry(pluginJar, LOCK_ENTRY)
-            ?.let(lockParser::parse)
-            ?: PluginModuleLock()
+        val lock =
+            readEntry(pluginJar, LOCK_ENTRY)
+                ?.let(lockParser::parse)
+                ?: PluginModuleLock()
 
         if (descriptor.dependencies.isNotEmpty() && lock.modules.isEmpty()) {
             throw PluginLoadException(
-                "Plugin ${descriptor.pluginId} declares dependencies but has no dependency lock"
+                "Plugin ${descriptor.pluginId} declares dependencies but has no dependency lock",
             )
         }
         if (descriptor.apiVersion > GatewayApiInfo.major) {
             throw PluginLoadException(
                 "Plugin ${descriptor.pluginId} requires API ${descriptor.apiVersion}, " +
-                    "gateway supports ${GatewayApiInfo.major}"
+                    "gateway supports ${GatewayApiInfo.major}",
             )
         }
 
         val graph = moduleRegistry.acquire(lock)
         var classLoader: PluginClassLoader? = null
         var collector: RouteCollector? = null
+        var started: ApiPlugin? = null
         try {
             classLoader = PluginClassLoader(pluginJar, platform, graph.loaders().toList())
             collector = RouteCollector(descriptor.pluginId, classLoader)
@@ -72,23 +75,34 @@ class PluginRuntimeLoader(
             val mainType = classLoader.loadClass(descriptor.mainClass)
             if (!ApiPlugin::class.java.isAssignableFrom(mainType)) {
                 throw PluginLoadException(
-                    "${descriptor.mainClass} does not implement ${ApiPlugin::class.java.name}"
+                    "${descriptor.mainClass} does not implement ${ApiPlugin::class.java.name}",
                 )
             }
             val instance = mainType.getDeclaredConstructor().newInstance() as ApiPlugin
+            started = instance
             withPluginClassLoader(classLoader) { instance.onStart(context) }
             val routes = collector.freeze()
             return LoadedPlugin(descriptor, instance, classLoader, graph, routes, context)
         } catch (ex: Throwable) {
+            // onStart may have opened resources before it failed; stop the instance so they
+            // are released with the class loader that owns them
+            started?.let { instance ->
+                classLoader?.let { loader ->
+                    runCatching { withPluginClassLoader(loader) { instance.onStop() } }
+                }
+            }
             collector?.close()
             classLoader?.close()
             graph.close()
+            // Closing can only fail on resources the failed mount already owns; the original
+            // failure is the one the caller needs to see
+            runCatching { services.close() }
             if (ex is PluginLoadException) {
                 throw ex
             }
             throw PluginLoadException(
                 "Cannot load plugin ${descriptor.pluginId}: ${ex.message}",
-                ex
+                ex,
             )
         }
     }
@@ -101,26 +115,25 @@ class PluginRuntimeLoader(
             if (!VersionRange.parse(descriptor.requiresGateway).contains(gatewayVersion)) {
                 throw PluginLoadException(
                     "Plugin ${descriptor.pluginId} requires gateway ${descriptor.requiresGateway}, " +
-                        "gateway is ${services.gatewayVersion}"
+                        "gateway is ${services.gatewayVersion}",
                 )
             }
             if (!VersionRange.parse(descriptor.requiresGatewayApi).contains(gatewayApiVersion)) {
                 throw PluginLoadException(
                     "Plugin ${descriptor.pluginId} requires gateway API ${descriptor.requiresGatewayApi}, " +
-                        "gateway API is ${services.gatewayApiVersion}"
+                        "gateway API is ${services.gatewayApiVersion}",
                 )
             }
         } catch (ex: VersionRangeException) {
             throw PluginLoadException(
-                "Invalid version requirement in plugin ${descriptor.pluginId}: ${ex.message}"
+                "Invalid version requirement in plugin ${descriptor.pluginId}: ${ex.message}",
             )
         }
     }
 
-    private fun readEntry(jar: Path, name: String): ByteArray? =
-        JarFile(jar.toFile()).use { file ->
-            file.getJarEntry(name)?.let { entry -> file.getInputStream(entry).readBytes() }
-        }
+    private fun readEntry(jar: Path, name: String): ByteArray? = JarFile(jar.toFile()).use { file ->
+        file.getJarEntry(name)?.let { entry -> file.getInputStream(entry).readBytes() }
+    }
 
     private fun withPluginClassLoader(classLoader: ClassLoader, action: () -> Unit) {
         val previous = Thread.currentThread().contextClassLoader

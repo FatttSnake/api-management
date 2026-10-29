@@ -22,7 +22,6 @@ data class ApiInterfaceUpdateStatusParam(
     @field:Schema(description = "API 接口 ID", required = true)
     @field:NotNull(message = "ID can not be null")
     var id: Long?,
-
     /**
      * Enable status
      *
@@ -31,5 +30,5 @@ data class ApiInterfaceUpdateStatusParam(
      */
     @field:Schema(description = "启用", required = true, example = "true")
     @field:NotNull(message = "Status can not be null")
-    var enable: Boolean?
+    var enable: Boolean?,
 )

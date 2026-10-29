@@ -25,7 +25,6 @@ data class ApiTransactionGetParam(
      */
     @field:Schema(description = "所属用户 ID（管理员查询指定用户，不传则查自己）")
     var userId: Long?,
-
     /**
      * Transaction type
      *
@@ -34,7 +33,6 @@ data class ApiTransactionGetParam(
      */
     @field:Schema(description = "流水类型", allowableValues = ["TOPUP", "DEDUCT", "REFUND", "ADJUST"])
     var type: ApiTransaction.Type?,
-
     /**
      * Start time
      *
@@ -44,7 +42,6 @@ data class ApiTransactionGetParam(
     @field:Schema(description = "开始时间", example = "2026-01-01T00:00:00.000Z")
     @field:DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     var startTime: LocalDateTime?,
-
     /**
      * End time
      *
@@ -53,5 +50,5 @@ data class ApiTransactionGetParam(
      */
     @field:Schema(description = "结束时间", example = "2026-12-31T00:00:00.000Z")
     @field:DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
-    var endTime: LocalDateTime?
+    var endTime: LocalDateTime?,
 ) : PageSortParam()

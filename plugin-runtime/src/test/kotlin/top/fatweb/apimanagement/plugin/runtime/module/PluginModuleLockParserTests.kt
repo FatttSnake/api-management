@@ -3,7 +3,6 @@ package top.fatweb.apimanagement.plugin.runtime.module
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
 
 /**
  * @author FatttSnake, fatttsnake@gmail.com
@@ -16,31 +15,32 @@ class PluginModuleLockParserTests {
 
     @Test
     fun `parses a valid lock`() {
-        val lock = parser.parse(
-            """
-            {
-              "format": 1,
-              "constraints": { "fixture:a": "[1.0,2.0)" },
-              "modules": [
+        val lock =
+            parser.parse(
+                """
                 {
-                  "group": "fixture",
-                  "name": "a",
-                  "version": "1.0.0",
-                  "sha256": "$shaA",
-                  "size": 10
-                },
-                {
-                  "group": "fixture",
-                  "name": "b",
-                  "version": "1.0.0",
-                  "sha256": "$shaB",
-                  "size": 20,
-                  "dependencies": ["$shaA"]
+                  "format": 1,
+                  "constraints": { "fixture:a": "[1.0,2.0)" },
+                  "modules": [
+                    {
+                      "group": "fixture",
+                      "name": "a",
+                      "version": "1.0.0",
+                      "sha256": "$shaA",
+                      "size": 10
+                    },
+                    {
+                      "group": "fixture",
+                      "name": "b",
+                      "version": "1.0.0",
+                      "sha256": "$shaB",
+                      "size": 20,
+                      "dependencies": ["$shaA"]
+                    }
+                  ]
                 }
-              ]
-            }
-            """.trimIndent()
-        )
+                """.trimIndent(),
+            )
 
         assertEquals(1, lock.format)
         assertEquals("[1.0,2.0)", lock.constraints["fixture:a"])
@@ -57,10 +57,11 @@ class PluginModuleLockParserTests {
 
     @Test
     fun `rejects a dependency cycle`() {
-        val modules = """
+        val modules =
+            """
             ${module(name = "a", sha = shaA, dependencies = listOf(shaB))},
             ${module(name = "b", sha = shaB, dependencies = listOf(shaA))}
-        """.trimIndent()
+            """.trimIndent()
         assertFailsWith<PluginModuleLockException> {
             parser.parse(lockJson(modules))
         }
@@ -82,10 +83,11 @@ class PluginModuleLockParserTests {
 
     @Test
     fun `rejects duplicate coordinates`() {
-        val modules = """
+        val modules =
+            """
             ${module(name = "a", sha = shaA)},
             ${module(name = "a", sha = shaB)}
-        """.trimIndent()
+            """.trimIndent()
         assertFailsWith<PluginModuleLockException> {
             parser.parse(lockJson(modules))
         }
@@ -93,30 +95,30 @@ class PluginModuleLockParserTests {
 
     @Test
     fun `ignores unknown fields`() {
-        val lock = parser.parse(
-            lockJson(
-                """
-                {
-                  "group": "fixture",
-                  "name": "a",
-                  "version": "1.0.0",
-                  "sha256": "$shaA",
-                  "future": true
-                }
-                """.trimIndent()
+        val lock =
+            parser.parse(
+                lockJson(
+                    """
+                    {
+                      "group": "fixture",
+                      "name": "a",
+                      "version": "1.0.0",
+                      "sha256": "$shaA",
+                      "future": true
+                    }
+                    """.trimIndent(),
+                ),
             )
-        )
-        assertTrue(lock.modules.single().coordinate == "fixture:a:1.0.0")
+        assertEquals("fixture:a:1.0.0", lock.modules.single().coordinate)
     }
 
-    private fun lockJson(modules: String): String =
-        """{ "format": 1, "modules": [ $modules ] }"""
+    private fun lockJson(modules: String): String = """{ "format": 1, "modules": [ $modules ] }"""
 
     private fun module(
         name: String,
         version: String = "1.0.0",
         sha: String = shaA,
-        dependencies: List<String> = emptyList()
+        dependencies: List<String> = emptyList(),
     ): String {
         val deps = dependencies.joinToString(",") { "\"$it\"" }
         return """

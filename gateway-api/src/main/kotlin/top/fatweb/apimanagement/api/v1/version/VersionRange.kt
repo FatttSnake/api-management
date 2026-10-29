@@ -10,9 +10,7 @@ package top.fatweb.apimanagement.api.v1.version
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-class VersionRange private constructor(
-    private val alternatives: List<Clause>
-) {
+class VersionRange private constructor(private val alternatives: List<Clause>) {
     /**
      * Checks whether a version satisfies the range.
      *
@@ -52,20 +50,19 @@ class VersionRange private constructor(
      * @since 1.0.0
      */
     fun minimumMajor(): Int {
-        val majors = alternatives.map { clause ->
-            clause.minimum?.major
-                ?: throw VersionRangeException("Version range has no lower bound")
-        }.distinct()
+        val majors =
+            alternatives
+                .map { clause ->
+                    clause.minimum?.major
+                        ?: throw VersionRangeException("Version range has no lower bound")
+                }.distinct()
         if (majors.size != 1) {
             throw VersionRangeException("Version range must target a single major version")
         }
         return majors.single()
     }
 
-    private data class Clause(
-        val predicates: List<(Semver) -> Boolean>,
-        val minimum: Semver?
-    )
+    private data class Clause(val predicates: List<(Semver) -> Boolean>, val minimum: Semver?)
 
     companion object {
         /**
@@ -82,18 +79,22 @@ class VersionRange private constructor(
             if (text.isEmpty() || text == "*") {
                 return VersionRange(listOf(Clause(emptyList(), null)))
             }
-            val alternatives = text.split("||").map { alternative ->
-                val clauses = alternative.trim().split(Regex("\\s+"))
-                    .filter { it.isNotEmpty() }
-                    .map(::clauseOf)
-                if (clauses.isEmpty()) {
-                    throw VersionRangeException("Invalid version range: $expression")
+            val alternatives =
+                text.split("||").map { alternative ->
+                    val clauses =
+                        alternative
+                            .trim()
+                            .split(Regex("\\s+"))
+                            .filter { it.isNotEmpty() }
+                            .map(::clauseOf)
+                    if (clauses.isEmpty()) {
+                        throw VersionRangeException("Invalid version range: $expression")
+                    }
+                    Clause(
+                        predicates = clauses.flatMap { it.predicates },
+                        minimum = clauses.mapNotNull { it.minimum }.maxOrNull(),
+                    )
                 }
-                Clause(
-                    predicates = clauses.flatMap { it.predicates },
-                    minimum = clauses.mapNotNull { it.minimum }.maxOrNull()
-                )
-            }
             return VersionRange(alternatives)
         }
 
@@ -115,20 +116,22 @@ class VersionRange private constructor(
                 "<=" -> Clause(listOf { candidate -> candidate <= version }, null)
                 "<" -> Clause(listOf { candidate -> candidate < version }, null)
                 "=" -> Clause(listOf { candidate -> candidate.compareTo(version) == 0 }, version)
-                "^" -> Clause(
-                    listOf(
-                        { candidate -> candidate >= version },
-                        { candidate -> candidate < caretUpper(version, components) }
-                    ),
-                    version
-                )
-                "~" -> Clause(
-                    listOf(
-                        { candidate -> candidate >= version },
-                        { candidate -> candidate < tildeUpper(version, components) }
-                    ),
-                    version
-                )
+                "^" ->
+                    Clause(
+                        listOf(
+                            { candidate -> candidate >= version },
+                            { candidate -> candidate < caretUpper(version, components) },
+                        ),
+                        version,
+                    )
+                "~" ->
+                    Clause(
+                        listOf(
+                            { candidate -> candidate >= version },
+                            { candidate -> candidate < tildeUpper(version, components) },
+                        ),
+                        version,
+                    )
                 else -> throw VersionRangeException("Unknown operator: $operator")
             }
         }

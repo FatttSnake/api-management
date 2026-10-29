@@ -22,7 +22,6 @@ data class UserWithInfoVo(
      */
     @field:JsonSerialize(using = ToStringSerializer::class)
     val id: Long?,
-
     /**
      * Username
      *
@@ -31,7 +30,6 @@ data class UserWithInfoVo(
      */
     @field:Schema(description = "用户名", example = "User")
     val username: String?,
-
     /**
      * Two-factor enable
      *
@@ -40,7 +38,6 @@ data class UserWithInfoVo(
      */
     @field:Schema(description = "启用双因素", example = "true")
     val twoFactor: Boolean?,
-
     /**
      * Verified
      *
@@ -49,7 +46,6 @@ data class UserWithInfoVo(
      */
     @field:Schema(description = "已验证", example = "true")
     val verified: Boolean?,
-
     /**
      * Locking
      *
@@ -58,7 +54,6 @@ data class UserWithInfoVo(
      */
     @field:Schema(description = "是否锁定", example = "false")
     val locking: Boolean?,
-
     /**
      * Expiration time
      *
@@ -67,7 +62,6 @@ data class UserWithInfoVo(
      */
     @field:Schema(description = "过期时间", example = "1900-01-01T00:00:00.000Z")
     val expiration: LocalDateTime?,
-
     /**
      * Credentials expiration time
      *
@@ -76,7 +70,6 @@ data class UserWithInfoVo(
      */
     @field:Schema(description = "认证过期时间", example = "1900-01-01T00:00:00.000Z")
     val credentialsExpiration: LocalDateTime?,
-
     /**
      * Enable
      *
@@ -85,7 +78,6 @@ data class UserWithInfoVo(
      */
     @field:Schema(description = "是否启用", example = "true")
     val enable: Boolean?,
-
     /**
      * Current login time
      *
@@ -94,7 +86,6 @@ data class UserWithInfoVo(
      */
     @field:Schema(description = "当前登录时间", example = "1900-01-01T00:00:00.000Z")
     val currentLoginTime: LocalDateTime?,
-
     /**
      * Current login IP
      *
@@ -103,7 +94,6 @@ data class UserWithInfoVo(
      */
     @field:Schema(description = "当前登录 IP", example = "1.1.1.1")
     val currentLoginIp: String?,
-
     /**
      * Last login time
      *
@@ -112,7 +102,6 @@ data class UserWithInfoVo(
      */
     @field:Schema(description = "最后登录时间", example = "1900-01-01T00:00:00.000Z")
     val lastLoginTime: LocalDateTime?,
-
     /**
      * Last login IP
      *
@@ -121,7 +110,6 @@ data class UserWithInfoVo(
      */
     @field:Schema(description = "最后登录 IP", example = "1.1.1.1")
     val lastLoginIp: String?,
-
     /**
      * Create time
      *
@@ -130,7 +118,6 @@ data class UserWithInfoVo(
      */
     @field:Schema(description = "创建时间", example = "1900-01-01T00:00:00.000Z")
     val createTime: LocalDateTime?,
-
     /**
      * Update time
      *
@@ -139,7 +126,6 @@ data class UserWithInfoVo(
      */
     @field:Schema(description = "修改时间", example = "1900-01-01T00:00:00.000Z")
     val updateTime: LocalDateTime?,
-
     /**
      * User information object
      *
@@ -147,5 +133,5 @@ data class UserWithInfoVo(
      * @since 1.0.0
      */
     @field:Schema(description = "用户资料")
-    val userInfo: UserInfoVo?
+    val userInfo: UserInfoVo?,
 )

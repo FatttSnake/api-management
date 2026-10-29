@@ -15,17 +15,16 @@ import kotlin.reflect.KClass
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-fun jarOf(
-    vararg classes: KClass<*>,
-    marker: String? = null,
-    entries: Map<String, ByteArray> = emptyMap()
-): ByteArray {
+fun jarOf(vararg classes: KClass<*>, marker: String? = null, entries: Map<String, ByteArray> = emptyMap()): ByteArray {
     val output = ByteArrayOutputStream()
     JarOutputStream(output).use { jar ->
         classes.forEach { type ->
             val resource = type.java.name.replace('.', '/') + ".class"
-            val bytes = type.java.classLoader.getResourceAsStream(resource)?.readBytes()
-                ?: error("Missing class resource $resource")
+            val bytes =
+                type.java.classLoader
+                    .getResourceAsStream(resource)
+                    ?.readBytes()
+                    ?: error("Missing class resource $resource")
             jar.putNextEntry(JarEntry(resource))
             jar.write(bytes)
             jar.closeEntry()

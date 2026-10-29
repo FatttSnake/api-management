@@ -18,7 +18,6 @@ data class BaseSettingsVo(
      */
     @field:Schema(description = "系统名称")
     val systemName: String?,
-
     /**
      * Token expiry buffer time(ms)
      *
@@ -27,7 +26,6 @@ data class BaseSettingsVo(
      */
     @field:Schema(description = "Token 失效缓冲时间（毫秒）")
     val tokenExpiryBufferMs: Long?,
-
     /**
      * Token expiry check interval time(ms)
      *
@@ -36,7 +34,6 @@ data class BaseSettingsVo(
      */
     @field:Schema(description = "Token 失效检查周期（毫秒）")
     val tokenExpiryCheckIntervalMs: Long?,
-
     /**
      * Turnstile site key
      *
@@ -45,7 +42,6 @@ data class BaseSettingsVo(
      */
     @field:Schema(description = "Turnstile 站点标识")
     val turnstileSiteKey: String?,
-
     /**
      * Turnstile secret key
      *
@@ -54,7 +50,6 @@ data class BaseSettingsVo(
      */
     @field:Schema(description = "Turnstile 密钥")
     val turnstileSecretKey: String?,
-
     /**
      * Home URL
      *
@@ -62,5 +57,5 @@ data class BaseSettingsVo(
      * @since 1.0.0
      */
     @field:Schema(description = "主页 URL")
-    val homeUrl: String?
+    val homeUrl: String?,
 )

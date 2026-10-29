@@ -19,7 +19,6 @@ data class BaseSettings(
      * @since 1.0.0
      */
     var systemName: String? = null,
-
     /**
      * Token expiry buffer time(ms)
      *
@@ -27,7 +26,6 @@ data class BaseSettings(
      * @since 1.0.0
      */
     var tokenExpiryBufferMs: Long? = null,
-
     /**
      * Token expiry check interval time(ms)
      *
@@ -35,7 +33,6 @@ data class BaseSettings(
      * @since 1.0.0
      */
     var tokenExpiryCheckIntervalMs: Long? = null,
-
     /**
      * Turnstile site key
      *
@@ -43,7 +40,6 @@ data class BaseSettings(
      * @since 1.0.0
      */
     var turnstileSiteKey: String? = null,
-
     /**
      * Turnstile secret key
      *
@@ -51,12 +47,11 @@ data class BaseSettings(
      * @since 1.0.0
      */
     var turnstileSecretKey: String? = null,
-
     /**
      * Home URL
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    var homeUrl: String? = null
+    var homeUrl: String? = null,
 )

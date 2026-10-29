@@ -24,15 +24,14 @@ class AsyncConfig {
      */
     @Primary
     @Bean("applicationTaskExecutor")
-    fun applicationTaskExecutor(): ThreadPoolTaskExecutor =
-        ThreadPoolTaskExecutor().apply {
-            setTaskDecorator(MdcTaskDecorator())
-            corePoolSize = 8
-            maxPoolSize = Int.MAX_VALUE
-            queueCapacity = Int.MAX_VALUE
-            keepAliveSeconds = 60
-            initialize()
-        }
+    fun applicationTaskExecutor(): ThreadPoolTaskExecutor = ThreadPoolTaskExecutor().apply {
+        setTaskDecorator(MdcTaskDecorator())
+        corePoolSize = 8
+        maxPoolSize = Int.MAX_VALUE
+        queueCapacity = Int.MAX_VALUE
+        keepAliveSeconds = 60
+        initialize()
+    }
 
     /**
      * Executor that carries out post-commit plugin remounts
@@ -42,16 +41,15 @@ class AsyncConfig {
      * @since 1.0.0
      */
     @Bean("pluginRemountExecutor")
-    fun pluginRemountExecutor(): ThreadPoolTaskExecutor =
-        ThreadPoolTaskExecutor().apply {
-            setTaskDecorator(MdcTaskDecorator())
-            corePoolSize = 1
-            maxPoolSize = 1
-            queueCapacity = Int.MAX_VALUE
-            keepAliveSeconds = 60
-            setThreadNamePrefix("plugin-remount-")
-            initialize()
-        }
+    fun pluginRemountExecutor(): ThreadPoolTaskExecutor = ThreadPoolTaskExecutor().apply {
+        setTaskDecorator(MdcTaskDecorator())
+        corePoolSize = 1
+        maxPoolSize = 1
+        queueCapacity = Int.MAX_VALUE
+        keepAliveSeconds = 60
+        setThreadNamePrefix("plugin-remount-")
+        initialize()
+    }
 
     /**
      * MDC context propagation task decorator

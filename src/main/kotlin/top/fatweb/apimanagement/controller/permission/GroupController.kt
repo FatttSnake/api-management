@@ -3,12 +3,22 @@ package top.fatweb.apimanagement.controller.permission
 import io.swagger.v3.oas.annotations.Operation
 import jakarta.validation.Valid
 import org.springframework.security.access.prepost.PreAuthorize
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PatchMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
+import org.springframework.web.bind.annotation.RequestBody
 import top.fatweb.apimanagement.annotation.BaseController
 import top.fatweb.apimanagement.annotation.ProcessParam
 import top.fatweb.apimanagement.entity.common.ResponseCode
 import top.fatweb.apimanagement.entity.common.ResponseResult
-import top.fatweb.apimanagement.param.permission.group.*
+import top.fatweb.apimanagement.param.permission.group.GroupAddParam
+import top.fatweb.apimanagement.param.permission.group.GroupDeleteParam
+import top.fatweb.apimanagement.param.permission.group.GroupGetParam
+import top.fatweb.apimanagement.param.permission.group.GroupUpdateParam
+import top.fatweb.apimanagement.param.permission.group.GroupUpdateStatusParam
 import top.fatweb.apimanagement.service.permission.IGroupService
 import top.fatweb.apimanagement.vo.PageVo
 import top.fatweb.apimanagement.vo.permission.GroupWithRoleVo
@@ -21,9 +31,7 @@ import top.fatweb.apimanagement.vo.permission.base.GroupVo
  * @since 1.0.0
  */
 @BaseController(path = ["/system/group"], name = "用户组管理", description = "用户组管理相关接口")
-class GroupController(
-    val groupService: IGroupService
-) {
+class GroupController(val groupService: IGroupService) {
     /**
      * Get group by ID
      *
@@ -51,7 +59,7 @@ class GroupController(
     @PreAuthorize("hasAnyAuthority('system:group:all:query')")
     fun get(@ProcessParam @Valid groupGetParam: GroupGetParam?): ResponseResult<PageVo<GroupWithRoleVo>> =
         ResponseResult.databaseSuccess(
-            data = groupService.getPage(groupGetParam)
+            data = groupService.getPage(groupGetParam),
         )
 
     /**
@@ -64,10 +72,9 @@ class GroupController(
     @Operation(summary = "获取用户组列表")
     @GetMapping("/list")
     @PreAuthorize("hasAnyAuthority('system:group:all:list', 'system:user:one:add', 'system:user:one:modify')")
-    fun list(): ResponseResult<List<GroupVo>> =
-        ResponseResult.databaseSuccess(
-            data = groupService.getList()
-        )
+    fun list(): ResponseResult<List<GroupVo>> = ResponseResult.databaseSuccess(
+        data = groupService.getList(),
+    )
 
     /**
      * Add group
@@ -82,7 +89,8 @@ class GroupController(
     @PreAuthorize("hasAnyAuthority('system:group:one:add')")
     fun add(@ProcessParam @Valid @RequestBody groupAddParam: GroupAddParam): ResponseResult<GroupVo> =
         ResponseResult.databaseSuccess(
-            ResponseCode.DATABASE_INSERT_SUCCESS, data = groupService.add(groupAddParam)
+            ResponseCode.DATABASE_INSERT_SUCCESS,
+            data = groupService.add(groupAddParam),
         )
 
     /**

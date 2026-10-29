@@ -1,11 +1,11 @@
 package top.fatweb.apimanagement.component.storage
 
+import top.fatweb.apimanagement.properties.SecurityProperties
+import top.fatweb.apimanagement.properties.ServerProperties
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
-import top.fatweb.apimanagement.properties.SecurityProperties
-import top.fatweb.apimanagement.properties.ServerProperties
 
 /**
  * External link signer tests
@@ -15,7 +15,7 @@ import top.fatweb.apimanagement.properties.ServerProperties
  * @see ExternalLinkSigner
  */
 class ExternalLinkSignerTests {
-    private val signer = ExternalLinkSigner(ServerProperties())
+    private val signer = ExternalLinkSigner(ServerProperties(security = SecurityProperties(tokenSecret = "test")))
     private val key = "alpha/files/avatar/1.png"
     private val expiresAt = 1_800_000_000L
 

@@ -3,6 +3,7 @@ package top.fatweb.apimanagement.service.api.impl
 import com.baomidou.dynamic.datasource.annotation.DS
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper
 import org.springframework.stereotype.Service
+import top.fatweb.apimanagement.component.plugin.PluginRegistryCache
 import top.fatweb.apimanagement.converter.api.toVo
 import top.fatweb.apimanagement.entity.api.ApiInterface
 import top.fatweb.apimanagement.entity.api.ApiKey
@@ -12,7 +13,6 @@ import top.fatweb.apimanagement.exception.ExportTooManyRecordsException
 import top.fatweb.apimanagement.mapper.api.ApiUsageMapper
 import top.fatweb.apimanagement.param.system.apiReport.ApiReportGetParam
 import top.fatweb.apimanagement.service.api.IApiKeyService
-import top.fatweb.apimanagement.component.plugin.PluginRegistryCache
 import top.fatweb.apimanagement.service.api.IApiReportService
 import top.fatweb.apimanagement.service.permission.IUserService
 import top.fatweb.apimanagement.service.system.IStorageBlobService
@@ -40,7 +40,7 @@ private const val MAX_DETAIL_EXPORT_ROWS = 100_000L
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-private const val CSV_BOM = "﻿"
+private const val CSV_BOM = ""
 
 /**
  * Header of the usage summary export, keep in sync with the columns built in [ApiReportServiceImpl.export]
@@ -77,7 +77,7 @@ private class ReportContext(
     val keys: Map<Long, ApiKey>,
     val users: Map<Long, UserWithInfoVo>,
     val interfaces: Map<String, ApiInterface>,
-    val plugins: Map<String, ApiPlugin>
+    val plugins: Map<String, ApiPlugin>,
 )
 
 /**
@@ -93,54 +93,62 @@ class ApiReportServiceImpl(
     private val pluginRegistryCache: PluginRegistryCache,
     private val apiKeyService: IApiKeyService,
     private val userService: IUserService,
-    private val storageBlobService: IStorageBlobService
+    private val storageBlobService: IStorageBlobService,
 ) : IApiReportService {
     override fun usage(apiReportGetParam: ApiReportGetParam?): List<ApiReportVo> {
         val dateExpression = localDateExpression()
-        val rows = apiUsageMapper.selectMaps(
-            baseQuery(apiReportGetParam)
-                .select(
-                    "api_key_id", "$dateExpression as date", "api_code",
-                    "count(*) as count", "coalesce(sum(cost), 0) as cost"
-                )
-                .groupBy("api_key_id", dateExpression, "api_code")
-                .orderByDesc("date")
-                .orderByAsc("api_code", "api_key_id")
-        )
-        val context = buildContext(
-            codes = rows.map { it["api_code"] as? String },
-            keyIds = rows.map { (it["api_key_id"] as? Number)?.toLong() }
-        )
+        val rows =
+            apiUsageMapper.selectMaps(
+                baseQuery(apiReportGetParam)
+                    .select(
+                        "api_key_id",
+                        "$dateExpression as date",
+                        "api_code",
+                        "count(*) as count",
+                        "coalesce(sum(cost), 0) as cost",
+                    ).groupBy("api_key_id", dateExpression, "api_code")
+                    .orderByDesc("date")
+                    .orderByAsc("api_code", "api_key_id"),
+            )
+        val context =
+            buildContext(
+                codes = rows.map { it["api_code"] as? String },
+                keyIds = rows.map { (it["api_key_id"] as? Number)?.toLong() },
+            )
         return rows.map { row -> row.toReportVo(context) }
     }
 
     override fun cost(apiReportGetParam: ApiReportGetParam?): List<ApiReportVo> {
-        val rows = apiUsageMapper.selectMaps(
-            baseQuery(apiReportGetParam)
-                .select("api_key_id", "api_code", "count(*) as count", "coalesce(sum(cost), 0) as cost")
-                .groupBy("api_key_id", "api_code")
-                .orderByDesc("cost")
-        )
-        val context = buildContext(
-            codes = rows.map { it["api_code"] as? String },
-            keyIds = rows.map { (it["api_key_id"] as? Number)?.toLong() }
-        )
+        val rows =
+            apiUsageMapper.selectMaps(
+                baseQuery(apiReportGetParam)
+                    .select("api_key_id", "api_code", "count(*) as count", "coalesce(sum(cost), 0) as cost")
+                    .groupBy("api_key_id", "api_code")
+                    .orderByDesc("cost"),
+            )
+        val context =
+            buildContext(
+                codes = rows.map { it["api_code"] as? String },
+                keyIds = rows.map { (it["api_key_id"] as? Number)?.toLong() },
+            )
         return rows.map { row -> row.toReportVo(context) }
     }
 
     override fun top(apiReportGetParam: ApiReportGetParam?): List<ApiTopVo> {
         val limit = apiReportGetParam?.limit ?: 10
-        val rows = apiUsageMapper.selectMaps(
-            baseQuery(apiReportGetParam)
-                .select("api_code", "count(*) as count", "coalesce(sum(cost), 0) as cost")
-                .groupBy("api_code")
-                .orderByDesc("count")
-                .last("limit $limit")
-        )
-        val context = buildContext(
-            codes = rows.map { it["api_code"] as? String },
-            keyIds = emptyList()
-        )
+        val rows =
+            apiUsageMapper.selectMaps(
+                baseQuery(apiReportGetParam)
+                    .select("api_code", "count(*) as count", "coalesce(sum(cost), 0) as cost")
+                    .groupBy("api_code")
+                    .orderByDesc("count")
+                    .last("limit $limit"),
+            )
+        val context =
+            buildContext(
+                codes = rows.map { it["api_code"] as? String },
+                keyIds = emptyList(),
+            )
         return rows.map { row -> row.toTopVo(context) }
     }
 
@@ -159,8 +167,8 @@ class ApiReportServiceImpl(
                     csvUser(row.userVo),
                     csvKey(row.keyVo),
                     row.count,
-                    csvMoney(row.cost)
-                )
+                    csvMoney(row.cost),
+                ),
             )
         }
         return storageBlobService.saveFile(csv.toString().toByteArray(Charsets.UTF_8))
@@ -172,21 +180,24 @@ class ApiReportServiceImpl(
             throw ExportTooManyRecordsException(MAX_DETAIL_EXPORT_ROWS)
         }
 
-        val usages = apiUsageMapper.selectList(
-            baseQuery(apiReportGetParam).orderByDesc("create_time")
-        )
-        val context = buildContext(
-            codes = usages.map { it.apiCode },
-            keyIds = usages.map { it.apiKeyId },
-            userIds = usages.map { it.userId }
-        )
+        val usages =
+            apiUsageMapper.selectList(
+                baseQuery(apiReportGetParam).orderByDesc("create_time"),
+            )
+        val context =
+            buildContext(
+                codes = usages.map { it.apiCode },
+                keyIds = usages.map { it.apiKeyId },
+                userIds = usages.map { it.userId },
+            )
 
         val csv = StringBuilder(CSV_BOM + DETAIL_EXPORT_HEADER + "\n")
         usages.forEach { usage ->
             val apiInterface = usage.apiCode?.let { context.interfaces[it] }
             val key = usage.apiKeyId?.let { context.keys[it] }
-            val user = usage.userId?.let { context.users[it] }
-                ?: key?.userId?.let { context.users[it] }
+            val user =
+                usage.userId?.let { context.users[it] }
+                    ?: key?.userId?.let { context.users[it] }
             csv.append(
                 csvLine(
                     csvLocalTime(usage.createTime),
@@ -203,8 +214,8 @@ class ApiReportServiceImpl(
                     csvUser(user),
                     csvKey(key?.toVo()),
                     csvMoney(usage.cost),
-                    csvBillingMode(usage.billingMode)
-                )
+                    csvBillingMode(usage.billingMode),
+                ),
             )
         }
         return storageBlobService.saveFile(csv.toString().toByteArray(Charsets.UTF_8))
@@ -231,31 +242,35 @@ class ApiReportServiceImpl(
     private fun buildContext(
         codes: List<String?>,
         keyIds: List<Long?>,
-        userIds: List<Long?> = emptyList()
+        userIds: List<Long?> = emptyList(),
     ): ReportContext {
         val codeSet = codes.filterNotNull().toSet()
         val keyIdSet = keyIds.filterNotNull().toSet()
 
-        val keys = if (keyIdSet.isEmpty()) {
-            emptyMap()
-        } else {
-            apiKeyService.listByIds(keyIdSet).associateBy { it.id!! }
-        }
+        val keys =
+            if (keyIdSet.isEmpty()) {
+                emptyMap()
+            } else {
+                apiKeyService.listByIds(keyIdSet).associateBy { it.id!! }
+            }
         val relatedUserIds = (keys.values.mapNotNull { it.userId } + userIds.filterNotNull()).distinct()
-        val users = if (relatedUserIds.isEmpty()) {
-            emptyMap()
-        } else {
-            userService.getBasicInfoByIds(relatedUserIds)
-        }
-        val interfaces = codeSet
-            .associateWith { pluginRegistryCache.getByCode(it) }
-            .filterValues { it != null }
-            .mapValues { it.value!! }
+        val users =
+            if (relatedUserIds.isEmpty()) {
+                emptyMap()
+            } else {
+                userService.getBasicInfoByIds(relatedUserIds)
+            }
+        val interfaces =
+            codeSet
+                .associateWith { pluginRegistryCache.getByCode(it) }
+                .filterValues { it != null }
+                .mapValues { it.value!! }
         val pluginIds = interfaces.values.mapNotNull { it.pluginId }.toSet()
-        val plugins = pluginIds
-            .associateWith { pluginRegistryCache.getByPluginId(it) }
-            .filterValues { it != null }
-            .mapValues { it.value!! }
+        val plugins =
+            pluginIds
+                .associateWith { pluginRegistryCache.getByPluginId(it) }
+                .filterValues { it != null }
+                .mapValues { it.value!! }
 
         return ReportContext(keys = keys, users = users, interfaces = interfaces, plugins = plugins)
     }
@@ -275,7 +290,7 @@ class ApiReportServiceImpl(
             keyVo = key?.toVo(),
             userVo = key?.userId?.let { context.users[it] },
             pluginVo = apiInterface?.pluginId?.let { context.plugins[it]?.toVo() },
-            interfaceVo = apiInterface?.toVo()
+            interfaceVo = apiInterface?.toVo(),
         )
     }
 
@@ -288,12 +303,11 @@ class ApiReportServiceImpl(
             count = (this["count"] as? Number)?.toLong() ?: 0L,
             cost = (this["cost"] as? Number)?.let { BigDecimal(it.toString()) } ?: BigDecimal.ZERO,
             pluginVo = apiInterface?.pluginId?.let { context.plugins[it]?.toVo() },
-            interfaceVo = apiInterface?.toVo()
+            interfaceVo = apiInterface?.toVo(),
         )
     }
 
-    private fun csvLine(vararg values: Any?): String =
-        values.joinToString(",") { csvField(it) } + "\n"
+    private fun csvLine(vararg values: Any?): String = values.joinToString(",") { csvField(it) } + "\n"
 
     /**
      * Convert the stored UTC time to the time zone of the client

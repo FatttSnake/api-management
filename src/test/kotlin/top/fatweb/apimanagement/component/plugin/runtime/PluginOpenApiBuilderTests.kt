@@ -1,7 +1,6 @@
 package top.fatweb.apimanagement.component.plugin.runtime
 
 import tools.jackson.databind.json.JsonMapper
-import top.fatweb.apimanagement.api.v1.ApiHandler
 import top.fatweb.apimanagement.api.v1.ApiResponse
 import top.fatweb.apimanagement.api.v1.OperationMetadata
 import top.fatweb.apimanagement.api.v1.ParameterLocation
@@ -12,6 +11,7 @@ import top.fatweb.apimanagement.api.v1.SchemaSpec
 import top.fatweb.apimanagement.plugin.runtime.route.RegisteredRoute
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.fail
 
 /**
  * OpenAPI fragment builder tests
@@ -26,29 +26,31 @@ class PluginOpenApiBuilderTests {
 
     @Test
     fun `parameters carry type format enum description and example`() {
-        val route = route(
-            OperationMetadata(
-                operationId = "link",
-                parameters = listOf(
-                    ParameterSpec(
-                        name = "id",
-                        location = ParameterLocation.PATH,
-                        type = "string",
-                        required = true,
-                        description = "文件 ID",
-                        example = "1"
+        val route =
+            route(
+                OperationMetadata(
+                    operationId = "link",
+                    parameters =
+                    listOf(
+                        ParameterSpec(
+                            name = "id",
+                            location = ParameterLocation.PATH,
+                            type = "string",
+                            required = true,
+                            description = "文件 ID",
+                            example = "1",
+                        ),
+                        ParameterSpec(
+                            name = "mode",
+                            location = ParameterLocation.QUERY,
+                            type = "string",
+                            description = "模式",
+                            format = "enum",
+                            enumValues = listOf("fast", "safe"),
+                        ),
                     ),
-                    ParameterSpec(
-                        name = "mode",
-                        location = ParameterLocation.QUERY,
-                        type = "string",
-                        description = "模式",
-                        format = "enum",
-                        enumValues = listOf("fast", "safe")
-                    )
-                )
+                ),
             )
-        )
 
         val parameters = operation(builder.build("filebox", listOf(route)))["parameters"].asList()
         val parameter = parameters.first().asMap()
@@ -67,26 +69,34 @@ class PluginOpenApiBuilderTests {
 
     @Test
     fun `responses carry description schema and example`() {
-        val route = route(
-            OperationMetadata(
-                operationId = "ping",
-                responses = mapOf(
-                    "200" to ResponseSpec(
-                        description = "成功",
-                        schema = SchemaSpec.objectOf(
-                            properties = mapOf(
-                                "message" to SchemaSpec.string("回声消息", example = "pong")
+        val route =
+            route(
+                OperationMetadata(
+                    operationId = "ping",
+                    responses =
+                    mapOf(
+                        "200" to
+                            ResponseSpec(
+                                description = "成功",
+                                schema =
+                                SchemaSpec.objectOf(
+                                    properties =
+                                    mapOf(
+                                        "message" to SchemaSpec.string("回声消息", example = "pong"),
+                                    ),
+                                    required = listOf("message"),
+                                ),
+                                example = mapOf("message" to "pong"),
                             ),
-                            required = listOf("message")
-                        ),
-                        example = mapOf("message" to "pong")
-                    )
-                )
+                    ),
+                ),
             )
-        )
 
-        val response = operation(builder.build("echo", listOf(route)))["responses"]
-            .asMap().getValue("200").asMap()
+        val response =
+            operation(builder.build("echo", listOf(route)))["responses"]
+                .asMap()
+                .getValue("200")
+                .asMap()
 
         assertEquals("成功", response["description"])
         val mediaType = response["content"].asMap().getValue("application/json").asMap()
@@ -103,46 +113,58 @@ class PluginOpenApiBuilderTests {
 
     @Test
     fun `request bodies carry a structured schema`() {
-        val route = route(
-            OperationMetadata(
-                operationId = "generateKey",
-                requestBodySchema = SchemaSpec.objectOf(
-                    properties = mapOf(
-                        "code" to SchemaSpec.string("兑换码", example = "abc")
+        val route =
+            route(
+                OperationMetadata(
+                    operationId = "generateKey",
+                    requestBodySchema =
+                    SchemaSpec.objectOf(
+                        properties =
+                        mapOf(
+                            "code" to SchemaSpec.string("兑换码", example = "abc"),
+                        ),
+                        required = listOf("code"),
                     ),
-                    required = listOf("code")
-                )
-            ),
-            method = "POST"
-        )
+                ),
+                method = "POST",
+            )
 
-        val schema = operation(builder.build("jetkey", listOf(route)))["requestBody"]
-            .asMap().getValue("content").asMap().getValue("application/json").asMap()
-            .getValue("schema").asMap()
+        val schema =
+            operation(builder.build("jetkey", listOf(route)))["requestBody"]
+                .asMap()
+                .getValue("content")
+                .asMap()
+                .getValue("application/json")
+                .asMap()
+                .getValue("schema")
+                .asMap()
 
         assertEquals("object", schema["type"])
         assertEquals(listOf("code"), schema["required"])
         assertEquals(listOf("abc"), schema["properties"].asMap()["code"].asMap()["examples"])
     }
 
-    private fun route(operation: OperationMetadata, method: String = "GET"): RegisteredRoute =
-        RegisteredRoute(
-            pluginId = "echo",
-            definition = RouteDefinition(method, "/ping", 1, operation),
-            handler = ApiHandler { ApiResponse.ok() },
-            classLoader = javaClass.classLoader
-        )
+    private fun route(operation: OperationMetadata, method: String = "GET"): RegisteredRoute = RegisteredRoute(
+        pluginId = "echo",
+        definition = RouteDefinition(method, "/ping", 1, operation),
+        handler = { ApiResponse.ok() },
+        classLoader = javaClass.classLoader,
+    )
 
-    @Suppress("UNCHECKED_CAST")
-    private fun operation(document: String): Map<String, Any> {
-        val root = mapper.readValue(document, Map::class.java) as Map<String, Any>
-        val paths = root.getValue("paths") as Map<String, Any>
-        val path = paths.values.first() as Map<String, Any>
+    private fun operation(document: String): Map<String, Any?> {
+        val root = mapper.readValue(document, Map::class.java).asMap()
+        val path = root.getValue("paths").asMap().values.first().asMap()
 
-        return path.values.first() as Map<String, Any>
+        return path.values.first().asMap()
     }
 }
 
-private fun Any?.asMap(): Map<String, Any> = this as Map<String, Any>
+private fun Any?.asMap(): Map<String, Any?> {
+    val map = this as? Map<*, *> ?: fail("expected an object but was $this")
 
-private fun Any?.asList(): List<Any> = this as List<Any>
+    return map.entries.associate { (key, value) ->
+        (key as? String ?: fail("expected a string key but was $key")) to value
+    }
+}
+
+private fun Any?.asList(): List<Any?> = this as? List<*> ?: fail("expected an array but was $this")

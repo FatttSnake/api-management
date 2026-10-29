@@ -17,6 +17,7 @@ import top.fatweb.apimanagement.filter.ApiKeyAuthenticationTokenFilter
 import top.fatweb.apimanagement.filter.JwtAuthenticationTokenFilter
 import top.fatweb.apimanagement.handler.JwtAccessDeniedHandler
 import top.fatweb.apimanagement.handler.JwtAuthenticationEntryPointHandler
+import top.fatweb.apimanagement.properties.ServerProperties
 import top.fatweb.apimanagement.util.TimezoneUtil
 
 /**
@@ -28,10 +29,11 @@ import top.fatweb.apimanagement.util.TimezoneUtil
 @Configuration
 @EnableMethodSecurity
 class SecurityConfig(
+    private val serverProperties: ServerProperties,
     private val apiKeyAuthenticationTokenFilter: ApiKeyAuthenticationTokenFilter,
     private val jwtAuthenticationTokenFilter: JwtAuthenticationTokenFilter,
     private val authenticationEntryPointHandler: JwtAuthenticationEntryPointHandler,
-    private val accessDeniedHandler: JwtAccessDeniedHandler
+    private val accessDeniedHandler: JwtAccessDeniedHandler,
 ) {
     @Bean
     fun passwordEncoder(): PasswordEncoder = Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8()
@@ -41,33 +43,37 @@ class SecurityConfig(
         authenticationConfiguration.authenticationManager
 
     @Bean
-    fun corsConfigurationSource(): UrlBasedCorsConfigurationSource {
-        return UrlBasedCorsConfigurationSource().apply {
-            registerCorsConfiguration("/**", CorsConfiguration().apply {
-                allowedOriginPatterns = listOf("*")
+    fun corsConfigurationSource(): UrlBasedCorsConfigurationSource = UrlBasedCorsConfigurationSource().apply {
+        registerCorsConfiguration(
+            "/**",
+            CorsConfiguration().apply {
+                // Credentials are sent with the request (the refresh token is a cookie), so the
+                // origin has to be a configured one rather than any site that asks
+                allowedOriginPatterns = serverProperties.security.allowedOriginPatterns
                 allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
                 allowedHeaders =
                     listOf(
-                        "Authorization", "Content-Type", "X-CSRF-TOKEN", "X-Requested-With", "Cache-Control",
-                        TimezoneUtil.TIMEZONE_OFFSET_HEADER
+                        "Authorization",
+                        "Content-Type",
+                        "X-CSRF-TOKEN",
+                        "X-Requested-With",
+                        "Cache-Control",
+                        TimezoneUtil.TIMEZONE_OFFSET_HEADER,
                     )
                 allowCredentials = true
                 maxAge = 3600L
                 exposedHeaders = listOf("X-CSRF-TOKEN")
-            })
-        }
+            },
+        )
     }
 
     @Bean
     fun securityFilterChain(httpSecurity: HttpSecurity): SecurityFilterChain = httpSecurity
         .cors {
             it.configurationSource(
-                corsConfigurationSource()
+                corsConfigurationSource(),
             )
-        }
-
-        .csrf { it.disable() }
-
+        }.csrf { it.disable() }
         .authorizeHttpRequests {
             it
                 .requestMatchers(
@@ -83,7 +89,7 @@ class SecurityConfig(
                     "/forget",
                     "/retrieve",
                     "/health",
-                    "/config"
+                    "/config",
                 ).anonymous()
                 .requestMatchers(
                     "/token",
@@ -91,26 +97,21 @@ class SecurityConfig(
                     "/tool/base/**",
                     "/tool/store",
                     "/tool/store/*",
-                    "/system/user/info/*",
                     StorageRoutes.PUBLIC_STORAGE_MATCHER,
-                    "/api/**"
+                    "/api/**",
                 ).permitAll()
-                .anyRequest().authenticated()
-        }
-
-        .logout {
+                .anyRequest()
+                .authenticated()
+        }.logout {
             it.disable()
-        }
-
-        .exceptionHandling {
+        }.exceptionHandling {
             it.authenticationEntryPoint(
-                authenticationEntryPointHandler
+                authenticationEntryPointHandler,
             )
             it.accessDeniedHandler(
-                accessDeniedHandler
+                accessDeniedHandler,
             )
-        }
-
-        .addFilterBefore(apiKeyAuthenticationTokenFilter, UsernamePasswordAuthenticationFilter::class.java)
-        .addFilterBefore(jwtAuthenticationTokenFilter, UsernamePasswordAuthenticationFilter::class.java).build()
+        }.addFilterBefore(apiKeyAuthenticationTokenFilter, UsernamePasswordAuthenticationFilter::class.java)
+        .addFilterBefore(jwtAuthenticationTokenFilter, UsernamePasswordAuthenticationFilter::class.java)
+        .build()
 }

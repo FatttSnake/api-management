@@ -24,7 +24,6 @@ data class ApiUsageGetParam(
      */
     @field:Schema(description = "所属用户 ID（管理员查询指定用户）")
     var userId: Long?,
-
     /**
      * API key ID
      *
@@ -33,7 +32,6 @@ data class ApiUsageGetParam(
      */
     @field:Schema(description = "API Key ID")
     var apiKeyId: Long?,
-
     /**
      * API code
      *
@@ -42,7 +40,6 @@ data class ApiUsageGetParam(
      */
     @field:Schema(description = "API 编码", example = "api:echo:v1:ping")
     var apiCode: String?,
-
     /**
      * Success status
      *
@@ -51,7 +48,6 @@ data class ApiUsageGetParam(
      */
     @field:Schema(description = "是否成功", allowableValues = ["true", "false"])
     var success: Boolean?,
-
     /**
      * Start time
      *
@@ -61,7 +57,6 @@ data class ApiUsageGetParam(
     @field:Schema(description = "开始时间", example = "2026-01-01T00:00:00.000Z")
     @field:DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     var startTime: LocalDateTime?,
-
     /**
      * End time
      *
@@ -70,5 +65,5 @@ data class ApiUsageGetParam(
      */
     @field:Schema(description = "结束时间", example = "2026-12-31T00:00:00.000Z")
     @field:DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
-    var endTime: LocalDateTime?
+    var endTime: LocalDateTime?,
 ) : PageSortParam()

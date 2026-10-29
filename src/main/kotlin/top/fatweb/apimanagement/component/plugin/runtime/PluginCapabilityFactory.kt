@@ -12,14 +12,13 @@ import top.fatweb.apimanagement.api.v1.DataSources
 import top.fatweb.apimanagement.api.v1.JsonCodec
 import top.fatweb.apimanagement.api.v1.PluginLogger
 import top.fatweb.apimanagement.api.v1.Settings
-import top.fatweb.apimanagement.api.v1.Storage
-import top.fatweb.apimanagement.api.v1.UserInfo as ApiUserInfo
 import top.fatweb.apimanagement.api.v1.Users
+import top.fatweb.apimanagement.component.plugin.PluginConfigSchema
 import top.fatweb.apimanagement.component.plugin.PluginConfigSchemaCache
+import top.fatweb.apimanagement.component.plugin.PluginConfigSchemaUtil
 import top.fatweb.apimanagement.component.plugin.PluginDatasourceFactory
 import top.fatweb.apimanagement.component.plugin.PluginSettingReader
 import top.fatweb.apimanagement.component.plugin.PluginStorageFactory
-import top.fatweb.apimanagement.entity.permission.UserInfo as UserInfoEntity
 import top.fatweb.apimanagement.entity.system.EventLog
 import top.fatweb.apimanagement.mapper.permission.UserInfoMapper
 import top.fatweb.apimanagement.mapper.permission.UserMapper
@@ -30,6 +29,8 @@ import top.fatweb.apimanagement.service.api.IApiAccountService
 import top.fatweb.apimanagement.service.api.IApiPluginSettingService
 import java.time.LocalDateTime
 import javax.sql.DataSource
+import top.fatweb.apimanagement.api.v1.UserInfo as ApiUserInfo
+import top.fatweb.apimanagement.entity.permission.UserInfo as UserInfoEntity
 
 /**
  * Builds the gateway capabilities handed to one plugin.
@@ -52,62 +53,68 @@ class PluginCapabilityFactory(
     private val eventBus: PluginEventBus,
     private val scheduler: PluginScheduler,
     private val httpClient: PluginHttpClient,
-    private val buildProperties: ObjectProvider<BuildProperties>
+    private val buildProperties: ObjectProvider<BuildProperties>,
 ) {
     /**
      * Creates the capabilities of a plugin.
      *
      * @param pluginId plugin ID
+     * @param schema schema the plugin declares, read from the cache when omitted
      * @return runtime services
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun create(pluginId: String): PluginRuntimeServices = PluginRuntimeServices(
-        settings = settings(pluginId),
-        dataSources = dataSources(pluginId),
-        storage = storage(pluginId),
-        users = users(),
-        audit = audit(pluginId),
-        events = eventBus.scoped(pluginId),
-        http = httpClient.capability(),
-        scheduler = scheduler.scoped(pluginId),
-        json = json(),
-        loggerFactory = { id -> Slf4jPluginLogger(LoggerFactory.getLogger("plugin.$id")) },
-        gatewayVersion = buildProperties.getIfAvailable()?.version ?: "1.0.0",
-        gatewayApiVersion = GatewayApiInfo.version
-    )
+    fun create(
+        pluginId: String,
+        schema: PluginConfigSchema? = pluginConfigSchemaCache.get(pluginId),
+    ): PluginRuntimeServices {
+        val datasources = pluginDatasourceFactory.create(pluginId, schema)
 
-    private fun settings(pluginId: String): Settings = object : Settings {
-        override fun get(key: String): String? = pluginSettingReader.resolve(pluginId, key)
+        return PluginRuntimeServices(
+            settings = settings(pluginId, schema),
+            dataSources = dataSources(datasources),
+            storage = pluginStorageFactory.create(pluginId),
+            users = users(),
+            audit = audit(pluginId),
+            events = eventBus.scoped(pluginId),
+            http = httpClient.capability(),
+            scheduler = scheduler.scoped(pluginId),
+            json = json(),
+            loggerFactory = { id -> Slf4jPluginLogger(LoggerFactory.getLogger("plugin.$id")) },
+            gatewayVersion = buildProperties.getIfAvailable()?.version ?: "1.0.0",
+            gatewayApiVersion = GatewayApiInfo.version,
+            close = { datasources.values.forEach { (it as? AutoCloseable)?.close() } },
+        )
+    }
+
+    private fun settings(pluginId: String, schema: PluginConfigSchema?): Settings = object : Settings {
+        override fun get(key: String): String? = pluginSettingReader.resolveRaw(pluginId, key)
 
         override fun getSecret(key: String): String? = pluginSettingReader.resolve(pluginId, key)
 
         override fun save(key: String, value: String) {
-            val schema = pluginConfigSchemaCache.get(pluginId)
             require(schema?.isDeclared(key) != true) {
                 "Setting '$key' is declared by the plugin config schema and can only be changed by an administrator"
             }
-            require(key.length <= MAX_KEY_LENGTH) {
-                "Setting key '$key' is longer than $MAX_KEY_LENGTH characters"
+            require(key.length <= PluginConfigSchemaUtil.MAX_KEY_LENGTH) {
+                "Setting key '$key' is longer than ${PluginConfigSchemaUtil.MAX_KEY_LENGTH} characters"
+            }
+            require(value.toByteArray().size <= PluginConfigSchemaUtil.MAX_VALUE_BYTES) {
+                "Setting value is longer than ${PluginConfigSchemaUtil.MAX_VALUE_BYTES} bytes"
             }
             apiPluginSettingService.set(pluginId, key, value)
         }
 
         override fun all(): Map<String, String> {
-            val schema = pluginConfigSchemaCache.get(pluginId)
-            return pluginSettingReader.resolveAll(pluginId)
-                .mapNotNull { (key, value) ->
-                    if (value != null && schema?.isSecret(key) != true) key to value else null
-                }
+            val keys = apiPluginSettingService.listByPlugin(pluginId).keys
+            return keys
+                .filterNot { schema?.isSecret(it) == true }
+                .mapNotNull { key -> pluginSettingReader.resolveRaw(pluginId, key)?.let { key to it } }
                 .toMap()
         }
     }
 
-    private fun dataSources(pluginId: String): DataSources = object : DataSources {
-        private val sources: Map<String, DataSource> by lazy {
-            pluginDatasourceFactory.create(pluginId, pluginConfigSchemaCache.get(pluginId))
-        }
-
+    private fun dataSources(sources: Map<String, DataSource>): DataSources = object : DataSources {
         override fun names(): Set<String> = sources.keys
 
         override fun all(): Map<String, DataSource> = sources
@@ -115,42 +122,19 @@ class PluginCapabilityFactory(
         override fun get(name: String): DataSource? = sources[name]
     }
 
-    private fun storage(pluginId: String): Storage {
-        val delegate = pluginStorageFactory.create(pluginId)
-        return object : Storage {
-            override fun saveContent(content: ByteArray): String = delegate.saveContent(content)
-
-            override fun loadContent(key: String): ByteArray? = delegate.loadContent(key)
-
-            override fun existsContent(key: String): Boolean = delegate.existsContent(key)
-
-            override fun deleteContent(key: String) = delegate.deleteContent(key)
-
-            override fun saveFile(path: String, content: ByteArray) = delegate.saveFile(path, content)
-
-            override fun loadFile(path: String): ByteArray? = delegate.loadFile(path)
-
-            override fun existsFile(path: String): Boolean = delegate.existsFile(path)
-
-            override fun deleteFile(path: String) = delegate.deleteFile(path)
-
-            override fun fileExternalUrl(path: String, ttl: java.time.Duration?): String? =
-                delegate.fileExternalUrl(path, ttl)
-        }
-    }
-
     private fun users(): Users = object : Users {
         override fun findUser(userId: Long): ApiUserInfo? {
             val user = userMapper.selectById(userId) ?: return null
-            val info = userInfoMapper.selectOne(
-                KtQueryWrapper(UserInfoEntity()).eq(UserInfoEntity::userId, userId)
-            )
+            val info =
+                userInfoMapper.selectOne(
+                    KtQueryWrapper(UserInfoEntity()).eq(UserInfoEntity::userId, userId),
+                )
             return ApiUserInfo(
                 id = user.id ?: userId,
                 username = user.username.orEmpty(),
                 nickname = info?.nickname.orEmpty(),
                 email = info?.email.orEmpty(),
-                enabled = user.enable == 1
+                enabled = user.enable == 1,
             )
         }
 
@@ -164,7 +148,7 @@ class PluginCapabilityFactory(
                     this.event = EventLog.Event.API
                     operateTime = LocalDateTime.now()
                     detail = "[$pluginId] ${event.action} ${event.target} ${event.detail} ${event.attributes}"
-                }
+                },
             )
         }
     }
@@ -192,9 +176,5 @@ class PluginCapabilityFactory(
             all[args.size] = cause
             logger.error(format, *all)
         }
-    }
-
-    companion object {
-        private const val MAX_KEY_LENGTH = 100
     }
 }

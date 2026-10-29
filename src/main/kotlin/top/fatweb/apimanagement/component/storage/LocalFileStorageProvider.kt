@@ -37,7 +37,7 @@ import kotlin.io.path.isRegularFile
 class LocalFileStorageProvider(
     serverProperties: ServerProperties,
     private val externalLinkSigner: ExternalLinkSigner,
-    private val publicBaseUrlResolver: PublicBaseUrlResolver
+    private val publicBaseUrlResolver: PublicBaseUrlResolver,
 ) : FileStorageProvider {
     private companion object {
         const val OBJECTS_DIR = "objects"
@@ -47,13 +47,15 @@ class LocalFileStorageProvider(
     private val logger = LoggerFactory.getLogger(this::class.java)
 
     private val storageRoot: Path =
-        Path(serverProperties.storage.local.root.trimEnd('/', '\\')).toAbsolutePath().normalize()
+        Path(
+            serverProperties.storage.local.root
+                .trimEnd('/', '\\'),
+        ).toAbsolutePath().normalize()
 
-    private fun String.splitFileName() =
-        Pair(
-            substring(0, 2),
-            substring(2)
-        )
+    private fun String.splitFileName() = Pair(
+        substring(0, 2),
+        substring(2),
+    )
 
     private fun String.contentPath(): Path {
         require(StorageKeyUtil.CONTENT_KEY_REGEX.matches(this)) { "Invalid content key: '$this'" }
@@ -82,13 +84,11 @@ class LocalFileStorageProvider(
                 base = storageRoot.resolve(OBJECTS_DIR).toString(),
                 dir,
                 fileName,
-                compressStreamFactory = ::ZstdOutputStream
-            )
-            .let { key }
+                compressStreamFactory = ::ZstdOutputStream,
+            ).let { key }
     }
 
-    override fun save(content: String): String =
-        save(content.toByteArray())
+    override fun save(content: String): String = save(content.toByteArray())
 
     override fun load(key: String): ByteArray? {
         val path = key.contentPath()
@@ -99,13 +99,11 @@ class LocalFileStorageProvider(
         return path.readFile(::ZstdInputStream)
     }
 
-    override fun exists(key: String): Boolean =
-        key.contentPath().isRegularFile()
+    override fun exists(key: String): Boolean = key.contentPath().isRegularFile()
 
-    override fun delete(key: String): Boolean =
-        runCatching {
-            key.contentPath().deleteIfExists()
-        }.getOrDefault(false)
+    override fun delete(key: String): Boolean = runCatching {
+        key.contentPath().deleteIfExists()
+    }.getOrDefault(false)
 
     override fun size(key: String): Long? {
         val path = key.contentPath()
@@ -124,7 +122,7 @@ class LocalFileStorageProvider(
         content.saveToFile(
             base = storageRoot.resolve(FILES_DIR).toString(),
             *key.split('/').toTypedArray(),
-            compressStreamFactory = null
+            compressStreamFactory = null,
         )
     }
 
@@ -137,11 +135,9 @@ class LocalFileStorageProvider(
         return path.readFile()
     }
 
-    override fun existsAt(key: String): Boolean =
-        key.locationPath().isRegularFile()
+    override fun existsAt(key: String): Boolean = key.locationPath().isRegularFile()
 
-    override fun deleteAt(key: String): Boolean =
-        key.locationPath().deleteIfExists()
+    override fun deleteAt(key: String): Boolean = key.locationPath().deleteIfExists()
 
     override fun deleteAtPrefix(key: String): Int {
         val base = key.locationPath()
@@ -168,7 +164,7 @@ class LocalFileStorageProvider(
 
                     return FileVisitResult.CONTINUE
                 }
-            }
+            },
         )
 
         return deleted
@@ -179,15 +175,16 @@ class LocalFileStorageProvider(
         // otherwise land straight in a URL the gateway hands out.
         StorageKeyUtil.validateLocationKey(reference)
 
-        val base = publicBaseUrlResolver.resolve() ?: run {
-            logger.debug(
-                "Cannot build an external storage URL for '{}' outside a request while " +
-                    "app.storage.public-base-url is unset",
-                reference
-            )
+        val base =
+            publicBaseUrlResolver.resolve() ?: run {
+                logger.debug(
+                    "Cannot build an external storage URL for '{}' outside a request while " +
+                        "app.storage.public-base-url is unset",
+                    reference,
+                )
 
-            return null
-        }
+                return null
+            }
 
         val expiresAt = Instant.now().plus(ttl).epochSecond
         val signature = externalLinkSigner.sign(reference, expiresAt)

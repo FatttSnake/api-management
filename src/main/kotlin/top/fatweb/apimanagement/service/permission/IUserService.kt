@@ -2,7 +2,14 @@ package top.fatweb.apimanagement.service.permission
 
 import com.baomidou.mybatisplus.spring.service.IService
 import top.fatweb.apimanagement.entity.permission.User
-import top.fatweb.apimanagement.param.permission.user.*
+import top.fatweb.apimanagement.param.permission.user.AvatarGenerateParam
+import top.fatweb.apimanagement.param.permission.user.UserAddParam
+import top.fatweb.apimanagement.param.permission.user.UserChangePasswordParam
+import top.fatweb.apimanagement.param.permission.user.UserDeleteParam
+import top.fatweb.apimanagement.param.permission.user.UserGetParam
+import top.fatweb.apimanagement.param.permission.user.UserInfoUpdateParam
+import top.fatweb.apimanagement.param.permission.user.UserUpdateParam
+import top.fatweb.apimanagement.param.permission.user.UserUpdatePasswordParam
 import top.fatweb.apimanagement.vo.PageVo
 import top.fatweb.apimanagement.vo.permission.UserWithInfoVo
 import top.fatweb.apimanagement.vo.permission.UserWithPowerInfoVo

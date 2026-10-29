@@ -7,7 +7,7 @@ import org.springframework.boot.runApplication
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.transaction.annotation.EnableTransactionManagement
 import java.io.File
-import java.util.*
+import java.util.UUID
 
 @SpringBootApplication
 @EnableTransactionManagement
@@ -32,7 +32,9 @@ fun main(args: Array<String>) {
         }
     }
 
-    if (!File("data/db/sqlite.db").isFile || File("data/db/sqlite.db").inputStream()
+    if (!File("data/db/sqlite.db").isFile ||
+        File("data/db/sqlite.db")
+            .inputStream()
             .use { it.readNBytes(15).toString(Charsets.UTF_8) != "SQLite format 3" }
     ) {
         logger.warn("The 'data/db/sqlite.db' database is lost or damaged, recreating...")
@@ -42,14 +44,20 @@ fun main(args: Array<String>) {
     }
 
     if (File("application-config.yml").exists() || File("data/application-config.yml").exists()) {
+        // Spring searches the working directory, but not data/: the documented second location
+        // has to be added explicitly, before the environment is built
+        System.setProperty("spring.config.additional-location", "optional:file:data/")
         runApplication<ApiManagementApplication>(*args)
     } else {
-        logger.warn("File 'application-config.yml' cannot be found in the running path or the data path. The configuration file template 'application-config.example.yml' has been created in directory 'data'. Please change the configuration file content, move it to the running path, rename it to 'application-config.yml', and then restart the server.")
+        logger.warn(
+            "File 'application-config.yml' cannot be found in the running path or the data path. The configuration file template 'application-config.example.yml' has been created in directory 'data'. Please change the configuration file content, move it to the running path, rename it to 'application-config.yml', and then restart the server.",
+        )
         ApiManagementApplication::class.java.getResource("/application-config-template.yml")?.readText()?.let {
             File("data/application-config.example.yml").writeText(
                 it.replace(
-                    $$"$uuid$", UUID.randomUUID().toString()
-                )
+                    $$"$uuid$",
+                    UUID.randomUUID().toString(),
+                ),
             )
         }
     }

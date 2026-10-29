@@ -22,7 +22,6 @@ data class ApiPluginTrustKeyAddParam(
     @field:Schema(description = "公钥 (SPKI PEM)", required = true)
     @field:NotBlank(message = "Public key can not be blank")
     var publicKey: String,
-
     /**
      * Key alias
      *
@@ -30,5 +29,5 @@ data class ApiPluginTrustKeyAddParam(
      * @since 1.0.0
      */
     @field:Schema(description = "密钥别名")
-    var alias: String?
+    var alias: String?,
 )

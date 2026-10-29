@@ -18,7 +18,6 @@ data class TwoFactorSettingsVo(
      */
     @field:Schema(description = "发布者")
     val issuer: String?,
-
     /**
      * Length of secret key
      *
@@ -26,5 +25,5 @@ data class TwoFactorSettingsVo(
      * @since 1.0.0
      */
     @field:Schema(description = "密钥长度")
-    val secretKeyLength: Int?
+    val secretKeyLength: Int?,
 )

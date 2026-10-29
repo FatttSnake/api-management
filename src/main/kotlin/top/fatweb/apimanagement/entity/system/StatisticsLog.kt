@@ -21,7 +21,7 @@ class StatisticsLog : Serializable {
         API_REQUEST_COUNT("API_REQUEST_COUNT"),
         API_ERROR_COUNT("API_ERROR_COUNT"),
         API_LATENCY_MS("API_LATENCY_MS"),
-        API_ACTIVE_KEYS("API_ACTIVE_KEYS")
+        API_ACTIVE_KEYS("API_ACTIVE_KEYS"),
     }
 
     /**
@@ -60,7 +60,5 @@ class StatisticsLog : Serializable {
     @TableField("record_time")
     var recordTime: LocalDateTime? = null
 
-    override fun toString(): String {
-        return "StatisticsLog(id=$id, key=$key, value=$value, recordTime=$recordTime)"
-    }
+    override fun toString(): String = "StatisticsLog(id=$id, key=$key, value=$value, recordTime=$recordTime)"
 }

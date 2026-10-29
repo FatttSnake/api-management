@@ -36,6 +36,6 @@ interface SysLogMapper : BaseMapper<SysLog> {
         @Param("requestMethod") requestMethod: List<String>?,
         @Param("searchRequestUrl") searchRequestUrl: String?,
         @Param("searchStartTime") searchStartTime: LocalDateTime?,
-        @Param("searchEndTime") searchEndTime: LocalDateTime?
+        @Param("searchEndTime") searchEndTime: LocalDateTime?,
     ): IPage<SysLog>
 }

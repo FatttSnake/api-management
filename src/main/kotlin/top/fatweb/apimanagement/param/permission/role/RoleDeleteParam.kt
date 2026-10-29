@@ -19,5 +19,5 @@ data class RoleDeleteParam(
      */
     @field:Schema(description = "角色 ID 列表", required = true)
     @field:NotEmpty(message = "Ids can not be empty")
-    val ids: List<Long>?
+    val ids: List<Long>?,
 )

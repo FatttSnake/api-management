@@ -21,5 +21,5 @@ data class MailSendParam(
      */
     @field:Schema(description = "接收者", required = true, example = "user@email.com")
     @field:NotBlank(message = "Receiver cannot be blank")
-    var to: String?
+    var to: String?,
 )

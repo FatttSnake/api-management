@@ -1,7 +1,14 @@
 package top.fatweb.apimanagement.converter.permission
 
 import com.baomidou.mybatisplus.core.metadata.IPage
-import top.fatweb.apimanagement.entity.permission.*
+import top.fatweb.apimanagement.entity.permission.Group
+import top.fatweb.apimanagement.entity.permission.Menu
+import top.fatweb.apimanagement.entity.permission.Module
+import top.fatweb.apimanagement.entity.permission.Operation
+import top.fatweb.apimanagement.entity.permission.Role
+import top.fatweb.apimanagement.entity.permission.Scope
+import top.fatweb.apimanagement.entity.permission.User
+import top.fatweb.apimanagement.entity.permission.UserInfo
 import top.fatweb.apimanagement.param.permission.user.UserAddParam
 import top.fatweb.apimanagement.param.permission.user.UserUpdateParam
 import top.fatweb.apimanagement.vo.PageVo
@@ -37,7 +44,7 @@ fun User.toVoWithPowerInfo() = UserWithPowerInfoVo(
     modules = this.modules?.map(Module::toVo),
     menus = this.menus?.map(Menu::toVo),
     scopes = this.scopes?.map(Scope::toVo),
-    operations = this.operations?.map(Operation::toVo)
+    operations = this.operations?.map(Operation::toVo),
 )
 
 /**
@@ -65,7 +72,7 @@ fun User.toVoWithRoleInfo() = UserWithRoleInfoVo(
     updateTime = this.updateTime,
     userInfo = this.userInfo?.let(UserInfo::toVo),
     roles = this.roles?.map(Role::toVo),
-    groups = this.groups?.map(Group::toVo)
+    groups = this.groups?.map(Group::toVo),
 )
 
 /**
@@ -91,7 +98,7 @@ fun User.toVoWithInfo() = UserWithInfoVo(
     lastLoginIp = this.lastLoginIp,
     createTime = this.createTime,
     updateTime = this.updateTime,
-    userInfo = this.userInfo?.let(UserInfo::toVo)
+    userInfo = this.userInfo?.let(UserInfo::toVo),
 )
 
 /**
@@ -109,12 +116,15 @@ fun UserAddParam.toEntity() = User().apply {
     expiration = this@toEntity.expiration
     credentialsExpiration = this@toEntity.credentialsExpiration
     enable = if (this@toEntity.enable) 1 else 0
-    userInfo = UserInfo().apply {
-        nickname = this@toEntity.nickname ?: this@toEntity.username
-        avatar = this@toEntity.avatar ?: GitHubAvatar.newAvatarBuilder().build()
-            .createAsBase64((Long.MIN_VALUE..Long.MAX_VALUE).random())
-        email = this@toEntity.email
-    }
+    userInfo =
+        UserInfo().apply {
+            nickname = this@toEntity.nickname ?: this@toEntity.username
+            avatar = this@toEntity.avatar ?: GitHubAvatar
+                .newAvatarBuilder()
+                .build()
+                .createAsBase64((Long.MIN_VALUE..Long.MAX_VALUE).random())
+            email = this@toEntity.email
+        }
     roles = this@toEntity.roleIds?.map { Role().apply { id = it } }
     groups = this@toEntity.groupIds?.map { Group().apply { id = it } }
 }
@@ -134,11 +144,12 @@ fun UserUpdateParam.toEntity() = User().apply {
     expiration = if (this@toEntity.id != 0L) this@toEntity.expiration else null
     credentialsExpiration = this@toEntity.credentialsExpiration
     enable = if (this@toEntity.enable || this@toEntity.id == 0L) 1 else 0
-    userInfo = UserInfo().apply {
-        nickname = this@toEntity.nickname
-        avatar = this@toEntity.avatar
-        email = this@toEntity.email
-    }
+    userInfo =
+        UserInfo().apply {
+            nickname = this@toEntity.nickname
+            avatar = this@toEntity.avatar
+            email = this@toEntity.email
+        }
     roles = if (this@toEntity.id != 0L) this@toEntity.roleIds?.map { Role().apply { id = it } } else null
     groups = if (this@toEntity.id != 0L) this@toEntity.groupIds?.map { Group().apply { id = it } } else null
 }
@@ -156,5 +167,5 @@ fun IPage<User>.toVoWithRoleInfo() = PageVo(
     pages = this.pages,
     size = this.size,
     current = this.current,
-    records = this.records.map(User::toVoWithRoleInfo)
+    records = this.records.map(User::toVoWithRoleInfo),
 )

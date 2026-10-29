@@ -20,7 +20,6 @@ data class OperationVo(
      */
     @field:JsonSerialize(using = ToStringSerializer::class)
     val id: Long?,
-
     /**
      * Name
      *
@@ -29,7 +28,6 @@ data class OperationVo(
      */
     @field:Schema(description = "操作名", example = "Add User")
     val name: String?,
-
     /**
      * Code
      *
@@ -38,7 +36,6 @@ data class OperationVo(
      */
     @field:Schema(description = "操作编码", example = "system:user:add")
     val code: String?,
-
     /**
      * Scope ID
      *
@@ -47,5 +44,5 @@ data class OperationVo(
      */
     @field:Schema(description = "作用域 ID")
     @field:JsonSerialize(using = ToStringSerializer::class)
-    val scopeId: Long?
+    val scopeId: Long?,
 )

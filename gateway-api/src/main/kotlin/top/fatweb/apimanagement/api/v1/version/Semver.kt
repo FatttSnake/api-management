@@ -10,12 +10,7 @@ package top.fatweb.apimanagement.api.v1.version
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-data class Semver(
-    val major: Int,
-    val minor: Int,
-    val patch: Int,
-    val qualifier: String? = null
-) : Comparable<Semver> {
+data class Semver(val major: Int, val minor: Int, val patch: Int, val qualifier: String? = null) : Comparable<Semver> {
     /**
      * Compares two versions, with a release above its pre-releases.
      *
@@ -37,8 +32,7 @@ data class Semver(
         }
     }
 
-    override fun toString(): String =
-        "$major.$minor.$patch" + (qualifier?.let { "-$it" } ?: "")
+    override fun toString(): String = "$major.$minor.$patch" + (qualifier?.let { "-$it" } ?: "")
 
     companion object {
         /**
@@ -62,14 +56,15 @@ data class Semver(
             if (parts.size > 3 || parts.any { it.isEmpty() }) {
                 throw VersionRangeException("Invalid version: $value")
             }
-            val numbers = parts.map { part ->
-                part.toIntOrNull() ?: throw VersionRangeException("Invalid version: $value")
-            }
+            val numbers =
+                parts.map { part ->
+                    part.toIntOrNull() ?: throw VersionRangeException("Invalid version: $value")
+                }
             return Semver(
                 major = numbers.getOrElse(0) { 0 },
                 minor = numbers.getOrElse(1) { 0 },
                 patch = numbers.getOrElse(2) { 0 },
-                qualifier = qualifier
+                qualifier = qualifier,
             )
         }
 

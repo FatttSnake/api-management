@@ -1,6 +1,11 @@
 package top.fatweb.apimanagement.entity.api
 
-import com.baomidou.mybatisplus.annotation.*
+import com.baomidou.mybatisplus.annotation.EnumValue
+import com.baomidou.mybatisplus.annotation.FieldFill
+import com.baomidou.mybatisplus.annotation.TableField
+import com.baomidou.mybatisplus.annotation.TableId
+import com.baomidou.mybatisplus.annotation.TableName
+import com.baomidou.mybatisplus.annotation.Version
 import com.fasterxml.jackson.annotation.JsonValue
 import java.io.Serializable
 import java.math.BigDecimal
@@ -21,7 +26,10 @@ class ApiTransaction : Serializable {
      * @since 1.0.0
      */
     enum class Type(@field:EnumValue @field:JsonValue val code: String) {
-        TOPUP("TOPUP"), DEDUCT("DEDUCT"), REFUND("REFUND"), ADJUST("ADJUST")
+        TOPUP("TOPUP"),
+        DEDUCT("DEDUCT"),
+        REFUND("REFUND"),
+        ADJUST("ADJUST"),
     }
 
     /**
@@ -133,7 +141,6 @@ class ApiTransaction : Serializable {
     @Version
     var version: Int? = null
 
-    override fun toString(): String {
-        return "ApiTransaction(id=$id, userId=$userId, apiKeyId=$apiKeyId, apiUsageId=$apiUsageId, orderNo=$orderNo, type=$type, amount=$amount, balanceAfter=$balanceAfter, remark=$remark, createTime=$createTime, updateTime=$updateTime, version=$version)"
-    }
+    override fun toString(): String =
+        "ApiTransaction(id=$id, userId=$userId, apiKeyId=$apiKeyId, apiUsageId=$apiUsageId, orderNo=$orderNo, type=$type, amount=$amount, balanceAfter=$balanceAfter, remark=$remark, createTime=$createTime, updateTime=$updateTime, version=$version)"
 }

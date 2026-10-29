@@ -20,9 +20,7 @@ import top.fatweb.apimanagement.vo.system.SysLogVo
  * @since 1.0.0
  */
 @BaseController(path = ["/system/log"], name = "系统日志", description = "系统日志相关接口")
-class SysLogController(
-    private val sysLogService: ISysLogService
-) {
+class SysLogController(private val sysLogService: ISysLogService) {
     /**
      * Get system log in page
      *
@@ -34,9 +32,9 @@ class SysLogController(
     @Operation(summary = "获取")
     @GetMapping
     @PreAuthorize("hasAnyAuthority('system:log:all:query')")
-    fun get(@ProcessParam @Valid sysLogGetParam: SysLogGetParam?): ResponseResult<PageVo<SysLogVo>> {
-        return ResponseResult.success(
-            ResponseCode.DATABASE_SELECT_SUCCESS, data = sysLogService.getPage(sysLogGetParam)
+    fun get(@ProcessParam @Valid sysLogGetParam: SysLogGetParam?): ResponseResult<PageVo<SysLogVo>> =
+        ResponseResult.success(
+            ResponseCode.DATABASE_SELECT_SUCCESS,
+            data = sysLogService.getPage(sysLogGetParam),
         )
-    }
 }

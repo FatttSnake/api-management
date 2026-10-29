@@ -31,27 +31,29 @@ class ApiDocServiceImpl(
     private val objectMapper: JsonMapper,
     private val apiPluginMapper: ApiPluginMapper,
     private val pluginRegistryCache: PluginRegistryCache,
-    private val apiKeyService: IApiKeyService
+    private val apiKeyService: IApiKeyService,
 ) : IApiDocService {
     override fun getPage(apiDocGetParam: ApiDocGetParam?): PageVo<ApiDocVo> {
         val page = Page<ApiPlugin>(apiDocGetParam?.currentPage ?: 1, apiDocGetParam?.pageSize ?: 20)
         setPageSort(apiDocGetParam, page, OrderItem.desc("create_time"))
 
         val (unrestricted, codes) = apiKeyService.callableScope()
-        val pluginPage = apiPluginMapper.selectCallablePage(
-            page = page,
-            searchName = apiDocGetParam?.searchName,
-            unrestricted = unrestricted,
-            codes = codes
-        )
+        val pluginPage =
+            apiPluginMapper.selectCallablePage(
+                page = page,
+                searchName = apiDocGetParam?.searchName,
+                unrestricted = unrestricted,
+                codes = codes,
+            )
 
-        val interfacesByPlugin = if (pluginPage.records.isNotEmpty()) {
-            apiKeyService
-                .callableApis(pluginIds = pluginPage.records.mapNotNull(ApiPlugin::pluginId))
-                .groupBy { it.pluginId ?: "" }
-        } else {
-            emptyMap()
-        }
+        val interfacesByPlugin =
+            if (pluginPage.records.isNotEmpty()) {
+                apiKeyService
+                    .callableApis(pluginIds = pluginPage.records.mapNotNull(ApiPlugin::pluginId))
+                    .groupBy { it.pluginId ?: "" }
+            } else {
+                emptyMap()
+            }
 
         return pluginPage.toDocVoPage { plugin ->
             interfacesByPlugin[plugin.pluginId].orEmpty().map { it.toResolvedVo(plugin) }
@@ -59,11 +61,14 @@ class ApiDocServiceImpl(
     }
 
     override fun getDetail(pluginId: String): ApiDocVo {
-        val plugin = pluginRegistryCache.getByPluginId(pluginId)?.takeIf { it.enable == 1 }
-            ?: throw NoRecordFoundException()
+        val plugin =
+            pluginRegistryCache.getByPluginId(pluginId)?.takeIf { it.enable == 1 }
+                ?: throw NoRecordFoundException()
 
-        val interfaces = apiKeyService.callableApis(pluginIds = listOf(pluginId))
-            .map { it.toResolvedVo(plugin) }
+        val interfaces =
+            apiKeyService
+                .callableApis(pluginIds = listOf(pluginId))
+                .map { it.toResolvedVo(plugin) }
         if (interfaces.isEmpty()) {
             throw NoRecordFoundException()
         }

@@ -19,12 +19,10 @@ annotation class ProcessParam
 @Target(
     AnnotationTarget.CLASS,
     AnnotationTarget.FIELD,
-    AnnotationTarget.VALUE_PARAMETER
+    AnnotationTarget.VALUE_PARAMETER,
 )
 @Retention(AnnotationRetention.RUNTIME)
-annotation class ParamProcessor(
-    val strategy: Array<ProcessStrategy> = [ProcessStrategy.Trim]
-)
+annotation class ParamProcessor(val strategy: Array<ProcessStrategy> = [ProcessStrategy.Trim])
 
 /**
  * Parameter process strategy
@@ -39,5 +37,5 @@ enum class ProcessStrategy {
     ToUpper,
     ToLower,
     RemoveSpaces,
-    Capitalize
+    Capitalize,
 }

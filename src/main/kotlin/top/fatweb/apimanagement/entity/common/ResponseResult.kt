@@ -12,15 +12,12 @@ import java.io.Serializable
 class ResponseResult<T> private constructor(
     @field:Schema(description = "响应码", defaultValue = "200")
     val code: Int,
-
     @field:Schema(description = "是否调用成功")
     val success: Boolean,
-
     @field:Schema(description = "信息")
     val msg: String,
-
     @field:Schema(description = "数据")
-    val data: T?
+    val data: T?,
 ) : Serializable {
     companion object {
         /**
@@ -33,8 +30,7 @@ class ResponseResult<T> private constructor(
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
          */
-        fun <T> build(code: Int, success: Boolean, msg: String, data: T?) =
-            ResponseResult(code, success, msg, data)
+        fun <T> build(code: Int, success: Boolean, msg: String, data: T?) = ResponseResult(code, success, msg, data)
 
         /**
          * Build response result object
@@ -83,7 +79,9 @@ class ResponseResult<T> private constructor(
          * @since 1.0.0
          */
         fun <T> databaseSuccess(
-            code: ResponseCode = ResponseCode.DATABASE_SELECT_SUCCESS, msg: String = "success", data: T? = null
+            code: ResponseCode = ResponseCode.DATABASE_SELECT_SUCCESS,
+            msg: String = "success",
+            data: T? = null,
         ) = build(code, true, msg, data)
 
         /**
@@ -96,7 +94,9 @@ class ResponseResult<T> private constructor(
          * @since 1.0.0
          */
         fun <T> databaseFail(
-            code: ResponseCode = ResponseCode.DATABASE_SELECT_FAILED, msg: String = "fail", data: T? = null
+            code: ResponseCode = ResponseCode.DATABASE_SELECT_FAILED,
+            msg: String = "fail",
+            data: T? = null,
         ) = build(code, false, msg, data)
     }
 }

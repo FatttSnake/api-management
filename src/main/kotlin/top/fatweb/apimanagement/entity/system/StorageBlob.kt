@@ -1,6 +1,10 @@
 package top.fatweb.apimanagement.entity.system
 
-import com.baomidou.mybatisplus.annotation.*
+import com.baomidou.mybatisplus.annotation.FieldFill
+import com.baomidou.mybatisplus.annotation.TableField
+import com.baomidou.mybatisplus.annotation.TableId
+import com.baomidou.mybatisplus.annotation.TableName
+import com.baomidou.mybatisplus.annotation.Version
 import java.io.Serializable
 import java.time.LocalDateTime
 
@@ -58,7 +62,6 @@ class StorageBlob : Serializable {
     @Version
     var version: Int? = null
 
-    override fun toString(): String {
-        return "StorageBlob(fileHash=$fileHash, referenceCount=$referenceCount, createTime=$createTime, updateTime=$updateTime, version=$version)"
-    }
+    override fun toString(): String =
+        "StorageBlob(fileHash=$fileHash, referenceCount=$referenceCount, createTime=$createTime, updateTime=$updateTime, version=$version)"
 }

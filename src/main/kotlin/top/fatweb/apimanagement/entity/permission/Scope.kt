@@ -40,7 +40,5 @@ class Scope : Serializable {
     @TableField("menu_id")
     var menuId: Long? = null
 
-    override fun toString(): String {
-        return "Scope(id=$id, name=$name, menuId=$menuId)"
-    }
+    override fun toString(): String = "Scope(id=$id, name=$name, menuId=$menuId)"
 }

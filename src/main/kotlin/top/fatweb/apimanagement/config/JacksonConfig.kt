@@ -36,8 +36,8 @@ class JacksonConfig {
                 builder.addModules(
                     SimpleModule().addSerializer(
                         LocalDateTime::class.java,
-                        LocalDateTimeSerializer(DateTimeFormatter.ofPattern(dateFormat))
-                    )
+                        LocalDateTimeSerializer(DateTimeFormatter.ofPattern(dateFormat)),
+                    ),
                 )
             }
         }

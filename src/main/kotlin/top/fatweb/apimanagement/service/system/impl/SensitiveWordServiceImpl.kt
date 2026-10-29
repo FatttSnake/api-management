@@ -26,7 +26,9 @@ import top.fatweb.apimanagement.vo.system.SensitiveWordVo
  * @since 1.0.0
  */
 @Service
-class SensitiveWordServiceImpl : ServiceImpl<SensitiveWordMapper, SensitiveWord>(), ISensitiveWordService {
+class SensitiveWordServiceImpl :
+    ServiceImpl<SensitiveWordMapper, SensitiveWord>(),
+    ISensitiveWordService {
     /**
      * Enabled words as patterns that are already compiled
      *
@@ -58,7 +60,7 @@ class SensitiveWordServiceImpl : ServiceImpl<SensitiveWordMapper, SensitiveWord>
         // instead of reaching the second statement, whose `in ()` is not valid SQL
         update(
             KtUpdateWrapper(SensitiveWord())
-                .set(SensitiveWord::enable, false)
+                .set(SensitiveWord::enable, false),
         )
 
         if (ids.isNotEmpty()) {
@@ -66,7 +68,7 @@ class SensitiveWordServiceImpl : ServiceImpl<SensitiveWordMapper, SensitiveWord>
                 update(
                     KtUpdateWrapper(SensitiveWord())
                         .`in`(SensitiveWord::id, ids)
-                        .set(SensitiveWord::enable, true)
+                        .set(SensitiveWord::enable, true),
                 )
             }
         }
@@ -116,11 +118,9 @@ class SensitiveWordServiceImpl : ServiceImpl<SensitiveWordMapper, SensitiveWord>
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    private fun loadPatterns(): List<Regex> =
-        list(
-            KtQueryWrapper(SensitiveWord())
-                .eq(SensitiveWord::enable, 1)
-        )
-            .mapNotNull(SensitiveWord::word)
-            .mapNotNull { runCatching { Regex(it, RegexOption.IGNORE_CASE) }.getOrNull() }
+    private fun loadPatterns(): List<Regex> = list(
+        KtQueryWrapper(SensitiveWord())
+            .eq(SensitiveWord::enable, 1),
+    ).mapNotNull(SensitiveWord::word)
+        .mapNotNull { runCatching { Regex(it, RegexOption.IGNORE_CASE) }.getOrNull() }
 }

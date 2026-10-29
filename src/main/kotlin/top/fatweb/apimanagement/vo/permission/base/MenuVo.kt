@@ -20,7 +20,6 @@ data class MenuVo(
      */
     @field:JsonSerialize(using = ToStringSerializer::class)
     val id: Long?,
-
     /**
      * Name
      *
@@ -29,7 +28,6 @@ data class MenuVo(
      */
     @field:Schema(description = "菜单名", example = "System")
     val name: String?,
-
     /**
      * URL
      *
@@ -38,7 +36,6 @@ data class MenuVo(
      */
     @field:Schema(description = "URL", example = "/system")
     val url: String?,
-
     /**
      * Parent ID
      *
@@ -48,7 +45,6 @@ data class MenuVo(
     @field:Schema(description = "父 ID")
     @field:JsonSerialize(using = ToStringSerializer::class)
     val parentId: Long?,
-
     /**
      * Module ID
      *
@@ -57,5 +53,5 @@ data class MenuVo(
      */
     @field:Schema(description = "模块 ID")
     @field:JsonSerialize(using = ToStringSerializer::class)
-    val moduleId: Long?
+    val moduleId: Long?,
 )

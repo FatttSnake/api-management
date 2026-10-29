@@ -24,10 +24,9 @@ data class UserGetParam(
         description = "搜索类型",
         allowableValues = ["ALL", "ID", "USERNAME", "NICKNAME", "EMAIL"],
         defaultValue = "ALL",
-        example = "ALL"
+        example = "ALL",
     )
     val searchType: String = "ALL",
-
     /**
      * Value to search for
      *
@@ -36,7 +35,6 @@ data class UserGetParam(
      */
     @field:Schema(description = "查询内容", example = "User_1")
     var searchValue: String?,
-
     /**
      * Use regex
      *
@@ -47,7 +45,7 @@ data class UserGetParam(
         description = "查询使用正则表达式",
         allowableValues = ["true", "false"],
         defaultValue = "false",
-        example = "false"
+        example = "false",
     )
     val searchRegex: Boolean = false,
 ) : PageSortParam()

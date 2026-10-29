@@ -16,9 +16,7 @@ import java.util.Enumeration
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-class GatewayApiClassLoader(
-    private val delegate: ClassLoader
-) : ClassLoader(null) {
+class GatewayApiClassLoader(private val delegate: ClassLoader) : ClassLoader(null) {
     /**
      * Loads a platform class.
      *
@@ -48,8 +46,7 @@ class GatewayApiClassLoader(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    override fun getResource(name: String): URL? =
-        if (isAllowedResource(name)) delegate.getResource(name) else null
+    override fun getResource(name: String): URL? = if (isAllowedResource(name)) delegate.getResource(name) else null
 
     /**
      * Returns platform resources.
@@ -69,19 +66,24 @@ class GatewayApiClassLoader(
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
          */
-        val ALLOWED_CLASS_PREFIXES: List<String> = listOf(
-            "java.",
-            "javax.",
-            "jdk.",
-            "sun.",
-            "kotlin.",
-            "top.fatweb.apimanagement.api."
-        )
+        val ALLOWED_CLASS_PREFIXES: List<String> =
+            listOf(
+                "java.",
+                "javax.",
+                "jdk.",
+                "sun.",
+                "kotlin.",
+                "org.ietf.jgss.",
+                "org.w3c.dom.",
+                "org.xml.sax.",
+                "top.fatweb.apimanagement.api.",
+            )
 
-        private val ALLOWED_RESOURCE_PREFIXES: List<String> = listOf(
-            "top/fatweb/apimanagement/api/",
-            "META-INF/gateway-api.abi.json"
-        )
+        private val ALLOWED_RESOURCE_PREFIXES: List<String> =
+            listOf(
+                "top/fatweb/apimanagement/api/",
+                "META-INF/gateway-api.abi.json",
+            )
 
         /**
          * Checks whether a class belongs to the platform surface.
@@ -91,10 +93,8 @@ class GatewayApiClassLoader(
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
          */
-        fun isAllowedClass(name: String): Boolean =
-            ALLOWED_CLASS_PREFIXES.any { name.startsWith(it) }
+        fun isAllowedClass(name: String): Boolean = ALLOWED_CLASS_PREFIXES.any { name.startsWith(it) }
 
-        private fun isAllowedResource(name: String): Boolean =
-            ALLOWED_RESOURCE_PREFIXES.any { name.startsWith(it) }
+        private fun isAllowedResource(name: String): Boolean = ALLOWED_RESOURCE_PREFIXES.any { name.startsWith(it) }
     }
 }

@@ -22,7 +22,6 @@ data class ApiInterfaceGetParam(
      */
     @field:Schema(description = "查询 API 编码", example = "api:echo:v1:ping")
     var searchCode: String?,
-
     /**
      * API name to search for
      *
@@ -31,7 +30,6 @@ data class ApiInterfaceGetParam(
      */
     @field:Schema(description = "查询 API 名称", example = "getRandom")
     var searchName: String?,
-
     /**
      * Owning plugin ID to filter by
      *
@@ -40,7 +38,6 @@ data class ApiInterfaceGetParam(
      */
     @field:Schema(description = "所属插件 ID", example = "echo")
     var pluginId: String?,
-
     /**
      * Enable status
      *
@@ -51,7 +48,7 @@ data class ApiInterfaceGetParam(
         description = "启用状态",
         allowableValues = ["true", "false"],
         defaultValue = "true",
-        example = "true"
+        example = "true",
     )
-    var enable: Boolean?
+    var enable: Boolean?,
 ) : PageSortParam()

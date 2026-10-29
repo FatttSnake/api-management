@@ -37,5 +37,5 @@ enum class BusinessCode(val code: Int) {
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    API_PLATFORM(400)
+    API_PLATFORM(400),
 }

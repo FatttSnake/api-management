@@ -25,7 +25,6 @@ data class UserUpdateParam(
     @field:Schema(description = "用户 ID", required = true)
     @field:NotNull(message = "ID can not be null")
     val id: Long?,
-
     /**
      * Username
      *
@@ -35,7 +34,6 @@ data class UserUpdateParam(
     @field:Schema(description = "用户名", required = true, example = "User_1")
     @field:NotBlank(message = "Username can not be blank")
     var username: String?,
-
     /**
      * Verified
      *
@@ -46,10 +44,9 @@ data class UserUpdateParam(
         description = "是否已验证",
         allowableValues = ["true", "false"],
         defaultValue = "false",
-        example = "false"
+        example = "false",
     )
     val verified: Boolean = false,
-
     /**
      * Locking
      *
@@ -58,7 +55,6 @@ data class UserUpdateParam(
      */
     @field:Schema(description = "锁定", allowableValues = ["true", "false"], defaultValue = "false", example = "false")
     val locking: Boolean = false,
-
     /**
      * Expiration time
      *
@@ -67,7 +63,6 @@ data class UserUpdateParam(
      */
     @field:Schema(description = "过期时间", example = "1900-01-01T00:00:00.000Z")
     val expiration: LocalDateTime?,
-
     /**
      * Credentials expiration time
      *
@@ -76,7 +71,6 @@ data class UserUpdateParam(
      */
     @field:Schema(description = "认证过期时间", example = "1900-01-01T00:00:00.000Z")
     val credentialsExpiration: LocalDateTime?,
-
     /**
      * Enable
      *
@@ -85,7 +79,6 @@ data class UserUpdateParam(
      */
     @field:Schema(description = "启用", allowableValues = ["true", "false"], defaultValue = "true", example = "true")
     val enable: Boolean = true,
-
     /**
      * Nickname
      *
@@ -95,7 +88,6 @@ data class UserUpdateParam(
     @field:Schema(description = "昵称", required = true, example = "Nickname_1")
     @field:NotBlank(message = "Nickname can not be blank")
     var nickname: String?,
-
     /**
      * Avatar base64
      *
@@ -104,7 +96,6 @@ data class UserUpdateParam(
      */
     @field:Schema(description = "头像")
     val avatar: String?,
-
     /**
      * Email
      *
@@ -115,7 +106,6 @@ data class UserUpdateParam(
     @field:NotBlank(message = "Email can not be blank")
     @field:Pattern(regexp = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$", message = "Illegal email address")
     var email: String?,
-
     /**
      * List of role IDs
      *
@@ -124,7 +114,6 @@ data class UserUpdateParam(
      */
     @field:Schema(description = "角色 ID 列表")
     val roleIds: List<Long>?,
-
     /**
      * List of group IDs
      *
@@ -132,5 +121,5 @@ data class UserUpdateParam(
      * @since 1.0.0
      */
     @field:Schema(description = "用户组 ID 列表")
-    val groupIds: List<Long>?
+    val groupIds: List<Long>?,
 )

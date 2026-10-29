@@ -28,7 +28,7 @@ class PluginWebConfig(
     private val apiAccessInterceptor: ApiAccessInterceptor,
     private val sysLogInterceptor: SysLogInterceptor,
     private val jsonMapper: JsonMapper,
-    private val registryCache: PluginRegistryCache
+    private val registryCache: PluginRegistryCache,
 ) {
     /**
      * Handler mapping for `/api/{pluginId}/v{n}/...`.
@@ -38,11 +38,10 @@ class PluginWebConfig(
      * @since 1.0.0
      */
     @Bean
-    fun pluginApiHandlerMapping(): PluginApiHandlerMapping =
-        PluginApiHandlerMapping(
-            registry = routeRegistry,
-            interceptors = listOf(sysLogInterceptor, apiAccessInterceptor)
-        )
+    fun pluginApiHandlerMapping(): PluginApiHandlerMapping = PluginApiHandlerMapping(
+        registry = routeRegistry,
+        interceptors = listOf(sysLogInterceptor, apiAccessInterceptor),
+    )
 
     /**
      * Handler adapter that invokes plugin handlers.
@@ -52,55 +51,56 @@ class PluginWebConfig(
      * @since 1.0.0
      */
     @Bean
-    fun pluginApiHandlerAdapter(): PluginApiHandlerAdapter =
-        PluginApiHandlerAdapter(
-            jsonMapper = jsonMapper,
-            principalResolver = {
-                when (val principal = SecurityContextHolder.getContext().authentication?.principal) {
-                    is ApiKeyPrincipal -> ApiPrincipal(
+    fun pluginApiHandlerAdapter(): PluginApiHandlerAdapter = PluginApiHandlerAdapter(
+        jsonMapper = jsonMapper,
+        principalResolver = {
+            when (val principal = SecurityContextHolder.getContext().authentication?.principal) {
+                is ApiKeyPrincipal ->
+                    ApiPrincipal(
                         type = PrincipalType.ACCESS_KEY,
                         userId = principal.userId,
                         accessKeyId = principal.keyId,
-                        name = ""
+                        name = "",
                     )
 
-                    is LoginUser -> ApiPrincipal(
+                is LoginUser ->
+                    ApiPrincipal(
                         type = PrincipalType.USER,
                         userId = principal.user.id,
                         accessKeyId = null,
-                        name = principal.user.username.orEmpty()
+                        name = principal.user.username.orEmpty(),
                     )
 
-                    else -> null
-                }
-            },
-            interfaceResolver = { invocation ->
-                val row = registryCache.getByCode(invocation.apiCode)
-                if (row == null) {
-                    InterfaceInfo(
-                        code = invocation.apiCode,
-                        pluginId = invocation.pluginId,
-                        apiVersion = invocation.definition.apiVersion,
-                        name = invocation.definition.operation.summary,
-                        path = invocation.definition.path,
-                        method = invocation.definition.method
-                    )
-                } else {
-                    InterfaceInfo(
-                        code = row.code ?: invocation.apiCode,
-                        pluginId = row.pluginId ?: invocation.pluginId,
-                        apiVersion = row.apiVersion ?: invocation.definition.apiVersion,
-                        name = row.name.orEmpty(),
-                        enabled = row.enable == 1,
-                        price = row.price,
-                        billingMode = row.billingMode?.code.orEmpty(),
-                        needKey = row.needKey == 1,
-                        rateLimit = row.rateLimit,
-                        accessMode = row.accessMode?.code.orEmpty(),
-                        path = row.path.orEmpty(),
-                        method = row.method.orEmpty()
-                    )
-                }
+                else -> null
             }
-        )
+        },
+        interfaceResolver = { invocation ->
+            val row = registryCache.getByCode(invocation.apiCode)
+            if (row == null) {
+                InterfaceInfo(
+                    code = invocation.apiCode,
+                    pluginId = invocation.pluginId,
+                    apiVersion = invocation.definition.apiVersion,
+                    name = invocation.definition.operation.summary,
+                    path = invocation.definition.path,
+                    method = invocation.definition.method,
+                )
+            } else {
+                InterfaceInfo(
+                    code = row.code ?: invocation.apiCode,
+                    pluginId = row.pluginId ?: invocation.pluginId,
+                    apiVersion = row.apiVersion ?: invocation.definition.apiVersion,
+                    name = row.name.orEmpty(),
+                    enabled = row.enable == 1,
+                    price = row.price,
+                    billingMode = row.billingMode?.code.orEmpty(),
+                    needKey = row.needKey == 1,
+                    rateLimit = row.rateLimit,
+                    accessMode = row.accessMode?.code.orEmpty(),
+                    path = row.path.orEmpty(),
+                    method = row.method.orEmpty(),
+                )
+            }
+        },
+    )
 }

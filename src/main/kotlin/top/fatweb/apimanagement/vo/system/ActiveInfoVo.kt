@@ -19,7 +19,6 @@ data class ActiveInfoVo(
      */
     @field:Schema(description = "注册用户数量历史")
     val registerHistory: List<HistoryVo>,
-
     /**
      * Login user number history
      *
@@ -28,7 +27,6 @@ data class ActiveInfoVo(
      */
     @field:Schema(description = "登录用户数量历史")
     val loginHistory: List<HistoryVo>,
-
     /**
      * Verify user number history
      *
@@ -36,7 +34,7 @@ data class ActiveInfoVo(
      * @since 1.0.0
      */
     @field:Schema(description = "验证用户数量历史")
-    val verifyHistory: List<HistoryVo>
+    val verifyHistory: List<HistoryVo>,
 ) {
     data class HistoryVo(
         /**
@@ -47,7 +45,6 @@ data class ActiveInfoVo(
          */
         @field:Schema(description = "记录时间", example = "1900-01-01")
         val time: LocalDate,
-
         /**
          * Count
          *
@@ -55,6 +52,6 @@ data class ActiveInfoVo(
          * @since 1.0.0
          */
         @field:Schema(description = "数量")
-        val count: Int
+        val count: Int,
     )
 }

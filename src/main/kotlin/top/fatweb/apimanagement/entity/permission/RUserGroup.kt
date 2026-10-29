@@ -1,6 +1,10 @@
 package top.fatweb.apimanagement.entity.permission
 
-import com.baomidou.mybatisplus.annotation.*
+import com.baomidou.mybatisplus.annotation.TableField
+import com.baomidou.mybatisplus.annotation.TableId
+import com.baomidou.mybatisplus.annotation.TableLogic
+import com.baomidou.mybatisplus.annotation.TableName
+import com.baomidou.mybatisplus.annotation.Version
 import java.io.Serializable
 
 /**
@@ -58,7 +62,6 @@ class RUserGroup : Serializable {
     @Version
     var version: Int? = null
 
-    override fun toString(): String {
-        return "RUserGroup(id=$id, userId=$userId, groupId=$groupId, deleted=$deleted, version=$version)"
-    }
+    override fun toString(): String =
+        "RUserGroup(id=$id, userId=$userId, groupId=$groupId, deleted=$deleted, version=$version)"
 }

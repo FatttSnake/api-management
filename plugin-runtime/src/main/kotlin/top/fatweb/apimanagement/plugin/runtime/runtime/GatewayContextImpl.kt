@@ -26,7 +26,7 @@ import top.fatweb.apimanagement.api.v1.Users
 class GatewayContextImpl(
     private val descriptor: PluginDescriptor,
     private val routes: ApiRoutes,
-    private val services: PluginRuntimeServices
+    private val services: PluginRuntimeServices,
 ) : GatewayContext {
     private val pluginLogger: PluginLogger = services.loggerFactory(descriptor.pluginId)
 
@@ -129,6 +129,16 @@ class GatewayContextImpl(
         pluginVersion = descriptor.versionName,
         gatewayVersion = services.gatewayVersion,
         apiVersion = descriptor.apiVersion,
-        gatewayApiVersion = services.gatewayApiVersion
+        gatewayApiVersion = services.gatewayApiVersion,
     )
+
+    /**
+     * Releases the resources owned by the capabilities.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    internal fun close() {
+        services.close()
+    }
 }

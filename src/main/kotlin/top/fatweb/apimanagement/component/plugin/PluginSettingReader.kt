@@ -18,8 +18,20 @@ import top.fatweb.apimanagement.util.PluginCryptoUtil
 class PluginSettingReader(
     private val serverProperties: ServerProperties,
     private val apiPluginSettingService: IApiPluginSettingService,
-    private val configSchemaCache: PluginConfigSchemaCache
+    private val configSchemaCache: PluginConfigSchemaCache,
 ) {
+    /**
+     * Read a setting without decrypting it
+     *
+     * @param pluginId Plugin ID
+     * @param key Setting key
+     * @return Stored value or the schema default; ciphertext for a secret
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    fun resolveRaw(pluginId: String, key: String): String? =
+        apiPluginSettingService.get(pluginId, key) ?: configSchemaCache.get(pluginId)?.defaultOf(key)
+
     /**
      * Read a setting
      *
@@ -72,8 +84,7 @@ class PluginSettingReader(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun isReadable(pluginId: String, key: String): Boolean =
-        runCatching { resolve(pluginId, key) }.isSuccess
+    fun isReadable(pluginId: String, key: String): Boolean = runCatching { resolve(pluginId, key) }.isSuccess
 
     /**
      * Decrypt a stored secret
@@ -86,7 +97,7 @@ class PluginSettingReader(
             .getOrElse { e ->
                 throw IllegalStateException(
                     "Failed to decrypt plugin setting '$key'; the gateway token secret may have been rotated",
-                    e
+                    e,
                 )
             }
 

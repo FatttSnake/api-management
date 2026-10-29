@@ -23,7 +23,6 @@ data class ApiInterfaceVo(
      */
     @field:JsonSerialize(using = ToStringSerializer::class)
     val id: Long?,
-
     /**
      * Owning plugin ID
      *
@@ -32,7 +31,6 @@ data class ApiInterfaceVo(
      */
     @field:Schema(description = "所属插件 ID", example = "echo")
     val pluginId: String?,
-
     /**
      * API scoping code
      *
@@ -41,7 +39,6 @@ data class ApiInterfaceVo(
      */
     @field:Schema(description = "API 编码", example = "api:echo:v1:ping")
     val code: String?,
-
     /**
      * API name
      *
@@ -50,7 +47,6 @@ data class ApiInterfaceVo(
      */
     @field:Schema(description = "API 名称", example = "getRandom")
     val name: String?,
-
     /**
      * Description
      *
@@ -59,7 +55,6 @@ data class ApiInterfaceVo(
      */
     @field:Schema(description = "API 描述")
     val description: String?,
-
     /**
      * Request path
      *
@@ -68,7 +63,6 @@ data class ApiInterfaceVo(
      */
     @field:Schema(description = "请求路径", example = "/api/echo/v1")
     val path: String?,
-
     /**
      * HTTP method
      *
@@ -77,7 +71,6 @@ data class ApiInterfaceVo(
      */
     @field:Schema(description = "请求方法", example = "GET")
     val method: String?,
-
     /**
      * API version
      *
@@ -86,7 +79,6 @@ data class ApiInterfaceVo(
      */
     @field:Schema(description = "API 版本", example = "1")
     val apiVersion: Int?,
-
     /**
      * Price per call
      *
@@ -96,7 +88,6 @@ data class ApiInterfaceVo(
     @field:Schema(description = "每次调用单价 (null=继承插件默认)", example = "0.0100")
     @field:JsonSerialize(using = ToStringSerializer::class)
     val price: BigDecimal?,
-
     /**
      * Billing mode
      *
@@ -105,7 +96,6 @@ data class ApiInterfaceVo(
      */
     @field:Schema(description = "计费模式", allowableValues = ["FREE", "SUCCESS_ONLY", "ALWAYS"])
     val billingMode: ApiInterface.BillingMode?,
-
     /**
      * Need API key status
      *
@@ -114,7 +104,6 @@ data class ApiInterfaceVo(
      */
     @field:Schema(description = "是否需要 API Key", example = "true")
     val needKey: Boolean?,
-
     /**
      * Rate limit per minute
      *
@@ -123,7 +112,6 @@ data class ApiInterfaceVo(
      */
     @field:Schema(description = "每分钟限流次数 (null=继承插件默认)", example = "100")
     val rateLimit: Int?,
-
     /**
      * Enable status
      *
@@ -132,7 +120,6 @@ data class ApiInterfaceVo(
      */
     @field:Schema(description = "启用", example = "true")
     val enable: Boolean?,
-
     /**
      * Access mode (null = inherit owning plugin's default)
      *
@@ -141,7 +128,6 @@ data class ApiInterfaceVo(
      */
     @field:Schema(description = "访问模式 (null=继承插件)", allowableValues = ["DEFAULT", "RESTRICTED"])
     val accessMode: ApiInterface.AccessMode?,
-
     /**
      * Create time
      *
@@ -150,7 +136,6 @@ data class ApiInterfaceVo(
      */
     @field:Schema(description = "创建时间", example = "2026-01-01T00:00:00.000Z")
     val createTime: LocalDateTime?,
-
     /**
      * Update time
      *
@@ -158,5 +143,5 @@ data class ApiInterfaceVo(
      * @since 1.0.0
      */
     @field:Schema(description = "修改时间", example = "2026-01-01T00:00:00.000Z")
-    val updateTime: LocalDateTime?
+    val updateTime: LocalDateTime?,
 )

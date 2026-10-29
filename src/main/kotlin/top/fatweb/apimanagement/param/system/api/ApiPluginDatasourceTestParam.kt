@@ -23,7 +23,6 @@ data class ApiPluginDatasourceTestParam(
     @field:Schema(description = "数据源名称", required = true, example = "main")
     @field:NotBlank(message = "Datasource name can not be blank")
     var name: String?,
-
     /**
      * Values to test with, leaving one out to test with what is stored
      *
@@ -32,5 +31,5 @@ data class ApiPluginDatasourceTestParam(
      */
     @field:Schema(description = "要测试的配置项（缺省的项用已存值）")
     @field:Valid
-    var values: List<ApiPluginConfigValueParam>?
+    var values: List<ApiPluginConfigValueParam>?,
 )

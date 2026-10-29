@@ -22,7 +22,6 @@ data class GroupGetParam(
      */
     @field:Schema(description = "查询用户组名称", example = "Group_1")
     var searchName: String?,
-
     /**
      * Use regex
      *
@@ -33,7 +32,7 @@ data class GroupGetParam(
         description = "查询使用正则表达式",
         allowableValues = ["true", "false"],
         defaultValue = "false",
-        example = "false"
+        example = "false",
     )
     val searchRegex: Boolean = false,
 ) : PageSortParam()

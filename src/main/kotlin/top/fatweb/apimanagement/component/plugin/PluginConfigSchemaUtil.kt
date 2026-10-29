@@ -1,6 +1,7 @@
 package top.fatweb.apimanagement.component.plugin
 
 import tools.jackson.databind.json.JsonMapper
+import top.fatweb.apimanagement.exception.PluginInstallException
 import java.math.BigDecimal
 import java.util.concurrent.ConcurrentHashMap
 
@@ -36,7 +37,7 @@ object PluginConfigSchemaUtil {
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    private const val MAX_VALUE_BYTES = 65535
+    const val MAX_VALUE_BYTES = 65535
 
     /**
      * Compiled declared patterns, by their source
@@ -65,12 +66,69 @@ object PluginConfigSchemaUtil {
         setOf("name", "dbType", "required") + PluginDatasourceSlot.entries.map { it.name.lowercase() }
 
     /**
+     * Every property a config group may carry
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    private val GROUP_PROPERTIES = setOf("key", "title", "description", "fields")
+
+    /**
+     * Every property a config field may carry
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    private val FIELD_PROPERTIES =
+        setOf(
+            "key",
+            "type",
+            "title",
+            "description",
+            "default",
+            "required",
+            "placeholder",
+            "minimum",
+            "maximum",
+            "integer",
+            "minLength",
+            "maxLength",
+            "pattern",
+            "options",
+        )
+
+    /**
+     * Every property an enum option may carry
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    private val OPTION_PROPERTIES = setOf("value", "label")
+
+    /**
      * Mapper used to read the declared file; private so this object stays Spring-free
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
     private val mapper = JsonMapper.builder().build()
+
+    /**
+     * Parse a declared schema, refusing a plugin whose schema is invalid
+     *
+     * @param json Raw content of `META-INF/plugin-config.json`, or null / blank when
+     *        the plugin ships none
+     * @return Parsed schema, or null when nothing was declared
+     * @throws PluginInstallException when the file cannot be honoured
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     * @see parse
+     */
+    fun parseOrThrow(json: String?): PluginConfigSchema? = try {
+        parse(json)
+    } catch (ex: IllegalArgumentException) {
+        throw PluginInstallException("Invalid plugin configuration schema: ${ex.message}", ex)
+    }
 
     /**
      * Parse a declared plugin config schema
@@ -87,11 +145,12 @@ object PluginConfigSchemaUtil {
             return null
         }
 
-        val root = try {
-            mapper.readValue(json, Map::class.java)
-        } catch (e: Exception) {
-            throw IllegalArgumentException("Plugin config schema must be a JSON object: ${e.message}")
-        } ?: throw IllegalArgumentException("Plugin config schema must be a JSON object")
+        val root =
+            try {
+                mapper.readValue(json, Map::class.java)
+            } catch (e: Exception) {
+                throw IllegalArgumentException("Plugin config schema must be a JSON object: ${e.message}")
+            } ?: throw IllegalArgumentException("Plugin config schema must be a JSON object")
 
         // A property the schema does not have is refused rather than skipped over: one that
         // spells `datasources` the singular way declares no datasource at all, and the plugin
@@ -99,29 +158,32 @@ object PluginConfigSchemaUtil {
         val unknown = root.keys.filterNot { it is String && it in SCHEMA_PROPERTIES }
         require(unknown.isEmpty()) {
             "Plugin config schema declares properties it does not support: ${unknown.joinToString()}" +
-                    " (a schema takes ${SCHEMA_PROPERTIES.joinToString()})"
+                " (a schema takes ${SCHEMA_PROPERTIES.joinToString()})"
         }
 
         val fieldKeys = mutableSetOf<String>()
         val groupKeys = mutableSetOf<String>()
 
-        val groups = when (val groupsNode = root["groups"]) {
-            null -> emptyList()
-            is List<*> -> groupsNode.mapIndexed { index, node ->
-                parseGroup(node, index, groupKeys, fieldKeys)
-            }
+        val groups =
+            when (val groupsNode = root["groups"]) {
+                null -> emptyList()
+                is List<*> ->
+                    groupsNode.mapIndexed { index, node ->
+                        parseGroup(node, index, groupKeys, fieldKeys)
+                    }
 
-            else -> throw IllegalArgumentException("Plugin config schema 'groups' must be an array")
-        }
+                else -> throw IllegalArgumentException("Plugin config schema 'groups' must be an array")
+            }
 
         // Read after the groups rather than before: a datasource names the config fields
         // holding its connection, so those fields have to exist before a reference to one
         // can be checked - and checking it is the whole point of declaring slots by key
-        val datasources = when (val datasourcesNode = root["datasources"]) {
-            null -> emptyList()
-            is List<*> -> parseDatasources(datasourcesNode, groups)
-            else -> throw IllegalArgumentException("Plugin config schema 'datasources' must be an array")
-        }
+        val datasources =
+            when (val datasourcesNode = root["datasources"]) {
+                null -> emptyList()
+                is List<*> -> parseDatasources(datasourcesNode, groups)
+                else -> throw IllegalArgumentException("Plugin config schema 'datasources' must be an array")
+            }
 
         return PluginConfigSchema(datasources = datasources, groups = groups)
     }
@@ -179,7 +241,7 @@ object PluginConfigSchemaUtil {
     fun effectiveValues(
         schema: PluginConfigSchema,
         submitted: Map<String, Map<String, String?>>,
-        stored: Map<String, String?>
+        stored: Map<String, String?>,
     ): Map<String, String?> {
         val submittedByKey = submitted.values.flatMap { it.entries }.associate { it.key to it.value }
 
@@ -206,25 +268,28 @@ object PluginConfigSchemaUtil {
     fun validate(
         schema: PluginConfigSchema,
         submitted: Map<String, Map<String, String?>>,
-        stored: Map<String, String?> = emptyMap()
+        stored: Map<String, String?> = emptyMap(),
     ) {
         submitted.forEach { (groupKey, values) ->
-            val group = schema.groupOf(groupKey)
-                ?: throw IllegalArgumentException(
-                    "Plugin config group '$groupKey' is not declared by the plugin"
-                )
+            val group =
+                schema.groupOf(groupKey)
+                    ?: throw IllegalArgumentException(
+                        "Plugin config group '$groupKey' is not declared by the plugin",
+                    )
 
             values.forEach { (key, value) ->
-                val field = group.fields.firstOrNull { it.key == key }
-                    ?: throw IllegalArgumentException(
-                        "Plugin config key '$key' is not declared by group '$groupKey'"
-                    )
+                val field =
+                    group.fields.firstOrNull { it.key == key }
+                        ?: throw IllegalArgumentException(
+                            "Plugin config key '$key' is not declared by group '$groupKey'",
+                        )
 
                 when (actionOf(field, value)) {
                     // Nothing carries a value: a kept key's value is already stored, and a
                     // cleared one has no value left for a length or a pattern to apply to
                     PluginConfigValueAction.KEEP,
-                    PluginConfigValueAction.CLEAR -> Unit
+                    PluginConfigValueAction.CLEAR,
+                    -> Unit
 
                     PluginConfigValueAction.SET -> validateValue(field, value!!)
                 }
@@ -235,7 +300,10 @@ object PluginConfigSchemaUtil {
         // plugin would fall back to, satisfies a required field without being submitted
         val effective = effectiveValues(schema, submitted, stored)
         submitted.keys.forEach { groupKey ->
-            schema.groupOf(groupKey)?.fields.orEmpty()
+            schema
+                .groupOf(groupKey)
+                ?.fields
+                .orEmpty()
                 .filter { it.required }
                 .forEach { field ->
                     require(!effective[field.key].isNullOrEmpty()) {
@@ -254,10 +322,7 @@ object PluginConfigSchemaUtil {
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    private fun parseDatasources(
-        nodes: List<*>,
-        groups: List<PluginConfigFieldGroup>
-    ): List<PluginDatasourceSchema> {
+    private fun parseDatasources(nodes: List<*>, groups: List<PluginConfigFieldGroup>): List<PluginDatasourceSchema> {
         val byKey = groups.flatMap { it.fields }.associateBy { it.key }
 
         // Which group declares each key, so a slot can be traced back to the form it is
@@ -302,7 +367,7 @@ object PluginConfigSchemaUtil {
         groupOf: Map<String, String>,
         names: MutableSet<String>,
         claimed: MutableMap<String, String>,
-        described: MutableMap<String, String>
+        described: MutableMap<String, String>,
     ): PluginDatasourceSchema {
         val what = "Plugin config schema datasource #$index"
         val map = node as? Map<*, *> ?: throw IllegalArgumentException("$what must be an object")
@@ -310,8 +375,9 @@ object PluginConfigSchemaUtil {
         val unknown = map.keys.filterNot { it is String && it in DATASOURCE_PROPERTIES }
         require(unknown.isEmpty()) { "$what declares properties it does not support: ${unknown.joinToString()}" }
 
-        val name = stringOf(map, "name", what)
-            ?: throw IllegalArgumentException("$what must declare a name")
+        val name =
+            stringOf(map, "name", what)
+                ?: throw IllegalArgumentException("$what must declare a name")
         require(PluginDatasourceSchema.isValidName(name)) {
             "$what has name '$name', which must match ${PluginDatasourceSchema.NAME_REGEX.pattern}"
         }
@@ -319,55 +385,62 @@ object PluginConfigSchemaUtil {
 
         // The dialect is the one thing the administrator cannot be asked for, so a
         // declaration that leaves it out is rejected rather than defaulted
-        val rawType = stringOf(map, "dbType", what)
-            ?: throw IllegalArgumentException("$what must declare a dbType")
-        val dbType = PluginDatasourceType.parse(rawType)
-            ?: throw IllegalArgumentException(
-                "$what has unknown dbType '$rawType' " +
-                        "(expected one of ${PluginDatasourceType.entries.joinToString { it.name.lowercase() }})"
-            )
-
-        val slots = PluginDatasourceSlot.entries.mapNotNull { slot ->
-            val slotName = slot.name.lowercase()
-            val key = stringOf(map, slotName, what) ?: return@mapNotNull null
-            val field = fields[key] ?: throw IllegalArgumentException(
-                "$what declares a $slotName slot pointing at '$key', which is not a declared config field"
-            )
-            require(slotAccepts(slot, field.type)) {
-                "$what declares a $slotName slot pointing at '$key', which is a ${field.type.name} field" +
-                        " and cannot describe a ${slot.name}"
-            }
-
-            // One key, one connection fact: a field read as two slots would be edited by an
-            // administrator who can see only one of the readers
-            claimed.put(key, "$name.$slotName")?.let { previous ->
-                throw IllegalArgumentException(
-                    "Plugin config key '$key' is claimed by both $previous and $name.$slotName"
+        val rawType =
+            stringOf(map, "dbType", what)
+                ?: throw IllegalArgumentException("$what must declare a dbType")
+        val dbType =
+            PluginDatasourceType.parse(rawType)
+                ?: throw IllegalArgumentException(
+                    "$what has unknown dbType '$rawType' " +
+                        "(expected one of ${PluginDatasourceType.entries.joinToString { it.name.lowercase() }})",
                 )
-            }
 
-            // A required secret could never be cleared: a blank submission is refused for
-            // being blank, so the stored password would be the administrator's only choice
-            require(slot != PluginDatasourceSlot.PASSWORD || !field.required) {
-                "$what declares a password slot pointing at '$key', which is required and could therefore" +
-                        " never be cleared"
-            }
+        val slots =
+            PluginDatasourceSlot.entries
+                .mapNotNull { slot ->
+                    val slotName = slot.name.lowercase()
+                    val key = stringOf(map, slotName, what) ?: return@mapNotNull null
+                    val field =
+                        fields[key] ?: throw IllegalArgumentException(
+                            "$what declares a $slotName slot pointing at '$key', which is not a declared config field",
+                        )
+                    require(slotAccepts(slot, field.type)) {
+                        "$what declares a $slotName slot pointing at '$key', which is a ${field.type.name} field" +
+                            " and cannot describe a ${slot.name}"
+                    }
 
-            slot to key
-        }.toMap()
+                    // One key, one connection fact: a field read as two slots would be edited by an
+                    // administrator who can see only one of the readers
+                    claimed.put(key, "$name.$slotName")?.let { previous ->
+                        throw IllegalArgumentException(
+                            "Plugin config key '$key' is claimed by both $previous and $name.$slotName",
+                        )
+                    }
+
+                    // A required secret could never be cleared: a blank submission is refused for
+                    // being blank, so the stored password would be the administrator's only choice
+                    require(slot != PluginDatasourceSlot.PASSWORD || !field.required) {
+                        "$what declares a password slot pointing at '$key', which is required and could therefore" +
+                            " never be cleared"
+                    }
+
+                    slot to key
+                }.toMap()
 
         when (dbType) {
             // Without these two there is nothing to connect to, whatever else is declared
-            PluginDatasourceType.MYSQL -> require(
-                PluginDatasourceSlot.HOST in slots && PluginDatasourceSlot.DATABASE in slots
-            ) {
-                "$what is a MYSQL datasource and must declare both a host and a database slot"
-            }
+            PluginDatasourceType.MYSQL ->
+                require(
+                    PluginDatasourceSlot.HOST in slots && PluginDatasourceSlot.DATABASE in slots,
+                ) {
+                    "$what is a MYSQL datasource and must declare both a host and a database slot"
+                }
 
             // Nothing an administrator could decide about it, so nothing to point at
-            PluginDatasourceType.SQLITE -> require(slots.isEmpty()) {
-                "$what is a SQLITE datasource, which the gateway supplies itself and which declares no slot"
-            }
+            PluginDatasourceType.SQLITE ->
+                require(slots.isEmpty()) {
+                    "$what is a SQLITE datasource, which the gateway supplies itself and which declares no slot"
+                }
         }
 
         // A group is the unit a connection is edited, saved and tested in, so one whose
@@ -376,7 +449,7 @@ object PluginConfigSchemaUtil {
         val owners = slots.values.mapNotNull { groupOf[it] }.toSet()
         require(owners.size <= 1) {
             "$what is described by fields of ${owners.size} groups (${owners.sorted().joinToString()})," +
-                    " but a datasource has to be described by a single one"
+                " but a datasource has to be described by a single one"
         }
 
         // And the other way round: a form describes one connection, so a second one drawn
@@ -385,7 +458,7 @@ object PluginConfigSchemaUtil {
             described.put(groupKey, name)?.let { previous ->
                 throw IllegalArgumentException(
                     "$what is described by group '$groupKey', which already describes the" +
-                            " datasource '$previous': a group describes at most one"
+                        " datasource '$previous': a group describes at most one",
                 )
             }
         }
@@ -394,7 +467,7 @@ object PluginConfigSchemaUtil {
             name = name,
             required = boolOf(map, "required", what) ?: false,
             dbType = dbType,
-            slots = slots
+            slots = slots,
         )
     }
 
@@ -414,7 +487,8 @@ object PluginConfigSchemaUtil {
         PluginDatasourceSlot.HOST,
         PluginDatasourceSlot.DATABASE,
         PluginDatasourceSlot.USERNAME,
-        PluginDatasourceSlot.PARAMS -> type.isText
+        PluginDatasourceSlot.PARAMS,
+        -> type.isText
     }
 
     /**
@@ -432,27 +506,30 @@ object PluginConfigSchemaUtil {
         node: Any?,
         index: Int,
         groupKeys: MutableSet<String>,
-        fieldKeys: MutableSet<String>
+        fieldKeys: MutableSet<String>,
     ): PluginConfigFieldGroup {
         val what = "Plugin config schema group #$index"
         val map = node as? Map<*, *> ?: throw IllegalArgumentException("$what must be an object")
+        requireKnownProperties(map, GROUP_PROPERTIES, what)
         val key = keyOf(map, what, "group")
         require(groupKeys.add(key)) { "Duplicate plugin config group key '$key'" }
 
         val fieldsNode =
             map["fields"] ?: throw IllegalArgumentException("Plugin config group '$key' must declare fields")
-        val fieldNodes = fieldsNode as? List<*>
-            ?: throw IllegalArgumentException("Plugin config group '$key' fields must be an array")
-        val fields = fieldNodes.mapIndexed { position, fieldNode ->
-            parseField(fieldNode, key, position, fieldKeys)
-        }
+        val fieldNodes =
+            fieldsNode as? List<*>
+                ?: throw IllegalArgumentException("Plugin config group '$key' fields must be an array")
+        val fields =
+            fieldNodes.mapIndexed { position, fieldNode ->
+                parseField(fieldNode, key, position, fieldKeys)
+            }
         require(fields.isNotEmpty()) { "Plugin config group '$key' must declare at least one field" }
 
         return PluginConfigFieldGroup(
             key = key,
             title = stringOf(map, "title", what),
             description = stringOf(map, "description", what),
-            fields = fields
+            fields = fields,
         )
     }
 
@@ -471,20 +548,23 @@ object PluginConfigSchemaUtil {
         node: Any?,
         groupKey: String,
         index: Int,
-        fieldKeys: MutableSet<String>
+        fieldKeys: MutableSet<String>,
     ): PluginConfigField {
         val what = "Plugin config field #$index of group '$groupKey'"
         val map = node as? Map<*, *> ?: throw IllegalArgumentException("$what must be an object")
+        requireKnownProperties(map, FIELD_PROPERTIES, what)
         val key = keyOf(map, what, "field")
         require(fieldKeys.add(key)) { "Duplicate plugin config field key '$key'" }
 
-        val rawType = stringOf(map, "type", what)
-            ?: throw IllegalArgumentException("Plugin config field '$key' must declare a type")
-        val type = PluginConfigFieldType.parse(rawType)
-            ?: throw IllegalArgumentException(
-                "Plugin config field '$key' has unknown type '$rawType' " +
-                        "(expected one of ${PluginConfigFieldType.entries.joinToString { it.name.lowercase() }})"
-            )
+        val rawType =
+            stringOf(map, "type", what)
+                ?: throw IllegalArgumentException("Plugin config field '$key' must declare a type")
+        val type =
+            PluginConfigFieldType.parse(rawType)
+                ?: throw IllegalArgumentException(
+                    "Plugin config field '$key' has unknown type '$rawType' " +
+                        "(expected one of ${PluginConfigFieldType.entries.joinToString { it.name.lowercase() }})",
+                )
 
         val default = scalarOf(map, "default", what)
         val minimum = decimalOf(map, "minimum", what)
@@ -504,9 +584,9 @@ object PluginConfigSchemaUtil {
         val textConstraints = minLength != null || maxLength != null || pattern != null
         require(
             !textConstraints ||
-                    type == PluginConfigFieldType.STRING ||
-                    type == PluginConfigFieldType.TEXT ||
-                    type == PluginConfigFieldType.SECRET
+                type == PluginConfigFieldType.STRING ||
+                type == PluginConfigFieldType.TEXT ||
+                type == PluginConfigFieldType.SECRET,
         ) {
             "Plugin config field '$key' declares minLength / maxLength / pattern but is not text"
         }
@@ -516,22 +596,23 @@ object PluginConfigSchemaUtil {
             }
         }
 
-        val field = PluginConfigField(
-            key = key,
-            type = type,
-            title = stringOf(map, "title", what),
-            description = stringOf(map, "description", what),
-            default = default,
-            required = boolOf(map, "required", what) ?: false,
-            placeholder = stringOf(map, "placeholder", what),
-            minimum = minimum,
-            maximum = maximum,
-            integer = integer,
-            minLength = minLength,
-            maxLength = maxLength,
-            pattern = pattern,
-            options = options
-        )
+        val field =
+            PluginConfigField(
+                key = key,
+                type = type,
+                title = stringOf(map, "title", what),
+                description = stringOf(map, "description", what),
+                default = default,
+                required = boolOf(map, "required", what) ?: false,
+                placeholder = stringOf(map, "placeholder", what),
+                minimum = minimum,
+                maximum = maximum,
+                integer = integer,
+                minLength = minLength,
+                maxLength = maxLength,
+                pattern = pattern,
+                options = options,
+            )
 
         // The declared default has to satisfy the field's own constraints, otherwise the
         // plugin reads a value the administrator could never have entered by hand
@@ -557,17 +638,20 @@ object PluginConfigSchemaUtil {
             return null
         }
 
-        val nodes = node as? List<*>
-            ?: throw IllegalArgumentException("Plugin config field '$key' must declare options")
+        val nodes =
+            node as? List<*>
+                ?: throw IllegalArgumentException("Plugin config field '$key' must declare options")
         require(nodes.isNotEmpty()) { "Plugin config field '$key' must declare at least one option" }
 
-        val options = nodes.mapIndexed { index, item ->
-            val what = "Plugin config field '$key' option #$index"
-            val map = item as? Map<*, *> ?: throw IllegalArgumentException("$what must be an object")
-            val value = stringOf(map, "value", what) ?: throw IllegalArgumentException("$what must declare a value")
+        val options =
+            nodes.mapIndexed { index, item ->
+                val what = "Plugin config field '$key' option #$index"
+                val map = item as? Map<*, *> ?: throw IllegalArgumentException("$what must be an object")
+                requireKnownProperties(map, OPTION_PROPERTIES, what)
+                val value = stringOf(map, "value", what) ?: throw IllegalArgumentException("$what must declare a value")
 
-            PluginConfigFieldOption(value = value, label = stringOf(map, "label", what))
-        }
+                PluginConfigFieldOption(value = value, label = stringOf(map, "label", what))
+            }
         require(options.map { it.value }.toSet().size == options.size) {
             "Plugin config field '$key' declares duplicate option values"
         }
@@ -594,13 +678,15 @@ object PluginConfigSchemaUtil {
         }
 
         when (field.type) {
-            PluginConfigFieldType.BOOLEAN -> require(value.equals("true", true) || value.equals("false", true)) {
-                "Plugin config key '$key' must be 'true' or 'false', got '$value'"
-            }
+            PluginConfigFieldType.BOOLEAN ->
+                require(value.equals("true", true) || value.equals("false", true)) {
+                    "Plugin config key '$key' must be 'true' or 'false', got '$value'"
+                }
 
             PluginConfigFieldType.NUMBER -> {
-                val number = value.toBigDecimalOrNull()
-                    ?: throw IllegalArgumentException("Plugin config key '$key' must be a number, got '$value'")
+                val number =
+                    value.toBigDecimalOrNull()
+                        ?: throw IllegalArgumentException("Plugin config key '$key' must be a number, got '$value'")
 
                 if (field.integer) {
                     require(number.stripTrailingZeros().scale() <= 0) {
@@ -624,7 +710,8 @@ object PluginConfigSchemaUtil {
 
             PluginConfigFieldType.STRING,
             PluginConfigFieldType.TEXT,
-            PluginConfigFieldType.SECRET -> {
+            PluginConfigFieldType.SECRET,
+            -> {
                 field.minLength?.let {
                     require(value.length >= it) { "Plugin config key '$key' must be at least $it characters" }
                 }
@@ -650,12 +737,31 @@ object PluginConfigSchemaUtil {
     private fun patternOf(pattern: String): Regex = patternCache.computeIfAbsent(pattern) { Regex(it) }
 
     /**
+     * Refuse a declared object carrying a property the format does not define
+     *
+     * @param map Declared object
+     * @param allowed Properties the object may carry
+     * @param what Description of the object, for error messages
+     * @throws IllegalArgumentException when the object carries a property outside [allowed]
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    private fun requireKnownProperties(map: Map<*, *>, allowed: Set<String>, what: String) {
+        val unknown = map.keys.filterNot { it is String && it in allowed }
+        require(unknown.isEmpty()) {
+            "$what declares properties it does not support: ${unknown.joinToString()}" +
+                " (allowed: ${allowed.joinToString()})"
+        }
+    }
+
+    /**
      * Read a config or group key
      *
      * @param map Declared object
      * @param what Description of the object, for error messages
      * @param kind What the key identifies, for error messages
      * @return Validated key
+     * @throws IllegalArgumentException when the key is missing, too long or badly formed
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
@@ -708,9 +814,9 @@ object PluginConfigSchemaUtil {
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    private fun intOf(map: Map<*, *>, name: String, what: String): Int? =
-        map[name]?.let { it as? Number ?: throw IllegalArgumentException("$what '$name' must be a number") }
-            ?.toInt()
+    private fun intOf(map: Map<*, *>, name: String, what: String): Int? = map[name]
+        ?.let { it as? Number ?: throw IllegalArgumentException("$what '$name' must be a number") }
+        ?.toInt()
 
     /**
      * Read a decimal property
@@ -722,9 +828,9 @@ object PluginConfigSchemaUtil {
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    private fun decimalOf(map: Map<*, *>, name: String, what: String): BigDecimal? =
-        map[name]?.let { it as? Number ?: throw IllegalArgumentException("$what '$name' must be a number") }
-            ?.let { BigDecimal(it.toString()) }
+    private fun decimalOf(map: Map<*, *>, name: String, what: String): BigDecimal? = map[name]
+        ?.let { it as? Number ?: throw IllegalArgumentException("$what '$name' must be a number") }
+        ?.let { BigDecimal(it.toString()) }
 
     /**
      * Read a property that may be declared as a string, a boolean or a number
@@ -736,15 +842,14 @@ object PluginConfigSchemaUtil {
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    private fun scalarOf(map: Map<*, *>, name: String, what: String): String? =
-        map[name]?.let {
-            when (it) {
-                is String -> it
-                is Boolean -> it.toString()
-                is Number -> numberToString(it)
-                else -> throw IllegalArgumentException("$what '$name' must be a string, a number or a boolean")
-            }
+    private fun scalarOf(map: Map<*, *>, name: String, what: String): String? = map[name]?.let {
+        when (it) {
+            is String -> it
+            is Boolean -> it.toString()
+            is Number -> numberToString(it)
+            else -> throw IllegalArgumentException("$what '$name' must be a string, a number or a boolean")
         }
+    }
 
     /**
      * Normalise a declared number to the string form stored by the setting table
@@ -796,5 +901,5 @@ enum class PluginConfigValueAction {
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    SET
+    SET,
 }

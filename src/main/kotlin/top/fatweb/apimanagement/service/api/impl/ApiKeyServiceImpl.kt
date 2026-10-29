@@ -25,12 +25,24 @@ import top.fatweb.apimanagement.exception.ApiKeyPermissionDeniedException
 import top.fatweb.apimanagement.mapper.api.ApiInterfaceMapper
 import top.fatweb.apimanagement.mapper.api.ApiKeyMapper
 import top.fatweb.apimanagement.mapper.permission.UserMapper
-import top.fatweb.apimanagement.param.system.apiKey.*
+import top.fatweb.apimanagement.param.system.apiKey.ApiKeyAddParam
+import top.fatweb.apimanagement.param.system.apiKey.ApiKeyDeleteParam
+import top.fatweb.apimanagement.param.system.apiKey.ApiKeyGetParam
+import top.fatweb.apimanagement.param.system.apiKey.ApiKeyUpdateParam
+import top.fatweb.apimanagement.param.system.apiKey.ApiKeyUpdateStatusParam
 import top.fatweb.apimanagement.properties.ServerProperties
 import top.fatweb.apimanagement.service.api.IApiKeyService
 import top.fatweb.apimanagement.settings.ApiSettings
 import top.fatweb.apimanagement.settings.SettingsOperator
-import top.fatweb.apimanagement.util.*
+import top.fatweb.apimanagement.util.generateRandomPassword
+import top.fatweb.apimanagement.util.getLoginUser
+import top.fatweb.apimanagement.util.getLoginUserId
+import top.fatweb.apimanagement.util.getLoginUserIdOrThrow
+import top.fatweb.apimanagement.util.queryOrThrowException
+import top.fatweb.apimanagement.util.saveOrThrowException
+import top.fatweb.apimanagement.util.setPageSort
+import top.fatweb.apimanagement.util.sha256
+import top.fatweb.apimanagement.util.updateOrThrowException
 import top.fatweb.apimanagement.vo.PageVo
 import top.fatweb.apimanagement.vo.api.ApiKeyAvailableGroupVo
 import top.fatweb.apimanagement.vo.api.ApiKeyAvailableInterfaceVo
@@ -52,8 +64,9 @@ class ApiKeyServiceImpl(
     private val redisProvider: RedisProvider,
     private val userMapper: UserMapper,
     private val pluginRegistryCache: PluginRegistryCache,
-    private val apiInterfaceMapper: ApiInterfaceMapper
-) : ServiceImpl<ApiKeyMapper, ApiKey>(), IApiKeyService {
+    private val apiInterfaceMapper: ApiInterfaceMapper,
+) : ServiceImpl<ApiKeyMapper, ApiKey>(),
+    IApiKeyService {
     private companion object {
         /**
          * Window in seconds between two consecutive last-used-time writes of the same key
@@ -67,11 +80,12 @@ class ApiKeyServiceImpl(
 
         val loginUserId = getLoginUserIdOrThrow()
         val targetUserId = if (managed) apiKeyGetParam?.userId ?: loginUserId else loginUserId
-        val wrapper = KtQueryWrapper(ApiKey()).apply {
-            eq(ApiKey::userId, targetUserId)
-            apiKeyGetParam?.searchName?.let { like(ApiKey::name, it) }
-            apiKeyGetParam?.enable?.let { eq(ApiKey::enable, if (it) 1 else 0) }
-        }
+        val wrapper =
+            KtQueryWrapper(ApiKey()).apply {
+                eq(ApiKey::userId, targetUserId)
+                apiKeyGetParam?.searchName?.let { like(ApiKey::name, it) }
+                apiKeyGetParam?.enable?.let { eq(ApiKey::enable, if (it) 1 else 0) }
+            }
 
         return page(page, wrapper).toVoPage()
     }
@@ -90,12 +104,13 @@ class ApiKeyServiceImpl(
         val accessKey = generateAccessKey(SettingsOperator.getValue(ApiSettings::accessKeyLength, 20))
         val secretKey = generateRandomPassword(SettingsOperator.getValue(ApiSettings::secretKeyLength, 40))
 
-        val entity = apiKeyAddParam.toEntity().apply {
-            this.userId = ownerId
-            this.accessKey = accessKey
-            this.secretKeyHash = sha256(secretKey)
-            this.permissions = permissions.sorted().joinToString(",")
-        }
+        val entity =
+            apiKeyAddParam.toEntity().apply {
+                this.userId = ownerId
+                this.accessKey = accessKey
+                this.secretKeyHash = sha256(secretKey)
+                this.permissions = permissions.sorted().joinToString(",")
+            }
         saveOrThrowException { save(entity) }
 
         return entity.toVoWithSecret(secretKey)
@@ -116,7 +131,7 @@ class ApiKeyServiceImpl(
                         ApiKey::permissions,
                         apiKeyUpdateParam.permissionCodes?.let {
                             resolvePermissions(key.userId!!, it).sorted().joinToString(",")
-                        }
+                        },
                     )
                     set(ApiKey::enable, apiKeyUpdateParam.enable)
                     set(ApiKey::expireTime, apiKeyUpdateParam.expireTime)
@@ -125,7 +140,7 @@ class ApiKeyServiceImpl(
                     set(ApiKey::quota, apiKeyUpdateParam.quota)
                     set(ApiKey::quotaPeriod, apiKeyUpdateParam.quotaPeriod)
                     set(ApiKey::remark, apiKeyUpdateParam.remark)
-                }
+                },
             )
         }
         evictCache(key)
@@ -186,10 +201,12 @@ class ApiKeyServiceImpl(
         }
         // Wrapper-based partial update: bypasses the optimistic-lock version check and does
         // not auto-fill update_time — a "last used" touch should not count as an edit.
-        update(KtUpdateWrapper(ApiKey()).apply {
-            eq(ApiKey::id, keyId)
-            set(ApiKey::lastUsedTime, LocalDateTime.now(ZoneOffset.UTC))
-        })
+        update(
+            KtUpdateWrapper(ApiKey()).apply {
+                eq(ApiKey::id, keyId)
+                set(ApiKey::lastUsedTime, LocalDateTime.now(ZoneOffset.UTC))
+            },
+        )
     }
 
     override fun availableApis(managed: Boolean, userId: Long?): List<ApiKeyAvailableGroupVo> {
@@ -200,7 +217,7 @@ class ApiKeyServiceImpl(
                 ApiKeyAvailableGroupVo(
                     pluginId = pluginId.ifBlank { null },
                     pluginName = pluginRegistryCache.getByPluginId(pluginId)?.name,
-                    interfaces = apis.map { ApiKeyAvailableInterfaceVo(it.code, it.name) }
+                    interfaces = apis.map { ApiKeyAvailableInterfaceVo(it.code, it.name) },
                 )
             }
     }
@@ -237,13 +254,12 @@ class ApiKeyServiceImpl(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    private fun operationCodesOf(ownerId: Long): Set<String> =
-        if (ownerId == getLoginUserId()) {
-            getLoginUser()?.user?.operations?.mapNotNullTo(LinkedHashSet()) { it.code } ?: emptySet()
-        } else {
-            userMapper.selectOneWithPowerInfoById(ownerId)?.operations?.mapNotNullTo(LinkedHashSet()) { it.code }
-                ?: emptySet()
-        }
+    private fun operationCodesOf(ownerId: Long): Set<String> = if (ownerId == getLoginUserId()) {
+        getLoginUser()?.user?.operations?.mapNotNullTo(LinkedHashSet()) { it.code } ?: emptySet()
+    } else {
+        userMapper.selectOneWithPowerInfoById(ownerId)?.operations?.mapNotNullTo(LinkedHashSet()) { it.code }
+            ?: emptySet()
+    }
 
     /**
      * Resolve the API interfaces that may be granted to a key owned by the given owner:
@@ -260,7 +276,7 @@ class ApiKeyServiceImpl(
     private fun selectableApis(
         ownerId: Long,
         pluginIds: Collection<String>? = null,
-        codeIn: Collection<String>? = null
+        codeIn: Collection<String>? = null,
     ): List<ApiInterface> {
         val scope = callableScope(ownerId)
 
@@ -268,7 +284,7 @@ class ApiKeyServiceImpl(
             pluginIds = pluginIds,
             codeIn = codeIn,
             unrestricted = scope.unrestricted,
-            codes = scope.codes
+            codes = scope.codes,
         )
     }
 
@@ -283,8 +299,9 @@ class ApiKeyServiceImpl(
 
         // Narrowed to the requested codes, so the check reads those rows rather than every
         // interface the owner holds.
-        val selectable = selectableApis(ownerId, codeIn = requestSet)
-            .mapNotNullTo(HashSet()) { it.code }
+        val selectable =
+            selectableApis(ownerId, codeIn = requestSet)
+                .mapNotNullTo(HashSet()) { it.code }
         requestSet.forEach {
             if (it !in selectable) {
                 throw ApiKeyPermissionDeniedException()

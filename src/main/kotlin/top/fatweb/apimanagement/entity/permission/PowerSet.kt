@@ -41,7 +41,6 @@ class PowerSet : Serializable {
      */
     var operationList: List<Operation>? = null
 
-    override fun toString(): String {
-        return "PowerSet(moduleList=$moduleList, menuList=$menuList, scopeLists=$scopeLists, operationList=$operationList)"
-    }
+    override fun toString(): String =
+        "PowerSet(moduleList=$moduleList, menuList=$menuList, scopeLists=$scopeLists, operationList=$operationList)"
 }

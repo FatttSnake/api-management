@@ -14,5 +14,5 @@ import java.math.BigDecimal
 data class Balance @JvmOverloads constructor(
     val userId: Long,
     val available: BigDecimal = BigDecimal.ZERO,
-    val frozen: BigDecimal = BigDecimal.ZERO
+    val frozen: BigDecimal = BigDecimal.ZERO,
 )

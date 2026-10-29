@@ -79,7 +79,7 @@ interface UserMapper : BaseMapper<User> {
         page: IPage<Long>,
         @Param("searchType") searchType: String,
         @Param("searchValue") searchValue: String?,
-        @Param("searchRegex") searchRegex: Boolean
+        @Param("searchRegex") searchRegex: Boolean,
     ): IPage<Long>
 
     /**

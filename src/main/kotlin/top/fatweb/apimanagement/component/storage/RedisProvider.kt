@@ -2,6 +2,8 @@ package top.fatweb.apimanagement.component.storage
 
 import org.springframework.data.redis.core.BoundSetOperations
 import org.springframework.data.redis.core.RedisTemplate
+import org.springframework.data.redis.core.ScanOptions
+import org.springframework.data.redis.core.types.Expiration
 import org.springframework.stereotype.Component
 import java.util.concurrent.TimeUnit
 
@@ -13,9 +15,8 @@ import java.util.concurrent.TimeUnit
  */
 @Suppress("UNCHECKED_CAST")
 @Component
-class RedisProvider(
-    private val redisTemplate: RedisTemplate<String, Any>
-) {
+class RedisProvider(private val redisTemplate: RedisTemplate<String, Any>) {
+
     /**
      * Set valid time
      *
@@ -27,14 +28,14 @@ class RedisProvider(
      * @since 1.0.0
      */
     fun setExpire(key: String, timeout: Long, timeUnit: TimeUnit = TimeUnit.SECONDS): Boolean =
-        redisTemplate.expire(key, timeout, timeUnit)
+        redisTemplate.expire(key, Expiration.from(timeout, timeUnit))
 
     /**
      * Get valid time
      *
      * @param key Cache key
      * @param timeUnit Unit of time
-     * @return Valid time
+     * @return Remaining time to live in [timeUnit]; -1=no expiry, -2=key absent
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
@@ -53,15 +54,20 @@ class RedisProvider(
     /**
      * Get list of cached key
      *
+     * Uses `SCAN` rather than `KEYS` so a large keyspace does not block the server.
+     *
      * @param pattern Pattern of key
      * @return List of key
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun keys(pattern: String): Set<String> = redisTemplate.keys(pattern)
+    fun keys(pattern: String): Set<String> =
+        redisTemplate.scan(ScanOptions.scanOptions().match(pattern).count(SCAN_COUNT).build()).use { cursor ->
+            cursor.asSequence().toSet()
+        }
 
     /**
-     * Cache basic object
+     * Cache basic object without expiry
      *
      * @param key   Cache key
      * @param value Cache object
@@ -71,9 +77,9 @@ class RedisProvider(
     fun setObject(key: String, value: Any) = redisTemplate.opsForValue().set(key, value)
 
     /**
-     * Cache basic object
+     * Cache basic object with time to live
      *
-     * @param key   Cache key
+     * @param key Cache key
      * @param value Cache object
      * @param timeout Timeout
      * @param timeUnit Unit of timeout
@@ -81,8 +87,7 @@ class RedisProvider(
      * @since 1.0.0
      */
     fun setObject(key: String, value: Any, timeout: Long, timeUnit: TimeUnit = TimeUnit.SECONDS) =
-        redisTemplate.opsForValue().set(key, value, timeout, timeUnit)
-
+        redisTemplate.opsForValue().set(key, value, Expiration.from(timeout, timeUnit))
 
     /**
      * Get cached basic object
@@ -127,7 +132,7 @@ class RedisProvider(
      * @since 1.0.0
      */
     fun setIfAbsent(key: String, timeout: Long, timeUnit: TimeUnit = TimeUnit.SECONDS): Boolean =
-        redisTemplate.opsForValue().setIfAbsent(key, 1, timeout, timeUnit) ?: false
+        redisTemplate.opsForValue().setIfAbsent(key, 1, Expiration.from(timeout, timeUnit)) ?: false
 
     /**
      * Increment cached value atomically
@@ -142,7 +147,7 @@ class RedisProvider(
     fun increment(key: String, delta: Long = 1, ttlSeconds: Long = -1): Long {
         val value = redisTemplate.opsForValue().increment(key, delta) ?: 0L
         if (ttlSeconds > 0 && value <= delta) {
-            redisTemplate.expire(key, ttlSeconds, TimeUnit.SECONDS)
+            redisTemplate.expire(key, Expiration.seconds(ttlSeconds))
         }
         return value
     }
@@ -179,8 +184,8 @@ class RedisProvider(
      */
     fun setSet(key: String, dataSet: Set<Any>): BoundSetOperations<String, Any> {
         val boundSetOps: BoundSetOperations<String, Any> = redisTemplate.boundSetOps(key)
-        for (data in dataSet) {
-            boundSetOps.add(data)
+        if (dataSet.isNotEmpty()) {
+            boundSetOps.add(*dataSet.toTypedArray())
         }
         return boundSetOps
     }
@@ -209,7 +214,7 @@ class RedisProvider(
         val existed = redisTemplate.hasKey(key)
         val result = redisTemplate.opsForSet().add(key, *values) ?: 0L
         if (ttlSeconds > 0 && !existed) {
-            redisTemplate.expire(key, ttlSeconds, TimeUnit.SECONDS)
+            redisTemplate.expire(key, Expiration.seconds(ttlSeconds))
         }
         return result
     }
@@ -256,7 +261,7 @@ class RedisProvider(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun <T> getMapValue(key: String, hKey: String) = redisTemplate.opsForHash<String, T>().get(key, hKey)
+    fun <T> getMapValue(key: String, hKey: String): T? = redisTemplate.opsForHash<String, T>().get(key, hKey)
 
     /**
      * Delete value in cached map
@@ -280,4 +285,14 @@ class RedisProvider(
      */
     fun <T> getMultiMapValue(key: String, hKeys: Collection<String>): List<T> =
         redisTemplate.opsForHash<String, T>().multiGet(key, hKeys)
+
+    private companion object {
+        /**
+         * Keys scanned per round trip
+         *
+         * @author FatttSnake, fatttsnake@gmail.com
+         * @since 1.0.0
+         */
+        const val SCAN_COUNT = 1000L
+    }
 }

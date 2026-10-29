@@ -19,7 +19,6 @@ data class FlywayProperties(
      * @since 1.0.0
      */
     val locations: List<String> = listOf("classpath:db/migration"),
-
     /**
      * Name of the schema history table that will be used by Flyway.
      *
@@ -27,7 +26,6 @@ data class FlywayProperties(
      * @since 1.0.0
      */
     val table: String = "flyway_schema_history",
-
     /**
      * Whether to allow migrations to be run out of order.
      *
@@ -35,7 +33,6 @@ data class FlywayProperties(
      * @since 1.0.0
      */
     val outOfOrder: Boolean = false,
-
     /**
      * Whether to automatically call validate when performing a migration.
      *
@@ -43,7 +40,6 @@ data class FlywayProperties(
      * @since 1.0.0
      */
     val validateOnMigrate: Boolean = true,
-
     /**
      * Encoding of SQL migrations.
      *
@@ -51,7 +47,6 @@ data class FlywayProperties(
      * @since 1.0.0
      */
     val encoding: Charset = Charsets.UTF_8,
-
     /**
      * File name prefix for SQL migrations.
      *
@@ -59,7 +54,6 @@ data class FlywayProperties(
      * @since 1.0.0
      */
     val sqlMigrationPrefix: String = "V",
-
     /**
      * File name separator for SQL migrations.
      *
@@ -67,7 +61,6 @@ data class FlywayProperties(
      * @since 1.0.0
      */
     val sqlMigrationSeparator: String = "__",
-
     /**
      * File name suffix for SQL migrations.
      *
@@ -75,7 +68,6 @@ data class FlywayProperties(
      * @since 1.0.0
      */
     val sqlMigrationSuffixes: List<String> = listOf(".sql"),
-
     /**
      * Whether to automatically call baseline when migrating a non-empty schema.
      *
@@ -83,12 +75,11 @@ data class FlywayProperties(
      * @since 1.0.0
      */
     val baselineOnMigrate: Boolean = true,
-
     /**
      * Version to tag an existing schema with when executing baseline.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    val baselineVersion: String = "0"
+    val baselineVersion: String = "0",
 )

@@ -14,11 +14,8 @@ import org.springframework.web.servlet.mvc.condition.RequestCondition
  * @since 1.0.0
  * @see ApiPath
  */
-class ApiVersionCondition(
-    private val plugin: String,
-    private val apiVersion: Int
-) : RequestCondition<ApiVersionCondition> {
-
+class ApiVersionCondition(private val plugin: String, private val apiVersion: Int) :
+    RequestCondition<ApiVersionCondition> {
     override fun combine(other: ApiVersionCondition): ApiVersionCondition =
         ApiVersionCondition(other.plugin, other.apiVersion)
 
@@ -27,6 +24,5 @@ class ApiVersionCondition(
         return if (scoped.plugin == plugin && scoped.apiVersion >= apiVersion) this else null
     }
 
-    override fun compareTo(other: ApiVersionCondition, request: HttpServletRequest): Int =
-        other.apiVersion - apiVersion
+    override fun compareTo(other: ApiVersionCondition, request: HttpServletRequest): Int = other.apiVersion - apiVersion
 }

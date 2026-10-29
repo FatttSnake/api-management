@@ -23,7 +23,6 @@ data class ApiAuditVo(
      */
     @field:JsonSerialize(using = ToStringSerializer::class)
     val id: Long?,
-
     /**
      * Event type
      *
@@ -32,7 +31,6 @@ data class ApiAuditVo(
      */
     @field:Schema(description = "事件类型")
     val event: EventLog.Event?,
-
     /**
      * Operate user ID
      *
@@ -41,7 +39,6 @@ data class ApiAuditVo(
      */
     @field:JsonSerialize(using = ToStringSerializer::class)
     val operateUserId: Long?,
-
     /**
      * Operate time
      *
@@ -50,7 +47,6 @@ data class ApiAuditVo(
      */
     @field:Schema(description = "操作时间")
     val operateTime: LocalDateTime?,
-
     /**
      * Event detail
      *
@@ -59,7 +55,6 @@ data class ApiAuditVo(
      */
     @field:Schema(description = "事件详情")
     val detail: String?,
-
     /**
      * Operator user information (resolved from operateUserId)
      *
@@ -68,7 +63,6 @@ data class ApiAuditVo(
      */
     @field:Schema(description = "操作人信息")
     val userVo: UserWithInfoVo?,
-
     /**
      * Affected API key information (resolved from apiKeyId)
      *
@@ -77,7 +71,6 @@ data class ApiAuditVo(
      */
     @field:Schema(description = "被操作 Key 信息")
     val keyVo: ApiKeyVo?,
-
     /**
      * Target user information (resolved from targetUserId)
      *
@@ -85,5 +78,5 @@ data class ApiAuditVo(
      * @since 1.0.0
      */
     @field:Schema(description = "目标用户信息")
-    val targetUserVo: UserWithInfoVo?
+    val targetUserVo: UserWithInfoVo?,
 )

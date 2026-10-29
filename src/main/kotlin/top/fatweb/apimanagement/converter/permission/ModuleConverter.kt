@@ -13,5 +13,5 @@ import top.fatweb.apimanagement.vo.permission.base.ModuleVo
  */
 fun Module.toVo() = ModuleVo(
     id = this.id,
-    name = this.name
+    name = this.name,
 )

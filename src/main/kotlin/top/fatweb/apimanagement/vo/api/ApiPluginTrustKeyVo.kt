@@ -21,7 +21,6 @@ data class ApiPluginTrustKeyVo(
      */
     @field:JsonSerialize(using = ToStringSerializer::class)
     val id: Long?,
-
     /**
      * Public key fingerprint
      *
@@ -30,7 +29,6 @@ data class ApiPluginTrustKeyVo(
      */
     @field:Schema(description = "公钥指纹")
     val keyId: String?,
-
     /**
      * Key alias
      *
@@ -39,7 +37,6 @@ data class ApiPluginTrustKeyVo(
      */
     @field:Schema(description = "密钥别名")
     val alias: String?,
-
     /**
      * Enable status
      *
@@ -48,7 +45,6 @@ data class ApiPluginTrustKeyVo(
      */
     @field:Schema(description = "状态", example = "true")
     val enable: Boolean?,
-
     /**
      * Create time
      *
@@ -56,5 +52,5 @@ data class ApiPluginTrustKeyVo(
      * @since 1.0.0
      */
     @field:Schema(description = "创建时间", example = "2026-01-01T00:00:00.000Z")
-    val createTime: LocalDateTime?
+    val createTime: LocalDateTime?,
 )

@@ -16,28 +16,29 @@ import kotlin.test.assertTrue
  * @see PluginConfigSchemaUtil
  */
 class PluginConfigSchemaUtilTests {
-    private val schema = PluginConfigSchemaUtil.parse(
-        """
-        {
-          "datasources": [ { "name": "cache", "dbType": "sqlite", "required": true } ],
-          "groups": [
+    private val schema =
+        PluginConfigSchemaUtil.parse(
+            """
             {
-              "key": "share",
-              "title": "分享设置",
-              "fields": [
-                { "key": "ttlHours", "type": "number", "title": "有效期", "default": 2,
-                  "minimum": 1, "maximum": 168, "integer": true },
-                { "key": "enabled", "type": "boolean", "default": true },
-                { "key": "mode", "type": "enum", "default": "fast",
-                  "options": [ { "value": "fast", "label": "快速" }, { "value": "slow" } ] },
-                { "key": "notice", "type": "text", "maxLength": 5 },
-                { "key": "token", "type": "secret", "required": true }
+              "datasources": [ { "name": "cache", "dbType": "sqlite", "required": true } ],
+              "groups": [
+                {
+                  "key": "share",
+                  "title": "分享设置",
+                  "fields": [
+                    { "key": "ttlHours", "type": "number", "title": "有效期", "default": 2,
+                      "minimum": 1, "maximum": 168, "integer": true },
+                    { "key": "enabled", "type": "boolean", "default": true },
+                    { "key": "mode", "type": "enum", "default": "fast",
+                      "options": [ { "value": "fast", "label": "快速" }, { "value": "slow" } ] },
+                    { "key": "notice", "type": "text", "maxLength": 5 },
+                    { "key": "token", "type": "secret", "required": true }
+                  ]
+                }
               ]
             }
-          ]
-        }
-        """.trimIndent()
-    )!!
+            """.trimIndent(),
+        )!!
 
     @Test
     fun `a declared schema is readable`() {
@@ -136,8 +137,8 @@ class PluginConfigSchemaUtilTests {
                 "enabled" to "false",
                 "mode" to "slow",
                 "notice" to "hello",
-                "token" to "s3cr3t"
-            )
+                "token" to "s3cr3t",
+            ),
         )
     }
 
@@ -171,7 +172,7 @@ class PluginConfigSchemaUtilTests {
         PluginConfigSchemaUtil.validate(
             schema,
             submit("share", "notice" to null),
-            stored = mapOf("token" to "s3cr3t")
+            stored = mapOf("token" to "s3cr3t"),
         )
     }
 
@@ -233,7 +234,7 @@ class PluginConfigSchemaUtilTests {
             assertEquals(
                 field.default,
                 PluginConfigSchemaUtil.effectiveValue(field, "", storedValue = "stored"),
-                "a cleared '$key' should fall back to its declared default"
+                "a cleared '$key' should fall back to its declared default",
             )
         }
     }
@@ -255,7 +256,9 @@ class PluginConfigSchemaUtilTests {
         // A field declaring a shortest length is saying a blank is not a value it accepts
         val constrained = parseField("""{ "key": "a", "type": "string", "minLength": 3 }""")!!
 
-        assertFailsWith<IllegalArgumentException> { PluginConfigSchemaUtil.validate(constrained, submit("g", "a" to "")) }
+        assertFailsWith<IllegalArgumentException> {
+            PluginConfigSchemaUtil.validate(constrained, submit("g", "a" to ""))
+        }
     }
 
     @Test
@@ -278,7 +281,7 @@ class PluginConfigSchemaUtilTests {
         PluginConfigSchemaUtil.validate(
             schema,
             submit("share", "notice" to "hi"),
-            stored = mapOf("token" to "s3cr3t")
+            stored = mapOf("token" to "s3cr3t"),
         )
     }
 
@@ -286,30 +289,40 @@ class PluginConfigSchemaUtilTests {
     fun `a required field of a group nobody submitted is not checked`() {
         // A console saves one group at a time, so a field left unfinished in another group is
         // not this save's business - otherwise the form could never be saved at all
-        val twoGroups = PluginConfigSchemaUtil.parse(
-            """
-            {
-              "groups": [
-                { "key": "db", "fields": [ { "key": "db.host", "type": "string", "required": true } ] },
-                { "key": "share", "fields": [ { "key": "notice", "type": "string" } ] }
-              ]
-            }
-            """.trimIndent()
-        )!!
+        val twoGroups =
+            PluginConfigSchemaUtil.parse(
+                """
+                {
+                  "groups": [
+                    { "key": "db", "fields": [ { "key": "db.host", "type": "string", "required": true } ] },
+                    { "key": "share", "fields": [ { "key": "notice", "type": "string" } ] }
+                  ]
+                }
+                """.trimIndent(),
+            )!!
 
         PluginConfigSchemaUtil.validate(twoGroups, submit("share", "notice" to "hi"))
-        assertFailsWith<IllegalArgumentException> { PluginConfigSchemaUtil.validate(twoGroups, submit("db", "db.host" to "")) }
+        assertFailsWith<IllegalArgumentException> {
+            PluginConfigSchemaUtil.validate(
+                twoGroups,
+                submit(
+                    "db",
+                    "db.host" to "",
+                ),
+            )
+        }
     }
 
     @Test
     fun `a blank is not a value a required field can be satisfied by`() {
         // A blank clears a key, so a required one is left unsatisfied rather than set to
         // nothing - whatever is still stored under it
-        val required = PluginConfigSchemaUtil.parse(
-            """
-            { "groups": [ { "key": "g", "fields": [ { "key": "a", "type": "string", "required": true } ] } ] }
-            """.trimIndent()
-        )!!
+        val required =
+            PluginConfigSchemaUtil.parse(
+                """
+                { "groups": [ { "key": "g", "fields": [ { "key": "a", "type": "string", "required": true } ] } ] }
+                """.trimIndent(),
+            )!!
 
         assertFailsWith<IllegalArgumentException> { PluginConfigSchemaUtil.validate(required, submit("g", "a" to "")) }
         PluginConfigSchemaUtil.validate(required, submit("g", "a" to "x"))
@@ -318,18 +331,19 @@ class PluginConfigSchemaUtilTests {
             PluginConfigSchemaUtil.validate(
                 schema,
                 submit("share", "token" to ""),
-                stored = mapOf("token" to "s3cr3t")
+                stored = mapOf("token" to "s3cr3t"),
             )
         }
     }
 
     @Test
     fun `the values after a save are read from the submission, the stored values and the defaults`() {
-        val effective = PluginConfigSchemaUtil.effectiveValues(
-            schema,
-            submit("share", "ttlHours" to "", "enabled" to "false", "notice" to ""),
-            stored = mapOf("ttlHours" to "5", "mode" to "slow", "token" to "s3cr3t")
-        )
+        val effective =
+            PluginConfigSchemaUtil.effectiveValues(
+                schema,
+                submit("share", "ttlHours" to "", "enabled" to "false", "notice" to ""),
+                stored = mapOf("ttlHours" to "5", "mode" to "slow", "token" to "s3cr3t"),
+            )
 
         assertEquals("2", effective["ttlHours"], "a cleared key falls back to its declared default")
         assertEquals("false", effective["enabled"], "a submitted value is what is read")
@@ -353,8 +367,7 @@ class PluginConfigSchemaUtilTests {
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    private fun submit(groupKey: String, vararg values: Pair<String, String?>) =
-        mapOf(groupKey to values.toMap())
+    private fun submit(groupKey: String, vararg values: Pair<String, String?>) = mapOf(groupKey to values.toMap())
 
     @Test
     fun `a schema without a datasource declares none`() {
@@ -374,13 +387,14 @@ class PluginConfigSchemaUtilTests {
     fun `the replaced singular spelling is refused by name`() {
         // An unknown top-level key is ignored, so without this an old plugin would mount with
         // no datasource, no error, and its data silently out of reach
-        val error = assertFailsWith<IllegalArgumentException> {
-            PluginConfigSchemaUtil.parse("""{ "datasource": { "dbType": "sqlite" } }""")
-        }
+        val error =
+            assertFailsWith<IllegalArgumentException> {
+                PluginConfigSchemaUtil.parse("""{ "datasource": { "dbType": "sqlite" } }""")
+            }
 
         assertTrue(
             error.message!!.contains("datasources"),
-            "the refusal should name the replacement: ${error.message}"
+            "the refusal should name the replacement: ${error.message}",
         )
     }
 
@@ -394,31 +408,40 @@ class PluginConfigSchemaUtilTests {
 
     @Test
     fun `an unknown dialect is rejected`() {
-        val error = assertFailsWith<IllegalArgumentException> {
-            parseDatasources("""[ { "name": "main", "dbType": "postgres" } ]""")
-        }
+        val error =
+            assertFailsWith<IllegalArgumentException> {
+                parseDatasources("""[ { "name": "main", "dbType": "postgres" } ]""")
+            }
 
-        assertTrue(error.message!!.contains("postgres"), "the refusal should name the offending value: ${error.message}")
+        assertTrue(
+            error.message!!.contains("postgres"),
+            "the refusal should name the offending value: ${error.message}",
+        )
     }
 
     @Test
     fun `a declared dialect is normalised`() {
         assertEquals(
             PluginDatasourceType.MYSQL,
-            parseDatasources(mysqlDatasource)!!.datasources.single().dbType
+            parseDatasources(mysqlDatasource)!!.datasources.single().dbType,
         )
         assertEquals(
             PluginDatasourceType.SQLITE,
-            parseDatasources("""[ { "name": "cache", "dbType": "SQLite" } ]""")!!.datasources.single().dbType
+            parseDatasources("""[ { "name": "cache", "dbType": "SQLite" } ]""")!!.datasources.single().dbType,
         )
     }
 
     @Test
     fun `a datasource may be optional or required`() {
-        assertEquals(false, parseDatasources("""[ { "name": "cache", "dbType": "SQLITE" } ]""")!!.datasources.single().required)
+        assertEquals(
+            false,
+            parseDatasources("""[ { "name": "cache", "dbType": "SQLITE" } ]""")!!.datasources.single().required,
+        )
         assertEquals(
             true,
-            parseDatasources("""[ { "name": "cache", "dbType": "SQLITE", "required": true } ]""")!!.datasources.single().required
+            parseDatasources(
+                """[ { "name": "cache", "dbType": "SQLITE", "required": true } ]""",
+            )!!.datasources.single().required,
         )
     }
 
@@ -426,7 +449,7 @@ class PluginConfigSchemaUtilTests {
     fun `the keys a datasource is composed from are the ones its slots name`() {
         assertEquals(
             setOf("db.host", "db.port", "db.name", "db.user", "db.password", "db.params"),
-            parseDatasources(mysqlDatasource)!!.datasourceKeys
+            parseDatasources(mysqlDatasource)!!.datasourceKeys,
         )
     }
 
@@ -434,9 +457,10 @@ class PluginConfigSchemaUtilTests {
     fun `a slot has to point at a declared field`() {
         // A slot that named nothing would be a connection fact the gateway can never read,
         // and the plugin author would see the plugin work locally and fail on install
-        val error = assertFailsWith<IllegalArgumentException> {
-            parseDatasources("""[ { "name": "main", "dbType": "MYSQL", "host": "nope", "database": "db.name" } ]""")
-        }
+        val error =
+            assertFailsWith<IllegalArgumentException> {
+                parseDatasources("""[ { "name": "main", "dbType": "MYSQL", "host": "nope", "database": "db.name" } ]""")
+            }
 
         assertTrue(error.message!!.contains("nope"), "the refusal should name the key: ${error.message}")
     }
@@ -447,11 +471,15 @@ class PluginConfigSchemaUtilTests {
             parseDatasources("""[ { "name": "main", "dbType": "MYSQL", "host": "db.port", "database": "db.name" } ]""")
         }
         assertFailsWith<IllegalArgumentException> {
-            parseDatasources("""[ { "name": "main", "dbType": "MYSQL", "host": "db.host", "database": "db.name", "port": "db.user" } ]""")
+            parseDatasources(
+                """[ { "name": "main", "dbType": "MYSQL", "host": "db.host", "database": "db.name", "port": "db.user" } ]""",
+            )
         }
         // A password held as a plain field would be stored in the clear
         assertFailsWith<IllegalArgumentException> {
-            parseDatasources("""[ { "name": "main", "dbType": "MYSQL", "host": "db.host", "database": "db.name", "password": "db.user" } ]""")
+            parseDatasources(
+                """[ { "name": "main", "dbType": "MYSQL", "host": "db.host", "database": "db.name", "password": "db.user" } ]""",
+            )
         }
     }
 
@@ -480,13 +508,13 @@ class PluginConfigSchemaUtilTests {
         // see changes with it
         assertFailsWith<IllegalArgumentException> {
             parseDatasources(
-                """[ { "name": "main", "dbType": "MYSQL", "host": "db.host", "database": "db.host" } ]"""
+                """[ { "name": "main", "dbType": "MYSQL", "host": "db.host", "database": "db.host" } ]""",
             )
         }
         assertFailsWith<IllegalArgumentException> {
             parseDatasources(
                 """[ { "name": "main", "dbType": "MYSQL", "host": "db.host", "database": "db.name" },
-                    { "name": "other", "dbType": "MYSQL", "host": "db.host", "database": "db.name" } ]"""
+                    { "name": "other", "dbType": "MYSQL", "host": "db.host", "database": "db.name" } ]""",
             )
         }
     }
@@ -496,41 +524,43 @@ class PluginConfigSchemaUtilTests {
         // A group is the form a connection is filled in, saved and tested as, so fields
         // spread over two of them describe a connection nothing could submit in one piece.
         // The refusal names the groups, since moving a field is what it asks the author for
-        val error = assertFailsWith<IllegalArgumentException> {
+        val error =
+            assertFailsWith<IllegalArgumentException> {
+                PluginConfigSchemaUtil.parse(
+                    """
+                    {
+                      "datasources": [ { "name": "main", "dbType": "MYSQL", "host": "db.host", "database": "db.name" } ],
+                      "groups": [
+                        { "key": "server", "fields": [ { "key": "db.host", "type": "string" } ] },
+                        { "key": "database", "fields": [ { "key": "db.name", "type": "string" } ] }
+                      ]
+                    }
+                    """.trimIndent(),
+                )
+            }
+
+        assertTrue(
+            error.message!!.contains("server") && error.message!!.contains("database"),
+            "the refusal should name both groups: ${error.message}",
+        )
+
+        // The same connection gathered into one group is what the rule asks for, and the
+        // group it lands in need not be the first one
+        val gathered =
             PluginConfigSchemaUtil.parse(
                 """
                 {
                   "datasources": [ { "name": "main", "dbType": "MYSQL", "host": "db.host", "database": "db.name" } ],
                   "groups": [
-                    { "key": "server", "fields": [ { "key": "db.host", "type": "string" } ] },
-                    { "key": "database", "fields": [ { "key": "db.name", "type": "string" } ] }
+                    { "key": "share", "fields": [ { "key": "notice", "type": "text" } ] },
+                    { "key": "database", "fields": [
+                      { "key": "db.host", "type": "string" },
+                      { "key": "db.name", "type": "string" }
+                    ] }
                   ]
                 }
-                """.trimIndent()
+                """.trimIndent(),
             )
-        }
-
-        assertTrue(
-            error.message!!.contains("server") && error.message!!.contains("database"),
-            "the refusal should name both groups: ${error.message}"
-        )
-
-        // The same connection gathered into one group is what the rule asks for, and the
-        // group it lands in need not be the first one
-        val gathered = PluginConfigSchemaUtil.parse(
-            """
-            {
-              "datasources": [ { "name": "main", "dbType": "MYSQL", "host": "db.host", "database": "db.name" } ],
-              "groups": [
-                { "key": "share", "fields": [ { "key": "notice", "type": "text" } ] },
-                { "key": "database", "fields": [
-                  { "key": "db.host", "type": "string" },
-                  { "key": "db.name", "type": "string" }
-                ] }
-              ]
-            }
-            """.trimIndent()
-        )
 
         assertEquals("main", gathered!!.datasourceOf("main")?.name)
     }
@@ -540,7 +570,35 @@ class PluginConfigSchemaUtilTests {
         // The other half of the same rule: a group is one form, and a form offers the one
         // connection test it has room for, so a second connection drawn beside the first
         // would be the one an administrator cannot ask about
-        val error = assertFailsWith<IllegalArgumentException> {
+        val error =
+            assertFailsWith<IllegalArgumentException> {
+                PluginConfigSchemaUtil.parse(
+                    """
+                    {
+                      "datasources": [
+                        { "name": "main", "dbType": "MYSQL", "host": "db.host", "database": "db.name" },
+                        { "name": "archive", "dbType": "MYSQL", "host": "old.host", "database": "old.name" }
+                      ],
+                      "groups": [
+                        { "key": "db", "fields": [
+                          { "key": "db.host", "type": "string" },
+                          { "key": "db.name", "type": "string" },
+                          { "key": "old.host", "type": "string" },
+                          { "key": "old.name", "type": "string" }
+                        ] }
+                      ]
+                    }
+                    """.trimIndent(),
+                )
+            }
+
+        assertTrue(
+            error.message!!.contains("main") && error.message!!.contains("db"),
+            "the refusal should name the group and what already has it: ${error.message}",
+        )
+
+        // Two connections described by two groups are what the rule asks for
+        val split =
             PluginConfigSchemaUtil.parse(
                 """
                 {
@@ -551,42 +609,16 @@ class PluginConfigSchemaUtilTests {
                   "groups": [
                     { "key": "db", "fields": [
                       { "key": "db.host", "type": "string" },
-                      { "key": "db.name", "type": "string" },
+                      { "key": "db.name", "type": "string" }
+                    ] },
+                    { "key": "archive", "fields": [
                       { "key": "old.host", "type": "string" },
                       { "key": "old.name", "type": "string" }
                     ] }
                   ]
                 }
-                """.trimIndent()
+                """.trimIndent(),
             )
-        }
-
-        assertTrue(
-            error.message!!.contains("main") && error.message!!.contains("db"),
-            "the refusal should name the group and what already has it: ${error.message}"
-        )
-
-        // Two connections described by two groups are what the rule asks for
-        val split = PluginConfigSchemaUtil.parse(
-            """
-            {
-              "datasources": [
-                { "name": "main", "dbType": "MYSQL", "host": "db.host", "database": "db.name" },
-                { "name": "archive", "dbType": "MYSQL", "host": "old.host", "database": "old.name" }
-              ],
-              "groups": [
-                { "key": "db", "fields": [
-                  { "key": "db.host", "type": "string" },
-                  { "key": "db.name", "type": "string" }
-                ] },
-                { "key": "archive", "fields": [
-                  { "key": "old.host", "type": "string" },
-                  { "key": "old.name", "type": "string" }
-                ] }
-              ]
-            }
-            """.trimIndent()
-        )
 
         assertEquals(2, split!!.datasources.size)
     }
@@ -595,27 +627,28 @@ class PluginConfigSchemaUtilTests {
     fun `a password slot cannot point at a required field`() {
         // A required field refuses a blank submission, so the stored password could never be
         // cleared - which is the whole reason the password is an ordinary secret field
-        val error = assertFailsWith<IllegalArgumentException> {
-            PluginConfigSchemaUtil.parse(
-                """
-                {
-                  "datasources": [ { "name": "main", "dbType": "MYSQL", "host": "db.host", "database": "db.name",
-                                     "password": "db.password" } ],
-                  "groups": [
-                    { "key": "db", "fields": [
-                      { "key": "db.host", "type": "string" },
-                      { "key": "db.name", "type": "string" },
-                      { "key": "db.password", "type": "secret", "required": true }
-                    ] }
-                  ]
-                }
-                """.trimIndent()
-            )
-        }
+        val error =
+            assertFailsWith<IllegalArgumentException> {
+                PluginConfigSchemaUtil.parse(
+                    """
+                    {
+                      "datasources": [ { "name": "main", "dbType": "MYSQL", "host": "db.host", "database": "db.name",
+                                         "password": "db.password" } ],
+                      "groups": [
+                        { "key": "db", "fields": [
+                          { "key": "db.host", "type": "string" },
+                          { "key": "db.name", "type": "string" },
+                          { "key": "db.password", "type": "secret", "required": true }
+                        ] }
+                      ]
+                    }
+                    """.trimIndent(),
+                )
+            }
 
         assertTrue(
             error.message!!.contains("cleared"),
-            "the refusal should say why: ${error.message}"
+            "the refusal should say why: ${error.message}",
         )
     }
 
@@ -625,7 +658,7 @@ class PluginConfigSchemaUtilTests {
         // make that question unanswerable
         assertFailsWith<IllegalArgumentException> {
             parseDatasources(
-                """[ { "name": "cache", "dbType": "SQLITE" }, { "name": "cache", "dbType": "SQLITE" } ]"""
+                """[ { "name": "cache", "dbType": "SQLITE" }, { "name": "cache", "dbType": "SQLITE" } ]""",
             )
         }
     }
@@ -657,9 +690,8 @@ class PluginConfigSchemaUtilTests {
      * @since 1.0.0
      * @see PluginConfigSchema
      */
-    private fun parseDatasources(datasources: String) =
-        PluginConfigSchemaUtil.parse(
-            """
+    private fun parseDatasources(datasources: String) = PluginConfigSchemaUtil.parse(
+        """
             {
               "datasources": $datasources,
               "groups": [
@@ -676,10 +708,11 @@ class PluginConfigSchemaUtilTests {
                 }
               ]
             }
-            """.trimIndent()
-        )
+        """.trimIndent(),
+    )
 
-    private val mysqlDatasource = """
+    private val mysqlDatasource =
+        """
         [
           {
             "name": "main",
@@ -693,5 +726,5 @@ class PluginConfigSchemaUtilTests {
             "params": "db.params"
           }
         ]
-    """.trimIndent()
+        """.trimIndent()
 }

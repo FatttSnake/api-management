@@ -18,7 +18,6 @@ data class ApiMonitorDashboardVo(
      */
     @field:Schema(description = "实时指标（当前窗口）")
     val live: List<ApiMonitorItemVo>?,
-
     /**
      * Total requests today
      *
@@ -27,7 +26,6 @@ data class ApiMonitorDashboardVo(
      */
     @field:Schema(description = "今日请求总数")
     val totalToday: Long?,
-
     /**
      * Error requests today
      *
@@ -36,7 +34,6 @@ data class ApiMonitorDashboardVo(
      */
     @field:Schema(description = "今日错误数")
     val errorToday: Long?,
-
     /**
      * Active keys this window
      *
@@ -45,7 +42,6 @@ data class ApiMonitorDashboardVo(
      */
     @field:Schema(description = "当前活跃 Key 数")
     val activeKeys: Long?,
-
     /**
      * Top APIs
      *
@@ -54,7 +50,6 @@ data class ApiMonitorDashboardVo(
      */
     @field:Schema(description = "Top API")
     val topApis: List<ApiTopVo>?,
-
     /**
      * Top APIs today
      *
@@ -62,7 +57,7 @@ data class ApiMonitorDashboardVo(
      * @since 1.0.0
      */
     @field:Schema(description = "今日 Top API")
-    val todayTopApis: List<ApiTopVo>?
+    val todayTopApis: List<ApiTopVo>?,
 ) {
     /**
      * API monitor item value object
@@ -80,7 +75,6 @@ data class ApiMonitorDashboardVo(
          */
         @field:Schema(description = "API 编码")
         val apiCode: String?,
-
         /**
          * Request count
          *
@@ -89,7 +83,6 @@ data class ApiMonitorDashboardVo(
          */
         @field:Schema(description = "请求次数")
         val count: Long?,
-
         /**
          * Error count
          *
@@ -98,7 +91,6 @@ data class ApiMonitorDashboardVo(
          */
         @field:Schema(description = "错误次数")
         val error: Long?,
-
         /**
          * Total latency in ms
          *
@@ -107,7 +99,6 @@ data class ApiMonitorDashboardVo(
          */
         @field:Schema(description = "总耗时(ms)")
         val latencyMs: Long?,
-
         /**
          * API plugin information
          *
@@ -116,7 +107,6 @@ data class ApiMonitorDashboardVo(
          */
         @field:Schema(description = "API 插件信息")
         val pluginVo: ApiPluginVo?,
-
         /**
          * API interface information
          *
@@ -124,6 +114,6 @@ data class ApiMonitorDashboardVo(
          * @since 1.0.0
          */
         @field:Schema(description = "API 接口信息")
-        val interfaceVo: ApiInterfaceVo?
+        val interfaceVo: ApiInterfaceVo?,
     )
 }

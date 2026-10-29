@@ -17,5 +17,5 @@ data class TwoFactorVo(
      * @since 1.0.0
      */
     @field:Schema(description = "二维码 SVG Base64")
-    val qrCodeSVGBase64: String?
+    val qrCodeSVGBase64: String?,
 )

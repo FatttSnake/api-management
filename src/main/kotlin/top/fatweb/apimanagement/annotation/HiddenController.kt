@@ -20,5 +20,5 @@ import org.springframework.web.bind.annotation.RestController
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
 annotation class HiddenController(
-    @get:AliasFor(annotation = RequestMapping::class, attribute = "path") val path: Array<String> = [""]
+    @get:AliasFor(annotation = RequestMapping::class, attribute = "path") val path: Array<String> = [""],
 )

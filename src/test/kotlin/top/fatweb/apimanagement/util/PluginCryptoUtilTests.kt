@@ -1,10 +1,10 @@
 package top.fatweb.apimanagement.util
 
+import java.util.Base64
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
-import java.util.Base64
 
 /**
  * Plugin crypto util tests

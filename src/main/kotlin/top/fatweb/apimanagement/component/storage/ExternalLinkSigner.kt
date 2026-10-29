@@ -18,16 +18,13 @@ import javax.crypto.spec.SecretKeySpec
  * @since 1.0.0
  */
 @Component
-class ExternalLinkSigner(
-    private val serverProperties: ServerProperties
-) {
+class ExternalLinkSigner(private val serverProperties: ServerProperties) {
     private companion object {
         const val PURPOSE = "plugin-storage-v1"
         const val ALGORITHM = "HmacSHA256"
     }
 
-    private fun canonical(key: String, expiresAt: Long): String =
-        "$PURPOSE\n$key\n$expiresAt"
+    private fun canonical(key: String, expiresAt: Long): String = "$PURPOSE\n$key\n$expiresAt"
 
     private fun digest(key: String, expiresAt: Long): ByteArray {
         val mac = Mac.getInstance(ALGORITHM)
@@ -61,9 +58,10 @@ class ExternalLinkSigner(
      * @since 1.0.0
      */
     fun verify(key: String, expiresAt: Long, signature: String): Boolean {
-        val presented = runCatching {
-            Base64.getUrlDecoder().decode(signature)
-        }.getOrNull() ?: return false
+        val presented =
+            runCatching {
+                Base64.getUrlDecoder().decode(signature)
+            }.getOrNull() ?: return false
 
         return MessageDigest.isEqual(digest(key, expiresAt), presented)
     }

@@ -3,6 +3,7 @@ package top.fatweb.apimanagement.component.plugin
 import org.springframework.stereotype.Component
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.Condition
 import java.util.concurrent.locks.ReentrantLock
 
 /**
@@ -31,7 +32,7 @@ class PluginInFlightTracker {
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
          */
-        internal val state: State
+        internal val state: State,
     )
 
     /**
@@ -42,7 +43,7 @@ class PluginInFlightTracker {
      */
     internal class State {
         val lock = ReentrantLock()
-        val idle = lock.newCondition()
+        val idle: Condition = lock.newCondition()
         var count = 0
         var draining = false
     }

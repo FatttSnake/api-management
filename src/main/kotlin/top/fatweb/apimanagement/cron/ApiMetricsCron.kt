@@ -21,7 +21,7 @@ import top.fatweb.apimanagement.service.system.IStatisticsLogService
 class ApiMetricsCron(
     private val serverProperties: ServerProperties,
     private val redisProvider: RedisProvider,
-    private val statisticsLogService: IStatisticsLogService
+    private val statisticsLogService: IStatisticsLogService,
 ) {
     private val logger = LoggerFactory.getLogger(this::class.java)
     private val jsonMapper = JsonMapper.builder().build()
@@ -58,7 +58,7 @@ class ApiMetricsCron(
 
     private fun readMetricMap(prefix: String, suffix: String): Map<String, Long> {
         val keyPrefix = "${prefix}_$suffix:"
-        return redisProvider.keys("${keyPrefix}*").associate { key ->
+        return redisProvider.keys("$keyPrefix*").associate { key ->
             key.removePrefix(keyPrefix) to (redisProvider.getObject<Number>(key)?.toLong() ?: 0L)
         }
     }
@@ -68,7 +68,7 @@ class ApiMetricsCron(
             StatisticsLog().apply {
                 key = keyItem
                 value = jsonMapper.writeValueAsString(map)
-            }
+            },
         )
     }
 }

@@ -18,7 +18,6 @@ data class SiteverifyResponse(
      */
     @field:JsonProperty("success")
     val success: Boolean,
-
     /**
      * Challenge time
      *
@@ -27,7 +26,6 @@ data class SiteverifyResponse(
      */
     @field:JsonProperty("challenge_ts")
     val challengeTs: LocalDateTime?,
-
     /**
      * Hostname
      *
@@ -36,7 +34,6 @@ data class SiteverifyResponse(
      */
     @field:JsonProperty("hostname")
     val hostname: String?,
-
     /**
      * Error codes list
      *
@@ -45,7 +42,6 @@ data class SiteverifyResponse(
      */
     @field:JsonProperty("error-codes")
     val errorCodes: List<String>?,
-
     /**
      * Action
      *
@@ -54,7 +50,6 @@ data class SiteverifyResponse(
      */
     @field:JsonProperty("action")
     val action: String?,
-
     /**
      * Cdata
      *
@@ -63,7 +58,6 @@ data class SiteverifyResponse(
      */
     @field:JsonProperty("cdata")
     val cdata: String?,
-
     /**
      * Metadata
      *
@@ -71,5 +65,5 @@ data class SiteverifyResponse(
      * @since 1.0.0
      */
     @field:JsonProperty("metadata")
-    val metadata: Map<String, String>?
+    val metadata: Map<String, String>?,
 )

@@ -59,7 +59,5 @@ class LoginUser() : UserDetails {
     @JsonIgnore
     override fun isEnabled() = user.enable == 1
 
-    override fun toString(): String {
-        return "LoginUser(user=$user, authorities=$authorities)"
-    }
+    override fun toString(): String = "LoginUser(user=$user, authorities=$authorities)"
 }

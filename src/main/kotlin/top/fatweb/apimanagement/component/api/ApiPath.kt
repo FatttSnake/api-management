@@ -30,14 +30,13 @@ internal object ApiPath {
          * @since 1.0.0
          */
         val plugin: String,
-
         /**
          * API version as it appears in the URL
          *
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
          */
-        val apiVersion: Int
+        val apiVersion: Int,
     )
 
     /**

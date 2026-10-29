@@ -21,7 +21,6 @@ data class PluginModuleGetParam(
      */
     @field:Schema(description = "查询 Maven group")
     var searchGroup: String?,
-
     /**
      * Maven artifact to search for
      *
@@ -30,7 +29,6 @@ data class PluginModuleGetParam(
      */
     @field:Schema(description = "查询 Maven artifact")
     var searchArtifact: String?,
-
     /**
      * Maven version to search for
      *
@@ -38,5 +36,5 @@ data class PluginModuleGetParam(
      * @since 1.0.0
      */
     @field:Schema(description = "查询 Maven version")
-    var searchVersion: String?
+    var searchVersion: String?,
 ) : PageSortParam()

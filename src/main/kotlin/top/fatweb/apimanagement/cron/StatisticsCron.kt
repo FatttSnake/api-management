@@ -17,7 +17,7 @@ import top.fatweb.apimanagement.service.system.IStatisticsLogService
 class StatisticsCron(
     private val serverProperties: ServerProperties,
     private val redisProvider: RedisProvider,
-    private val statisticsLogService: IStatisticsLogService
+    private val statisticsLogService: IStatisticsLogService,
 ) {
     /**
      * Auto record number of online users
@@ -27,14 +27,21 @@ class StatisticsCron(
      */
     @Scheduled(cron = "0 * * * * *")
     fun onlineUserCount() {
-        statisticsLogService.save(StatisticsLog().apply {
-            key = StatisticsLog.KeyItem.ONLINE_USERS_COUNT
-            value = redisProvider.keys("${serverProperties.security.tokenIssuer}_access_*")
-                .distinctBy {
-                    Regex("${serverProperties.security.tokenIssuer}_access_(.*?)_.*:.*").matchEntire(it)?.groupValues?.getOrNull(
-                        1
-                    )
-                }.size.toString()
-        })
+        statisticsLogService.save(
+            StatisticsLog().apply {
+                key = StatisticsLog.KeyItem.ONLINE_USERS_COUNT
+                value =
+                    redisProvider
+                        .keys("${serverProperties.security.tokenIssuer}_access_*")
+                        .distinctBy {
+                            Regex(
+                                "${serverProperties.security.tokenIssuer}_access_(.*?)_.*:.*",
+                            ).matchEntire(it)?.groupValues?.getOrNull(
+                                1,
+                            )
+                        }.size
+                        .toString()
+            },
+        )
     }
 }

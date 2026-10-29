@@ -2,7 +2,13 @@ package top.fatweb.apimanagement.service.permission
 
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-import top.fatweb.apimanagement.param.permission.*
+import top.fatweb.apimanagement.param.permission.ForgetParam
+import top.fatweb.apimanagement.param.permission.LoginParam
+import top.fatweb.apimanagement.param.permission.RegisterParam
+import top.fatweb.apimanagement.param.permission.RetrieveParam
+import top.fatweb.apimanagement.param.permission.TwoFactorRemoveParam
+import top.fatweb.apimanagement.param.permission.TwoFactorValidateParam
+import top.fatweb.apimanagement.param.permission.VerifyParam
 import top.fatweb.apimanagement.vo.permission.LoginVo
 import top.fatweb.apimanagement.vo.permission.RegisterVo
 import top.fatweb.apimanagement.vo.permission.TokenVo
@@ -127,9 +133,5 @@ interface IAuthenticationService {
      * @since 1.0.0
      * @see HttpServletRequest
      */
-    fun refreshToken(
-        response: HttpServletResponse,
-        refreshToken: String?,
-        csrfToken: String? = null
-    ): TokenVo
+    fun refreshToken(response: HttpServletResponse, refreshToken: String?, csrfToken: String? = null): TokenVo
 }

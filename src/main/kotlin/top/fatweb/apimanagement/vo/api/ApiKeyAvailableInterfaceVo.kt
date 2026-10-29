@@ -18,7 +18,6 @@ data class ApiKeyAvailableInterfaceVo(
      */
     @Schema(description = "API 编码", example = "api:echo:v1:ping")
     val code: String?,
-
     /**
      * API name
      *
@@ -26,5 +25,5 @@ data class ApiKeyAvailableInterfaceVo(
      * @since 1.0.0
      */
     @Schema(description = "API 名称", example = "getRandom")
-    val name: String?
+    val name: String?,
 )

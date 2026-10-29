@@ -20,8 +20,5 @@ interface TurnstileApi {
      */
     @FormUrlEncoded
     @POST("siteverify")
-    suspend fun siteverify(
-        @Field("response") captchaCode: String,
-        @Field("secret") secret: String
-    ): SiteverifyResponse
+    suspend fun siteverify(@Field("response") captchaCode: String, @Field("secret") secret: String): SiteverifyResponse
 }

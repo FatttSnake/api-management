@@ -31,13 +31,7 @@ interface ApiRoutes {
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun register(
-        method: String,
-        path: String,
-        apiVersion: Int,
-        operation: OperationMetadata,
-        handler: ApiHandler
-    ) {
+    fun register(method: String, path: String, apiVersion: Int, operation: OperationMetadata, handler: ApiHandler) {
         register(RouteDefinition(method, path, apiVersion, operation), handler)
     }
 }

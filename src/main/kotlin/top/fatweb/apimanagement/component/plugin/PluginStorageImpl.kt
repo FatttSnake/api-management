@@ -21,18 +21,15 @@ class PluginStorageImpl(
     private val pluginId: String,
     private val serverProperties: ServerProperties,
     private val fileStorageProvider: FileStorageProvider,
-    private val storageBlobService: IStorageBlobService
+    private val storageBlobService: IStorageBlobService,
 ) : Storage {
     private val logger = LoggerFactory.getLogger(this::class.java)
 
-    override fun saveContent(content: ByteArray): String =
-        storageBlobService.saveFile(content)
+    override fun saveContent(content: ByteArray): String = storageBlobService.saveFile(content)
 
-    override fun loadContent(key: String): ByteArray? =
-        storageBlobService.loadFile(key)
+    override fun loadContent(key: String): ByteArray? = storageBlobService.loadFile(key)
 
-    override fun existsContent(key: String): Boolean =
-        storageBlobService.existsFile(key)
+    override fun existsContent(key: String): Boolean = storageBlobService.existsFile(key)
 
     override fun deleteContent(key: String) {
         storageBlobService.removeFile(key)
@@ -51,12 +48,11 @@ class PluginStorageImpl(
         fileStorageProvider.deleteAt(StorageKeyUtil.pluginKey(pluginId, path))
     }
 
-    override fun fileExternalUrl(path: String, ttl: Duration?): String? =
-        fileStorageProvider.externalUrlAt(
-            StorageKeyUtil.pluginKey(pluginId, path),
-            StorageKeyUtil.pluginReference(pluginId, path),
-            resolveTtl(ttl)
-        )
+    override fun fileExternalUrl(path: String, ttl: Duration?): String? = fileStorageProvider.externalUrlAt(
+        StorageKeyUtil.pluginKey(pluginId, path),
+        StorageKeyUtil.pluginReference(pluginId, path),
+        resolveTtl(ttl),
+    )
 
     /**
      * Resolve the requested validity against the configured default and maximum

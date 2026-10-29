@@ -21,7 +21,7 @@ fun ApiAccount.toVo(resolveUserInfo: ((Long) -> UserWithInfoVo?)? = null) = ApiA
     enable = this.enable?.let { it == 1 },
     createTime = this.createTime,
     updateTime = this.updateTime,
-    userVo = this.userId?.let { userId -> resolveUserInfo?.invoke(userId) }
+    userVo = this.userId?.let { userId -> resolveUserInfo?.invoke(userId) },
 )
 
 /**
@@ -37,5 +37,5 @@ fun IPage<ApiAccount>.toVoPage(resolveUserInfo: ((Long) -> UserWithInfoVo?)? = n
     pages = this.pages,
     size = this.size,
     current = this.current,
-    records = this.records.map { it.toVo(resolveUserInfo) }
+    records = this.records.map { it.toVo(resolveUserInfo) },
 )

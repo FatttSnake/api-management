@@ -16,7 +16,7 @@ import top.fatweb.apimanagement.service.system.IStorageBlobService
 class PluginStorageFactory(
     private val serverProperties: ServerProperties,
     private val fileStorageProvider: FileStorageProvider,
-    private val storageBlobService: IStorageBlobService
+    private val storageBlobService: IStorageBlobService,
 ) {
     /**
      * Create the storage channel of a plugin
@@ -26,11 +26,10 @@ class PluginStorageFactory(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun create(pluginId: String): Storage =
-        PluginStorageImpl(
-            pluginId = pluginId,
-            serverProperties = serverProperties,
-            fileStorageProvider = fileStorageProvider,
-            storageBlobService = storageBlobService
-        )
+    fun create(pluginId: String): Storage = PluginStorageImpl(
+        pluginId = pluginId,
+        serverProperties = serverProperties,
+        fileStorageProvider = fileStorageProvider,
+        storageBlobService = storageBlobService,
+    )
 }

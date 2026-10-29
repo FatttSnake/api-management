@@ -1,0 +1,22 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+max_line_length = 120
+
+[*.{kt,kts}]
+# IntelliJ's EditorConfigKeyCorrectness inspection only knows its own properties, not ktlint's
+# noinspection EditorConfigKeyCorrectness
+ktlint_code_style = intellij_idea
+ij_kotlin_allow_trailing_comma = true
+ij_kotlin_allow_trailing_comma_on_call_site = true
+
+# Annotations on a primary constructor stay on the constructor line; ktlint's rewrite of
+# `@JvmOverloads constructor(` indents the whole class body by four extra spaces.
+# noinspection EditorConfigKeyCorrectness
+ktlint_standard_annotation = disabled

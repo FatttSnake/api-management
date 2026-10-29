@@ -13,4 +13,6 @@ import top.fatweb.apimanagement.service.permission.IMenuService
  * @since 1.0.0
  */
 @Service
-class MenuServiceImpl : ServiceImpl<MenuMapper, Menu>(), IMenuService
+class MenuServiceImpl :
+    ServiceImpl<MenuMapper, Menu>(),
+    IMenuService

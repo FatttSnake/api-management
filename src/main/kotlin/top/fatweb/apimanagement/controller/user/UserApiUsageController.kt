@@ -20,9 +20,7 @@ import top.fatweb.apimanagement.vo.api.ApiUsageVo
  * @since 1.0.0
  */
 @BaseController(path = ["/user/api/usage"], name = "我的 API 用量", description = "用户自助 API 用量接口")
-class UserApiUsageController(
-    private val apiUsageService: IApiUsageService
-) {
+class UserApiUsageController(private val apiUsageService: IApiUsageService) {
     /**
      * Get my API usage paging information
      *

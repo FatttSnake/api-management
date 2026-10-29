@@ -23,7 +23,6 @@ data class GroupUpdateParam(
     @field:Schema(description = "用户组 ID", required = true)
     @field:NotNull(message = "ID can not be null")
     val id: Long?,
-
     /**
      * Name
      *
@@ -33,7 +32,6 @@ data class GroupUpdateParam(
     @field:Schema(description = "用户组名称", required = true, example = "Group_1")
     @field:NotBlank(message = "Name can not be blank")
     var name: String?,
-
     /**
      * Enable
      *
@@ -42,7 +40,6 @@ data class GroupUpdateParam(
      */
     @field:Schema(description = "启用", allowableValues = ["true", "false"], defaultValue = "true", example = "true")
     val enable: Boolean = true,
-
     /**
      * List of role IDs
      *
@@ -50,5 +47,5 @@ data class GroupUpdateParam(
      * @since 1.0.0
      */
     @field:Schema(description = "角色 ID 列表")
-    val roleIds: List<Long>?
+    val roleIds: List<Long>?,
 )

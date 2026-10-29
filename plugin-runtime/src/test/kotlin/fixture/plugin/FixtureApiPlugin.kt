@@ -10,13 +10,12 @@ import top.fatweb.apimanagement.api.v1.ParameterSpec
 import top.fatweb.apimanagement.api.v1.RouteDefinition
 
 class PingHandler(private val pluginId: String) : ApiHandler {
-    override fun handle(request: ApiRequest): ApiResponse =
-        ApiResponse.ok(
-            mapOf(
-                "message" to "hello, ${request.pathParam("name")}",
-                "plugin" to pluginId
-            )
-        )
+    override fun handle(request: ApiRequest): ApiResponse = ApiResponse.ok(
+        mapOf(
+            "message" to "hello, ${request.pathParam("name")}",
+            "plugin" to pluginId,
+        ),
+    )
 }
 
 class FixtureApiPlugin : ApiPlugin {
@@ -26,13 +25,14 @@ class FixtureApiPlugin : ApiPlugin {
                 method = "GET",
                 path = "/ping/{name}",
                 apiVersion = 1,
-                operation = OperationMetadata(
+                operation =
+                OperationMetadata(
                     operationId = "ping",
                     summary = "Ping",
-                    parameters = listOf(ParameterSpec.path("name"))
-                )
+                    parameters = listOf(ParameterSpec.path("name")),
+                ),
             ),
-            PingHandler(context.metadata().pluginId)
+            PingHandler(context.metadata().pluginId),
         )
     }
 }

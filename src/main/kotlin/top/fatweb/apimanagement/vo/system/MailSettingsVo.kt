@@ -19,7 +19,6 @@ data class MailSettingsVo(
      */
     @field:Schema(description = "SMTP 服务器")
     val host: String?,
-
     /**
      * Port
      *
@@ -28,7 +27,6 @@ data class MailSettingsVo(
      */
     @field:Schema(description = "端口")
     val port: Int?,
-
     /**
      * Security type
      *
@@ -37,7 +35,6 @@ data class MailSettingsVo(
      */
     @field:Schema(description = "安全类型")
     val securityType: MailSecurityType?,
-
     /**
      * Username
      *
@@ -46,7 +43,6 @@ data class MailSettingsVo(
      */
     @field:Schema(description = "用户名")
     val username: String?,
-
     /**
      * Password
      *
@@ -55,7 +51,6 @@ data class MailSettingsVo(
      */
     @field:Schema(description = "密码")
     val password: String?,
-
     /**
      * Sender
      *
@@ -64,7 +59,6 @@ data class MailSettingsVo(
      */
     @field:Schema(description = "发送者")
     val from: String?,
-
     /**
      * Sender name
      *
@@ -72,5 +66,5 @@ data class MailSettingsVo(
      * @since 1.0.0
      */
     @field:Schema(description = "发送者名称")
-    val fromName: String?
+    val fromName: String?,
 )

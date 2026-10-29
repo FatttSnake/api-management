@@ -33,7 +33,7 @@ fun ApiUsage.toVo(resolveApi: ((String) -> ApiInterface?)? = null): ApiUsageVo {
         traceId = this.traceId,
         cost = this.cost,
         billingMode = this.billingMode,
-        createTime = this.createTime
+        createTime = this.createTime,
     )
 }
 
@@ -50,5 +50,5 @@ fun IPage<ApiUsage>.toVoPage(resolveApi: ((String) -> ApiInterface?)? = null) = 
     pages = this.pages,
     size = this.size,
     current = this.current,
-    records = this.records.map { it.toVo(resolveApi) }
+    records = this.records.map { it.toVo(resolveApi) },
 )

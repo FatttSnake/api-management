@@ -16,7 +16,7 @@ data class PluginMetadata @JvmOverloads constructor(
     val pluginVersion: String = "",
     val gatewayVersion: String = "",
     val apiVersion: Int = 1,
-    val gatewayApiVersion: String = ""
+    val gatewayApiVersion: String = "",
 ) {
     init {
         require(pluginId.isNotBlank()) { "pluginId must not be blank" }

@@ -23,7 +23,7 @@ fun Group.toVo() = GroupVo(
     name = this.name,
     enable = this.enable?.let { it == 1 },
     createTime = this.createTime,
-    updateTime = this.updateTime
+    updateTime = this.updateTime,
 )
 
 /**
@@ -40,7 +40,7 @@ fun Group.toVoWithRole() = GroupWithRoleVo(
     enable = this.enable?.let { it == 1 },
     createTime = this.createTime,
     updateTime = this.updateTime,
-    roles = this.roles?.map(Role::toVo)
+    roles = this.roles?.map(Role::toVo),
 )
 
 /**
@@ -56,7 +56,7 @@ fun IPage<Group>.toVoWithRole() = PageVo(
     pages = this.pages,
     size = this.size,
     current = this.current,
-    records = this.records.map(Group::toVoWithRole)
+    records = this.records.map(Group::toVoWithRole),
 )
 
 /**

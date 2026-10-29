@@ -10,16 +10,21 @@ import org.springframework.web.filter.OncePerRequestFilter
 import top.fatweb.apimanagement.component.storage.RedisProvider
 import top.fatweb.apimanagement.entity.api.ApiKey
 import top.fatweb.apimanagement.entity.api.ApiKeyPrincipal
-import top.fatweb.apimanagement.exception.*
+import top.fatweb.apimanagement.exception.ApiKeyDisabledException
+import top.fatweb.apimanagement.exception.ApiKeyExpiredException
+import top.fatweb.apimanagement.exception.ApiKeyInvalidException
+import top.fatweb.apimanagement.exception.ApiKeyIpNotAllowedException
+import top.fatweb.apimanagement.exception.ApiKeySecretMismatchException
 import top.fatweb.apimanagement.properties.ServerProperties
 import top.fatweb.apimanagement.service.api.IApiKeyService
 import top.fatweb.apimanagement.settings.ApiSettings
 import top.fatweb.apimanagement.settings.SettingsOperator
 import top.fatweb.apimanagement.util.getRequestIp
 import top.fatweb.apimanagement.util.sha256
+import java.security.MessageDigest
 import java.time.LocalDateTime
 import java.time.ZoneOffset
-import java.util.*
+import java.util.Base64
 import java.util.concurrent.TimeUnit
 
 /**
@@ -32,7 +37,7 @@ import java.util.concurrent.TimeUnit
 class ApiKeyAuthenticationTokenFilter(
     private val serverProperties: ServerProperties,
     private val redisProvider: RedisProvider,
-    private val apiKeyService: IApiKeyService
+    private val apiKeyService: IApiKeyService,
 ) : OncePerRequestFilter() {
     override fun shouldNotFilter(request: HttpServletRequest): Boolean {
         val uri = request.requestURI
@@ -47,18 +52,22 @@ class ApiKeyAuthenticationTokenFilter(
     }
 
     override fun doFilterInternal(
-        request: HttpServletRequest, response: HttpServletResponse, filterChain: FilterChain
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+        filterChain: FilterChain,
     ) {
-        val header = request.getHeader(serverProperties.security.headerKey) ?: run {
-            filterChain.doFilter(request, response)
-            return
-        }
+        val header =
+            request.getHeader(serverProperties.security.headerKey) ?: run {
+                filterChain.doFilter(request, response)
+                return
+            }
         val encoded = header.removePrefix(serverProperties.security.secretKeyPrefix).trim()
-        val decoded = try {
-            String(Base64.getDecoder().decode(encoded), Charsets.UTF_8)
-        } catch (_: Exception) {
-            throw ApiKeyInvalidException()
-        }
+        val decoded =
+            try {
+                String(Base64.getDecoder().decode(encoded), Charsets.UTF_8)
+            } catch (_: Exception) {
+                throw ApiKeyInvalidException()
+            }
         val separator = decoded.indexOf(':')
         if (separator <= 0) {
             throw ApiKeyInvalidException()
@@ -67,23 +76,29 @@ class ApiKeyAuthenticationTokenFilter(
         val secretKey = decoded.substring(separator + 1)
 
         val apiKey = loadApiKey(accessKey)
-        if (sha256(secretKey) != apiKey.secretKeyHash) {
+        val actualHash = sha256(secretKey).toByteArray(Charsets.UTF_8)
+        val expectedHash = apiKey.secretKeyHash?.toByteArray(Charsets.UTF_8) ?: ByteArray(0)
+        if (!MessageDigest.isEqual(actualHash, expectedHash)) {
             throw ApiKeySecretMismatchException()
         }
         checkStatus(apiKey)
         checkIpWhitelist(apiKey, request)
 
-        val principal = ApiKeyPrincipal().apply {
-            this.keyId = apiKey.id
-            this.userId = apiKey.userId
-            this.accessKey = apiKey.accessKey
-            this.enable = apiKey.enable
-            this.permissions =
-                apiKey.permissions?.split(",")?.map(String::trim)?.filter(String::isNotEmpty) ?: emptyList()
-            this.rateLimit = apiKey.rateLimit
-            this.quota = apiKey.quota
-            this.quotaPeriod = apiKey.quotaPeriod
-        }
+        val principal =
+            ApiKeyPrincipal().apply {
+                this.keyId = apiKey.id
+                this.userId = apiKey.userId
+                this.accessKey = apiKey.accessKey
+                this.enable = apiKey.enable
+                this.permissions =
+                    apiKey.permissions
+                        ?.split(",")
+                        ?.map(String::trim)
+                        ?.filter(String::isNotEmpty) ?: emptyList()
+                this.rateLimit = apiKey.rateLimit
+                this.quota = apiKey.quota
+                this.quotaPeriod = apiKey.quotaPeriod
+            }
 
         SecurityContextHolder.getContext().authentication =
             UsernamePasswordAuthenticationToken(principal, null, principal.authorities)
@@ -100,7 +115,7 @@ class ApiKeyAuthenticationTokenFilter(
             cacheKey,
             apiKey,
             SettingsOperator.getValue(ApiSettings::cacheTtlSeconds, 300).toLong(),
-            TimeUnit.SECONDS
+            TimeUnit.SECONDS,
         )
         return apiKey
     }
@@ -123,7 +138,7 @@ class ApiKeyAuthenticationTokenFilter(
             return
         }
 
-        val ip = getRequestIp(request)
+        val ip = getRequestIp(request, serverProperties.security.trustProxyHeaders)
         if (allowed.none { ipMatches(it, ip) }) {
             throw ApiKeyIpNotAllowedException()
         }

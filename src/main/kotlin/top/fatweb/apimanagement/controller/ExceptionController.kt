@@ -13,7 +13,5 @@ import top.fatweb.apimanagement.annotation.HiddenController
 @HiddenController(["/error"])
 class ExceptionController {
     @RequestMapping("/thrown")
-    fun thrown(request: HttpServletRequest) {
-        throw request.getAttribute("filter.error") as Exception
-    }
+    fun thrown(request: HttpServletRequest): Unit = throw request.getAttribute("filter.error") as Exception
 }

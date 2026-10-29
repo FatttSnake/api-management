@@ -19,9 +19,7 @@ import top.fatweb.apimanagement.vo.api.ApiDocVo
  * @since 1.0.0
  */
 @BaseController(path = ["/user/api/docs"], name = "用户 API 文档", description = "用户可调用 API 文档")
-class UserApiDocController(
-    private val apiDocService: IApiDocService
-) {
+class UserApiDocController(private val apiDocService: IApiDocService) {
     /**
      * Get the API documentation catalog of the plugins I can call
      *

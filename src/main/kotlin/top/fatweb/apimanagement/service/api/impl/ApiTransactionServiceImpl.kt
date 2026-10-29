@@ -28,24 +28,30 @@ import java.math.BigDecimal
  */
 @Service
 @DS("master")
-class ApiTransactionServiceImpl : ServiceImpl<ApiTransactionMapper, ApiTransaction>(), IApiTransactionService {
-    override fun getPage(
-        managed: Boolean,
-        apiTransactionGetParam: ApiTransactionGetParam?
-    ): PageVo<ApiTransactionVo> {
-        val page = Page<ApiTransaction>(
-            apiTransactionGetParam?.currentPage ?: 1, apiTransactionGetParam?.pageSize ?: 20
-        )
+class ApiTransactionServiceImpl :
+    ServiceImpl<ApiTransactionMapper, ApiTransaction>(),
+    IApiTransactionService {
+    override fun getPage(managed: Boolean, apiTransactionGetParam: ApiTransactionGetParam?): PageVo<ApiTransactionVo> {
+        val page =
+            Page<ApiTransaction>(
+                apiTransactionGetParam?.currentPage ?: 1,
+                apiTransactionGetParam?.pageSize ?: 20,
+            )
         setPageSort(apiTransactionGetParam, page, OrderItem.desc("create_time"))
 
-        val targetUserId = if (managed) apiTransactionGetParam?.userId ?: getLoginUserIdOrThrow()
-        else getLoginUserIdOrThrow()
-        val wrapper = KtQueryWrapper(ApiTransaction()).apply {
-            eq(ApiTransaction::userId, targetUserId)
-            apiTransactionGetParam?.type?.let { eq(ApiTransaction::type, it) }
-            apiTransactionGetParam?.startTime?.let { ge(ApiTransaction::createTime, it) }
-            apiTransactionGetParam?.endTime?.let { le(ApiTransaction::createTime, it) }
-        }
+        val targetUserId =
+            if (managed) {
+                apiTransactionGetParam?.userId ?: getLoginUserIdOrThrow()
+            } else {
+                getLoginUserIdOrThrow()
+            }
+        val wrapper =
+            KtQueryWrapper(ApiTransaction()).apply {
+                eq(ApiTransaction::userId, targetUserId)
+                apiTransactionGetParam?.type?.let { eq(ApiTransaction::type, it) }
+                apiTransactionGetParam?.startTime?.let { ge(ApiTransaction::createTime, it) }
+                apiTransactionGetParam?.endTime?.let { le(ApiTransaction::createTime, it) }
+            }
 
         return page(page, wrapper).toVoPage()
     }
@@ -60,15 +66,16 @@ class ApiTransactionServiceImpl : ServiceImpl<ApiTransactionMapper, ApiTransacti
             return true
         }
 
-        val transaction = ApiTransaction().apply {
-            this.userId = apiUsage.userId
-            this.apiKeyId = apiUsage.apiKeyId
-            this.apiUsageId = usageId
-            this.type = ApiTransaction.Type.DEDUCT
-            this.amount = apiUsage.cost?.negate()
-            this.balanceAfter = balanceAfter
-            this.remark = "API usage ${apiUsage.apiCode}"
-        }
+        val transaction =
+            ApiTransaction().apply {
+                this.userId = apiUsage.userId
+                this.apiKeyId = apiUsage.apiKeyId
+                this.apiUsageId = usageId
+                this.type = ApiTransaction.Type.DEDUCT
+                this.amount = apiUsage.cost?.negate()
+                this.balanceAfter = balanceAfter
+                this.remark = "API usage ${apiUsage.apiCode}"
+            }
 
         return try {
             save(transaction)

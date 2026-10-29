@@ -30,7 +30,7 @@ interface IPluginModuleService : IService<PluginModule> {
     fun installForPlugin(
         pluginId: String,
         lock: PluginModuleLock,
-        bytesOf: (LockedModule) -> ByteArray?
+        bytesOf: (LockedModule) -> ByteArray?,
     ): List<PluginModule>
 
     /**
@@ -51,16 +51,6 @@ interface IPluginModuleService : IService<PluginModule> {
      * @since 1.0.0
      */
     fun delete(sha256: String)
-
-    /**
-     * Points a plugin at the modules of a lock that are already installed
-     *
-     * @param pluginId plugin ID
-     * @param lock dependency lock
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    fun reference(pluginId: String, lock: PluginModuleLock)
 
     /**
      * Removes every module reference held by a plugin

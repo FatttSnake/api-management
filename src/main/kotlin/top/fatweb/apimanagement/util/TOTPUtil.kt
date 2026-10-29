@@ -111,13 +111,17 @@ object TOTPUtil {
         val secretKey = StringBuilder()
         secretKey.append(
             uppercaseChars[Random.nextInt(uppercaseChars.length)],
-            digits[Random.nextInt(digits.length)]
+            digits[Random.nextInt(digits.length)],
         )
         repeat(length - 3) {
             secretKey.append(allChars[Random.nextInt(allChars.length)])
         }
 
-        return secretKey.toString().toList().shuffled().joinToString("")
+        return secretKey
+            .toString()
+            .toList()
+            .shuffled()
+            .joinToString("")
     }
 
     /**
@@ -165,7 +169,9 @@ object TOTPUtil {
     fun generateQRCodeSVG(issuer: String, username: String, secretKey: String): String {
         val qrCode = generateQRCode(issuer, username, secretKey)
         val stringBuilder =
-            StringBuilder("<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" viewBox=\"0 0 ${qrCode.width} ${qrCode.height}\">")
+            StringBuilder(
+                "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" viewBox=\"0 0 ${qrCode.width} ${qrCode.height}\">",
+            )
 
         for (y in 0 until qrCode.height) {
             for (x in 0 until qrCode.width) {

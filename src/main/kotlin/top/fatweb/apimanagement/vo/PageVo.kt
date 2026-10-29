@@ -18,7 +18,6 @@ data class PageVo<T>(
      */
     @field:Schema(description = "总数量", example = "100")
     val total: Long,
-
     /**
      * Total number of pages
      *
@@ -27,7 +26,6 @@ data class PageVo<T>(
      */
     @field:Schema(description = "总页码", example = "10")
     val pages: Long,
-
     /**
      * Size of page
      *
@@ -36,7 +34,6 @@ data class PageVo<T>(
      */
     @field:Schema(description = "分页大小", example = "10")
     val size: Long,
-
     /**
      * Current page number
      *
@@ -45,7 +42,6 @@ data class PageVo<T>(
      */
     @field:Schema(description = "当前页码", example = "2")
     val current: Long,
-
     /**
      * Records in current page
      *
@@ -53,5 +49,5 @@ data class PageVo<T>(
      * @since 1.0.0
      */
     @field:Schema(description = "数据")
-    val records: List<T>
+    val records: List<T>,
 )

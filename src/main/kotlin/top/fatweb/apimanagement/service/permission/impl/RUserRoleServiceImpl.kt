@@ -13,4 +13,6 @@ import top.fatweb.apimanagement.service.permission.IRUserRoleService
  * @since 1.0.0
  */
 @Service
-class RUserRoleServiceImpl : ServiceImpl<RUserRoleMapper, RUserRole>(), IRUserRoleService
+class RUserRoleServiceImpl :
+    ServiceImpl<RUserRoleMapper, RUserRole>(),
+    IRUserRoleService

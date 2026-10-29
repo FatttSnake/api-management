@@ -21,7 +21,6 @@ data class ApiGroupVo(
      */
     @Schema(description = "所属插件 ID", example = "echo")
     val pluginId: String?,
-
     /**
      * Plugin display name
      *
@@ -30,7 +29,6 @@ data class ApiGroupVo(
      */
     @Schema(description = "插件名称", example = "Echo 插件")
     val pluginName: String?,
-
     /**
      * Plugin description
      *
@@ -39,7 +37,6 @@ data class ApiGroupVo(
      */
     @Schema(description = "插件描述")
     val pluginDescription: String?,
-
     /**
      * Interfaces belonging to the plugin
      *
@@ -47,5 +44,5 @@ data class ApiGroupVo(
      * @since 1.0.0
      */
     @Schema(description = "该插件下的接口列表")
-    val interfaces: List<ApiInterfaceVo>
+    val interfaces: List<ApiInterfaceVo>,
 )

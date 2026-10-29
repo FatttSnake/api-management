@@ -3,7 +3,12 @@ package top.fatweb.apimanagement.controller.system
 import io.swagger.v3.oas.annotations.Operation
 import jakarta.validation.Valid
 import org.springframework.security.access.prepost.PreAuthorize
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PatchMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
 import top.fatweb.apimanagement.annotation.BaseController
 import top.fatweb.apimanagement.annotation.ProcessParam
 import top.fatweb.apimanagement.entity.common.ResponseCode
@@ -26,11 +31,9 @@ import top.fatweb.apimanagement.vo.api.ApiPluginTrustKeyVo
 @BaseController(
     path = ["/system/api/plugin/key"],
     name = "插件信任密钥",
-    description = "API 插件签名信任密钥管理相关接口"
+    description = "API 插件签名信任密钥管理相关接口",
 )
-class ApiTrustKeyController(
-    private val apiPluginTrustKeyService: IApiPluginTrustKeyService
-) {
+class ApiTrustKeyController(private val apiPluginTrustKeyService: IApiPluginTrustKeyService) {
     /**
      * Get plugin trust key list
      *
@@ -42,7 +45,9 @@ class ApiTrustKeyController(
     @Operation(summary = "获取插件信任密钥列表")
     @GetMapping
     @PreAuthorize("hasAnyAuthority('system:plugin:key:query')")
-    fun get(apiPluginTrustKeyGetParam: ApiPluginTrustKeyGetParam): ResponseResult<PageVo<ApiPluginTrustKeyVo>> =
+    fun get(
+        @Valid @ProcessParam apiPluginTrustKeyGetParam: ApiPluginTrustKeyGetParam,
+    ): ResponseResult<PageVo<ApiPluginTrustKeyVo>> =
         ResponseResult.databaseSuccess(data = apiPluginTrustKeyService.get(apiPluginTrustKeyGetParam))
 
     /**
@@ -56,11 +61,12 @@ class ApiTrustKeyController(
     @Operation(summary = "添加插件信任密钥")
     @PostMapping
     @PreAuthorize("hasAnyAuthority('system:plugin:key:add')")
-    fun add(@ProcessParam @Valid @RequestBody apiPluginTrustKeyAddParam: ApiPluginTrustKeyAddParam): ResponseResult<ApiPluginTrustKeyVo> =
-        ResponseResult.databaseSuccess(
-            ResponseCode.DATABASE_INSERT_SUCCESS,
-            data = apiPluginTrustKeyService.add(apiPluginTrustKeyAddParam)
-        )
+    fun add(
+        @ProcessParam @Valid @RequestBody apiPluginTrustKeyAddParam: ApiPluginTrustKeyAddParam,
+    ): ResponseResult<ApiPluginTrustKeyVo> = ResponseResult.databaseSuccess(
+        ResponseCode.DATABASE_INSERT_SUCCESS,
+        data = apiPluginTrustKeyService.add(apiPluginTrustKeyAddParam),
+    )
 
     /**
      * Update plugin trust key status
@@ -73,7 +79,9 @@ class ApiTrustKeyController(
     @Operation(summary = "修改插件信任密钥状态")
     @PatchMapping
     @PreAuthorize("hasAnyAuthority('system:plugin:key:status')")
-    fun status(@ProcessParam @Valid @RequestBody apiPluginTrustKeyUpdateStatusParam: ApiPluginTrustKeyUpdateStatusParam): ResponseResult<Unit> {
+    fun status(
+        @ProcessParam @Valid @RequestBody apiPluginTrustKeyUpdateStatusParam: ApiPluginTrustKeyUpdateStatusParam,
+    ): ResponseResult<Unit> {
         apiPluginTrustKeyService.status(apiPluginTrustKeyUpdateStatusParam)
 
         return ResponseResult.databaseSuccess(ResponseCode.DATABASE_UPDATE_SUCCESS)

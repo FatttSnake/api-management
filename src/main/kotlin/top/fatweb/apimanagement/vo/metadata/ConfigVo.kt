@@ -19,7 +19,6 @@ data class ConfigVo(
      */
     @field:Schema(description = "系统名称")
     val systemName: String?,
-
     /**
      * Token expiry buffer time(ms)
      *
@@ -28,7 +27,6 @@ data class ConfigVo(
      */
     @field:Schema(description = "Token 失效缓冲时间（毫秒）")
     val tokenExpiryBufferMs: Long?,
-
     /**
      * Token expiry check interval time(ms)
      *
@@ -37,7 +35,6 @@ data class ConfigVo(
      */
     @field:Schema(description = "Token 失效检查周期（毫秒）")
     val tokenExpiryCheckIntervalMs: Long?,
-
     /**
      * Turnstile site key
      *
@@ -46,7 +43,6 @@ data class ConfigVo(
      */
     @field:Schema(description = "Turnstile 站点标识")
     val turnstileSiteKey: String?,
-
     /**
      * Home URL
      *
@@ -54,7 +50,7 @@ data class ConfigVo(
      * @since 1.0.0
      */
     @field:Schema(description = "主页 URL")
-    val homeUrl: String?
+    val homeUrl: String?,
 ) {
     companion object {
         /**
@@ -63,13 +59,12 @@ data class ConfigVo(
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
          */
-        fun fromBaseSettingsVo(baseSettingsVo: BaseSettingsVo) =
-            ConfigVo(
-                systemName = baseSettingsVo.systemName ?: "",
-                tokenExpiryBufferMs = baseSettingsVo.tokenExpiryBufferMs ?: 0,
-                tokenExpiryCheckIntervalMs = baseSettingsVo.tokenExpiryCheckIntervalMs ?: 0,
-                turnstileSiteKey = baseSettingsVo.turnstileSiteKey ?: "",
-                homeUrl = baseSettingsVo.homeUrl ?: ""
-            )
+        fun fromBaseSettingsVo(baseSettingsVo: BaseSettingsVo) = ConfigVo(
+            systemName = baseSettingsVo.systemName ?: "",
+            tokenExpiryBufferMs = baseSettingsVo.tokenExpiryBufferMs ?: 0,
+            tokenExpiryCheckIntervalMs = baseSettingsVo.tokenExpiryCheckIntervalMs ?: 0,
+            turnstileSiteKey = baseSettingsVo.turnstileSiteKey ?: "",
+            homeUrl = baseSettingsVo.homeUrl ?: "",
+        )
     }
 }

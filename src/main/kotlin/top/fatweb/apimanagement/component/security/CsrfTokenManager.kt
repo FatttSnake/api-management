@@ -4,7 +4,7 @@ import org.springframework.stereotype.Component
 import top.fatweb.apimanagement.component.storage.RedisProvider
 import top.fatweb.apimanagement.properties.ServerProperties
 import java.security.SecureRandom
-import java.util.*
+import java.util.UUID
 
 /**
  * CSRF token manager
@@ -16,10 +16,7 @@ import java.util.*
  * @since 1.0.0
  */
 @Component
-class CsrfTokenManager(
-    private val redisProvider: RedisProvider,
-    private val serverProperties: ServerProperties
-) {
+class CsrfTokenManager(private val redisProvider: RedisProvider, private val serverProperties: ServerProperties) {
     private val secureRandom = SecureRandom()
 
     /**
@@ -37,7 +34,7 @@ class CsrfTokenManager(
             key = combinedKey(userId, refreshToken, token),
             value = token,
             timeout = serverProperties.security.refreshTokenTtl,
-            timeUnit = serverProperties.security.refreshTokenTtlUnit
+            timeUnit = serverProperties.security.refreshTokenTtlUnit,
         )
         return token
     }
@@ -64,7 +61,7 @@ class CsrfTokenManager(
      * @since 1.0.0
      */
     fun removeToken(userId: Long, refreshToken: String) {
-        val pattern = "${serverProperties.security.tokenIssuer}_csrf_${userId}_${refreshToken}:*"
+        val pattern = "${serverProperties.security.tokenIssuer}_csrf_${userId}_$refreshToken:*"
         val keys = redisProvider.keys(pattern)
         if (keys.isNotEmpty()) {
             redisProvider.delObject(keys)
@@ -72,5 +69,5 @@ class CsrfTokenManager(
     }
 
     private fun combinedKey(userId: Long, refreshToken: String, csrfToken: String) =
-        "${serverProperties.security.tokenIssuer}_csrf_${userId}_${refreshToken}:${csrfToken}"
+        "${serverProperties.security.tokenIssuer}_csrf_${userId}_$refreshToken:$csrfToken"
 }

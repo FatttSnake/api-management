@@ -1,6 +1,10 @@
 package top.fatweb.apimanagement.entity.api
 
-import com.baomidou.mybatisplus.annotation.*
+import com.baomidou.mybatisplus.annotation.FieldFill
+import com.baomidou.mybatisplus.annotation.TableField
+import com.baomidou.mybatisplus.annotation.TableId
+import com.baomidou.mybatisplus.annotation.TableName
+import com.baomidou.mybatisplus.annotation.Version
 import java.io.Serializable
 import java.math.BigDecimal
 import java.time.LocalDateTime
@@ -167,7 +171,6 @@ class ApiUsage : Serializable {
     @Version
     var version: Int? = null
 
-    override fun toString(): String {
-        return "ApiUsage(id=$id, apiKeyId=$apiKeyId, apiId=$apiId, apiCode=$apiCode, userId=$userId, requestPath=$requestPath, requestMethod=$requestMethod, responseCode=$responseCode, success=$success, executeTime=$executeTime, requestIp=$requestIp, traceId=$traceId, cost=$cost, billingMode=$billingMode, createTime=$createTime, updateTime=$updateTime, version=$version)"
-    }
+    override fun toString(): String =
+        "ApiUsage(id=$id, apiKeyId=$apiKeyId, apiId=$apiId, apiCode=$apiCode, userId=$userId, requestPath=$requestPath, requestMethod=$requestMethod, responseCode=$responseCode, success=$success, executeTime=$executeTime, requestIp=$requestIp, traceId=$traceId, cost=$cost, billingMode=$billingMode, createTime=$createTime, updateTime=$updateTime, version=$version)"
 }

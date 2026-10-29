@@ -23,7 +23,6 @@ data class ApiUsageVo(
      */
     @field:JsonSerialize(using = ToStringSerializer::class)
     val id: Long?,
-
     /**
      * API key ID
      *
@@ -32,7 +31,6 @@ data class ApiUsageVo(
      */
     @field:JsonSerialize(using = ToStringSerializer::class)
     val apiKeyId: Long?,
-
     /**
      * API ID
      *
@@ -41,7 +39,6 @@ data class ApiUsageVo(
      */
     @field:JsonSerialize(using = ToStringSerializer::class)
     val apiId: Long?,
-
     /**
      * API scoping code
      *
@@ -50,7 +47,6 @@ data class ApiUsageVo(
      */
     @field:Schema(description = "API 编码")
     val apiCode: String?,
-
     /**
      * API name
      *
@@ -59,7 +55,6 @@ data class ApiUsageVo(
      */
     @field:Schema(description = "API 名称")
     val apiName: String?,
-
     /**
      * API description
      *
@@ -68,7 +63,6 @@ data class ApiUsageVo(
      */
     @field:Schema(description = "API 描述")
     val apiDescription: String?,
-
     /**
      * Owner user ID
      *
@@ -77,7 +71,6 @@ data class ApiUsageVo(
      */
     @field:JsonSerialize(using = ToStringSerializer::class)
     val userId: Long?,
-
     /**
      * Request path
      *
@@ -86,7 +79,6 @@ data class ApiUsageVo(
      */
     @field:Schema(description = "请求路径")
     val requestPath: String?,
-
     /**
      * Request method
      *
@@ -95,7 +87,6 @@ data class ApiUsageVo(
      */
     @field:Schema(description = "请求方法")
     val requestMethod: String?,
-
     /**
      * Response code
      *
@@ -104,7 +95,6 @@ data class ApiUsageVo(
      */
     @field:Schema(description = "响应码")
     val responseCode: Int?,
-
     /**
      * Success status
      *
@@ -113,7 +103,6 @@ data class ApiUsageVo(
      */
     @field:Schema(description = "是否成功")
     val success: Boolean?,
-
     /**
      * Execute time in ms
      *
@@ -122,7 +111,6 @@ data class ApiUsageVo(
      */
     @field:Schema(description = "执行耗时(ms)")
     val executeTime: Long?,
-
     /**
      * Request IP
      *
@@ -131,7 +119,6 @@ data class ApiUsageVo(
      */
     @field:Schema(description = "请求 IP")
     val requestIp: String?,
-
     /**
      * Trace ID
      *
@@ -140,7 +127,6 @@ data class ApiUsageVo(
      */
     @field:Schema(description = "Trace ID")
     val traceId: String?,
-
     /**
      * Billed cost
      *
@@ -150,7 +136,6 @@ data class ApiUsageVo(
     @field:Schema(description = "计费金额")
     @field:JsonSerialize(using = ToStringSerializer::class)
     val cost: BigDecimal?,
-
     /**
      * Billing mode
      *
@@ -159,7 +144,6 @@ data class ApiUsageVo(
      */
     @field:Schema(description = "计费模式")
     val billingMode: ApiInterface.BillingMode?,
-
     /**
      * Create time
      *
@@ -167,5 +151,5 @@ data class ApiUsageVo(
      * @since 1.0.0
      */
     @field:Schema(description = "调用时间")
-    val createTime: LocalDateTime?
+    val createTime: LocalDateTime?,
 )

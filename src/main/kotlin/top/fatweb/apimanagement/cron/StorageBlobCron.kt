@@ -18,9 +18,7 @@ import top.fatweb.apimanagement.service.system.IStorageBlobService
  * @since 1.0.0
  */
 @Component
-class StorageBlobCron(
-    private val storageBlobService: IStorageBlobService
-) {
+class StorageBlobCron(private val storageBlobService: IStorageBlobService) {
     companion object {
         /**
          * How long a blob must have been unreferenced before it is deleted (1 hour)

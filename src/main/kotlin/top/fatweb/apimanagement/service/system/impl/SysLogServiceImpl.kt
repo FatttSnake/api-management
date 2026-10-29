@@ -25,30 +25,32 @@ import top.fatweb.apimanagement.vo.system.SysLogVo
  */
 @DS("sqlite")
 @Service
-class SysLogServiceImpl(
-    private val userService: IUserService
-) : ServiceImpl<SysLogMapper, SysLog>(), ISysLogService {
+class SysLogServiceImpl(private val userService: IUserService) :
+    ServiceImpl<SysLogMapper, SysLog>(),
+    ISysLogService {
     override fun getPage(sysLogGetParam: SysLogGetParam?): PageVo<SysLogVo> {
         val sysLogPage = Page<SysLog>(sysLogGetParam?.currentPage ?: 1, sysLogGetParam?.pageSize ?: 20)
 
         setPageSort(sysLogGetParam, sysLogPage, OrderItem.desc("start_time"))
 
-        val sysLogIPage = baseMapper.selectPage(
-            page = sysLogPage,
-            logType = sysLogGetParam?.logType?.split(","),
-            traceId = sysLogGetParam?.searchTraceId,
-            requestMethod = sysLogGetParam?.requestMethod?.split(","),
-            searchRequestUrl = sysLogGetParam?.searchRequestUrl?.let { "%$it%" },
-            searchStartTime = sysLogGetParam?.searchStartTime,
-            searchEndTime = sysLogGetParam?.searchEndTime
-        )
+        val sysLogIPage =
+            baseMapper.selectPage(
+                page = sysLogPage,
+                logType = sysLogGetParam?.logType?.split(","),
+                traceId = sysLogGetParam?.searchTraceId,
+                requestMethod = sysLogGetParam?.requestMethod?.split(","),
+                searchRequestUrl = sysLogGetParam?.searchRequestUrl?.let { "%$it%" },
+                searchStartTime = sysLogGetParam?.searchStartTime,
+                searchEndTime = sysLogGetParam?.searchEndTime,
+            )
 
         if (sysLogIPage.records.isNotEmpty()) {
             val userIds = sysLogIPage.records.map(SysLog::operateUserId)
 
-            val usernames = userService
-                .list(KtQueryWrapper(User()).select(User::id, User::username).`in`(User::id, userIds))
-                .associate { it.id to it.username }
+            val usernames =
+                userService
+                    .list(KtQueryWrapper(User()).select(User::id, User::username).`in`(User::id, userIds))
+                    .associate { it.id to it.username }
 
             sysLogIPage.records.forEach { it.operateUsername = usernames[it.operateUserId] }
         }

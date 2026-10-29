@@ -28,7 +28,7 @@ API Management 是一个**可自托管的 API 网关与管理平台**。它将�
 
 # 特性
 
-- **插件化 API 托管** —— 上传插件 Jar，网关会先校验其 **Ed25519 签名**（对照管理员维护的信任公钥库），再装入**隔离的类加载器 / 子容器**中完成**热安装/升级/卸载**，无需重启。
+- **插件化 API 托管** —— 上传插件 Jar，网关会先校验其 **Ed25519 签名**（对照管理员维护的信任公钥库），再装入**隔离的插件类加载器与模块图**中完成**热安装/升级/卸载**，无需重启。
 - **命名空间与版本化路由** —— 每个插件接口被统一暴露为 `/api/{plugin}/v{version}/...`，接口路由注册到数据库，重启后自动恢复。
 - **多级访问控制** —— 账户通过 JWT 登录，调用方亦可使用 **AccessKey / SecretKey**；可选 **两步验证（TOTP）**；每个接口支持 `need-key`、启停开关以及 `DEFAULT` / `RESTRICTED` 两种访问模式，并以 RBAC 权限点的形式统一表达。
 - **计量与计费** —— 每个接口可独立设置单价与计费模式（`FREE` / `SUCCESS_ONLY` / `ALWAYS`）、**每分钟频控**；账户维度支持**余额**与配额周期。
@@ -60,13 +60,13 @@ api-management/
 │       ├── ApiPlugin.kt                          # 应用 apiPlugin DSL，将 gateway-api 作为 compileOnly
 │       ├── GeneratePluginLock.kt                 # 解析运行时依赖并生成 api-plugin-deps.json
 │       ├── CheckPluginAbi.kt                     # 对照 gateway-api.abi.json 校验插件字节码
-│       └── ApiPluginTasks.kt                     # descriptor / keys / sign / verify / deployPlugin
+│       └── GeneratePluginDescriptor / GenPluginKeys / SignPlugin / VerifyPlugin / DeployPlugin
 ├── src/main/kotlin/top/fatweb/apimanagement/
 │   ├── ApiManagementApplication.kt               # 启动入口（校验/创建 data 目录、首次运行生成配置模板）
 │   ├── annotation / aspectj                      # 注解与拦截切面（API 访问拦截、参数处理、操作/事件日志）
 │   ├── component/
 │   │   ├── api/                                  # API 路由注册与版本匹配（/api/{plugin}/v{version}/...）
-│   │   ├── plugin/                               # 插件类加载隔离与运行上下文
+│   │   ├── plugin/                               # 插件产物、配置 schema、数据源、运行时注册表
 │   │   ├── security/                             # JWT、CSRF 令牌
 │   │   └── storage/                              # 本地 / S3 文件存储
 │   ├── config/                                   # Security / Jackson / Redis / Flyway / MyBatis-Plus / Knife4j 等
@@ -78,10 +78,10 @@ api-management/
 │   ├── cron/                                     # 用量指标与统计的定时聚合
 │   ├── filter / handler / exception / http       # 过滤器、全局异常处理、HTTP 客户端、Turnstile 校验
 │   ├── migration / properties / settings / util
-│   └── resources/
-│       ├── application.yaml                      # 应用基础配置（数据源骨架、SQLite、日志、MyBatis-Plus）
-│       ├── application-config-template.yml       # 首次运行生成的配置模板
-│       └── db/migration/{master,sqlite}/         # Flyway SQL 迁移
+├── src/main/resources/
+│   ├── application.yaml                          # 应用基础配置（数据源骨架、SQLite、日志、MyBatis-Plus）
+│   ├── application-config-template.yml           # 首次运行生成的配置模板
+│   └── db/migration/{master,sqlite}/             # Flyway SQL 迁移
 └── data/                                         # 运行期数据（目录不存在时自动创建）
     ├── db/sqlite.db                              # SQLite（日志等大量读写的数据）
     ├── log/                                      # 应用日志
@@ -110,13 +110,13 @@ api-management/
 
 ```shell
 ./gradlew bootJar          # Windows 使用 gradlew.bat bootJar
-# 产物位于 build/libs/ 目录下，文件名形如 api-management-1.0.0.jar
+# 产物位于 build/libs/ 目录下，文件名形如 api-management-<version>.jar
 ```
 
 2. 首次运行，生成配置文件模板
 
 ```shell
-java -jar api-management.jar
+java -jar api-management-<version>.jar
 ```
 
 > 当运行目录或 `data` 目录下不存在 `application-config.yml` 时，程序会在 `data/application-config.example.yml` 生成一份配置模板（内含自动生成的随机 token-secret），随后自动退出。
@@ -132,7 +132,7 @@ cp ./data/application-config.example.yml application-config.yml
 5. 再次运行
 
 ```shell
-java -jar api-management.jar
+java -jar api-management-<version>.jar
 ```
 
 服务默认监听 `8080` 端口（可用 `server.port` 修改）。数据库由 Flyway 在首次启动时自动初始化。
@@ -144,7 +144,7 @@ java -jar api-management.jar
 | 配置块 | 说明 | 关键项 |
 | --- | --- | --- |
 | `app.admin` | 初始化数据库时创建的管理员（可选） | `username`、`password`、`nickname`、`email` |
-| `app.security` | JWT 令牌与安全相关 | `token-secret`（必填，模板已生成随机值）、`token-prefix`、`access-token-ttl`、`refresh-token-ttl` |
+| `app.security` | JWT 令牌与安全相关 | `token-secret`（必填，模板已生成随机值）、`token-prefix`、`access-token-ttl`、`refresh-token-ttl`、`trust-proxy-headers`、`allowed-origin-patterns` |
 | `app.storage` | 文件存储 | `mode`（`local`/`s3`）、`local.root`、`public-base-url`、`external-url-*`、`s3.*` |
 | `server.port` | 服务端口 | 默认 `8080` |
 | `spring.datasource.dynamic.datasource.master` | MySQL（关键业务数据） | `url`、`username`、`password` |
@@ -185,7 +185,7 @@ knife4j:
 
 # 插件开发
 
-完整架构说明——模块、类加载、安装/启动流程、请求链路与数据模型——见 [docs/plugin-platform_zh.md](docs/plugin-platform_zh.md)。
+完整架构说明——模块、类加载、安装/启动流程、请求链路与数据模型——见 [docs/plugin-platform_zh.md](docs/plugin-platform_zh.md)。代码布局、成员顺序、import、KDoc 与异常规范见 [docs/code-style_zh.md](docs/code-style_zh.md)，由 `./gradlew ktlintCheck detekt` 强制执行。
 
 平台的全部 API 都由插件提供。插件是独立 Gradle 工程，应用 **`top.fatweb.api-plugin`**，唯一编译依赖是 `top.fatweb:api-management-gateway-api`。
 
@@ -225,7 +225,7 @@ Java 插件作者使用同一套类型：`ApiHandler`、`EventSubscriber`、`Sub
 
 `GatewayContext` 是插件能看到的全部网关能力：`api()`、`settings()`、`dataSources()`、`storage()`、`users()`、`audit()`、`events()`、`http()`、`scheduler()`、`json()`、`logger()`、`metadata()`。它不暴露 Spring 容器、Bean、Mapper 或网关的 ObjectMapper。
 
-请求体是原始字节（`request.body()` / `request.bodyText()`）；需要结构化 JSON 时用 `context.json()`，或使用插件自带的库。响应体可以是字节、字符串、Map 或普通 Bean；`ApiResponse.raw(...)` 绕过业务信封。
+请求体是原始字节（`request.body` / `request.bodyText()`）；需要结构化 JSON 时用 `context.json()`，或使用插件自带的库。响应体可以是字节、字符串、Map 或普通 Bean；`ApiResponse.raw(...)` 绕过业务信封。
 
 ## 依赖
 

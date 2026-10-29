@@ -26,46 +26,52 @@ import top.fatweb.apimanagement.vo.api.ApiAuditVo
  */
 @Service
 @DS("sqlite")
-class ApiAuditServiceImpl(
-    private val apiKeyService: IApiKeyService,
-    private val userService: IUserService
-) : ServiceImpl<EventLogMapper, EventLog>(), IApiAuditService {
+class ApiAuditServiceImpl(private val apiKeyService: IApiKeyService, private val userService: IUserService) :
+    ServiceImpl<EventLogMapper, EventLog>(),
+    IApiAuditService {
     override fun getPage(apiAuditGetParam: ApiAuditGetParam?): PageVo<ApiAuditVo> {
         val page = Page<EventLog>(apiAuditGetParam?.currentPage ?: 1, apiAuditGetParam?.pageSize ?: 20)
         setPageSort(apiAuditGetParam, page, OrderItem.desc("operate_time"))
 
-        val wrapper = KtQueryWrapper(EventLog()).apply {
-            `in`(
-                EventLog::event,
-                listOf(
-                    EventLog.Event.KEY_CREATE, EventLog.Event.KEY_UPDATE, EventLog.Event.KEY_DELETE,
-                    EventLog.Event.KEY_STATUS, EventLog.Event.KEY_REGENERATE, EventLog.Event.KEY_TOPUP
+        val wrapper =
+            KtQueryWrapper(EventLog()).apply {
+                `in`(
+                    EventLog::event,
+                    listOf(
+                        EventLog.Event.KEY_CREATE,
+                        EventLog.Event.KEY_UPDATE,
+                        EventLog.Event.KEY_DELETE,
+                        EventLog.Event.KEY_STATUS,
+                        EventLog.Event.KEY_REGENERATE,
+                        EventLog.Event.KEY_TOPUP,
+                    ),
                 )
-            )
-            apiAuditGetParam?.event?.let { eq(EventLog::event, it) }
-            apiAuditGetParam?.startTime?.let { ge(EventLog::operateTime, it) }
-            apiAuditGetParam?.endTime?.let { le(EventLog::operateTime, it) }
-        }
+                apiAuditGetParam?.event?.let { eq(EventLog::event, it) }
+                apiAuditGetParam?.startTime?.let { ge(EventLog::operateTime, it) }
+                apiAuditGetParam?.endTime?.let { le(EventLog::operateTime, it) }
+            }
 
         val pageResult = page(page, wrapper)
         val records = pageResult.records
         val keyIds = records.mapNotNull { it.apiKeyId }.toSet()
-        val keys = if (keyIds.isEmpty()) {
-            emptyList()
-        } else {
-            apiKeyService.listByIds(keyIds)
-        }
-        val userMap = userService.getBasicInfoByIds(
-            (records.flatMap { listOfNotNull(it.operateUserId, it.targetUserId) } + keys.mapNotNull { it.userId })
-                .toSet()
-                .toList()
-        )
+        val keys =
+            if (keyIds.isEmpty()) {
+                emptyList()
+            } else {
+                apiKeyService.listByIds(keyIds)
+            }
+        val userMap =
+            userService.getBasicInfoByIds(
+                (records.flatMap { listOfNotNull(it.operateUserId, it.targetUserId) } + keys.mapNotNull { it.userId })
+                    .toSet()
+                    .toList(),
+            )
         val keyMap = keys.associate { it.id!! to it.toVo() }
 
         return pageResult.toAuditPage(
             resolveUser = { userId -> userMap[userId] },
             resolveKey = { keyId -> keyMap[keyId] },
-            resolveTargetUser = { userId -> userMap[userId] }
+            resolveTargetUser = { userId -> userMap[userId] },
         )
     }
 }

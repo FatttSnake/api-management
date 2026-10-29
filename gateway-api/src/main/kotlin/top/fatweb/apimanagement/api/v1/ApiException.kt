@@ -16,7 +16,7 @@ class ApiException @JvmOverloads constructor(
     val httpStatus: Int = 200,
     val code: Int = 400,
     message: String = "",
-    val data: Any? = null
+    val data: Any? = null,
 ) : RuntimeException(message) {
     /**
      * Builds a failure.

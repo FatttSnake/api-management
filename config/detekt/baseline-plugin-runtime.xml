@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ComplexCondition:PluginModuleLock.kt:PluginModuleLock$module.version.endsWith("-SNAPSHOT") || module.version.equals("SNAPSHOT", ignoreCase = true) || module.version.equals("LATEST", ignoreCase = true) || module.version.equals("RELEASE", ignoreCase = true)</ID>
+    <ID>CyclomaticComplexMethod:PluginModuleLock.kt:PluginModuleLock$fun validate</ID>
+    <ID>EmptyFunctionBlock:TestServices.kt:&lt;no name provided>${ }</ID>
+    <ID>FunctionOnlyReturningConstant:FixtureA.kt:FixtureA$fun value: String</ID>
+    <ID>SwallowedException:PluginDescriptor.kt:PluginDescriptorParser$ex: Exception</ID>
+    <ID>SwallowedException:PluginDescriptor.kt:PluginDescriptorParser$ex: VersionRangeException</ID>
+    <ID>SwallowedException:PluginModuleLockParser.kt:PluginModuleLockParser$ex: Exception</ID>
+    <ID>SwallowedException:PluginRuntimeLoader.kt:PluginRuntimeLoader$ex: VersionRangeException</ID>
+  </CurrentIssues>
+</SmellBaseline>

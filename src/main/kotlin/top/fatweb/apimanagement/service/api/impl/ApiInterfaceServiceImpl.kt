@@ -15,4 +15,6 @@ import top.fatweb.apimanagement.service.api.IApiInterfaceService
  */
 @Service
 @DS("master")
-class ApiInterfaceServiceImpl : ServiceImpl<ApiInterfaceMapper, ApiInterface>(), IApiInterfaceService
+class ApiInterfaceServiceImpl :
+    ServiceImpl<ApiInterfaceMapper, ApiInterface>(),
+    IApiInterfaceService

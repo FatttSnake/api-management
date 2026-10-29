@@ -18,7 +18,6 @@ data class StorageInfoVo(
      */
     @field:Schema(description = "总内存容量")
     val memoryTotal: Long,
-
     /**
      * The amount of physical memory currently
      * available。
@@ -28,7 +27,6 @@ data class StorageInfoVo(
      */
     @field:Schema(description = "空闲内存容量")
     val memoryFree: Long,
-
     /**
      * The maximum memory that can be committed by the system without extending the paging
      * file(s). Also called the Commit Limit.
@@ -38,7 +36,6 @@ data class StorageInfoVo(
      */
     @field:Schema(description = "总虚拟内存容量")
     val virtualMemoryMax: Long,
-
     /**
      * The memory currently committed by the system, in bytes. Also called the Commit Total.
      *
@@ -47,7 +44,6 @@ data class StorageInfoVo(
      */
     @field:Schema(description = "已用虚拟内存容量")
     val virtualMemoryInUse: Long,
-
     /**
      * The current size of the paging/swap file(s).
      *
@@ -56,7 +52,6 @@ data class StorageInfoVo(
      */
     @field:Schema(description = "总交换区容量")
     val swapTotal: Long,
-
     /**
      * The current memory committed to the
      * paging/swap file(s).
@@ -66,7 +61,6 @@ data class StorageInfoVo(
      */
     @field:Schema(description = "可用交换区容量")
     val swapUsed: Long,
-
     /**
      * Total amount of memory in the Java virtual machine.
      *
@@ -75,7 +69,6 @@ data class StorageInfoVo(
      */
     @field:Schema(description = "Java 虚拟机总内存容量")
     val jvmTotal: Long,
-
     /**
      * Amount of free memory in the Java Virtual Machine.
      *
@@ -84,7 +77,6 @@ data class StorageInfoVo(
      */
     @field:Schema(description = "Java 虚拟机空闲内存容量")
     val jvmFree: Long,
-
     /**
      * List of FileStoreInfoVo object
      *
@@ -92,5 +84,5 @@ data class StorageInfoVo(
      * @since 1.0.0
      */
     @field:Schema(description = "文件存储信息列表")
-    val fileStores: List<FileStoreInfoVo>
+    val fileStores: List<FileStoreInfoVo>,
 )

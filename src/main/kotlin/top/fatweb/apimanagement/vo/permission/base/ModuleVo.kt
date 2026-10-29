@@ -20,7 +20,6 @@ data class ModuleVo(
      */
     @field:JsonSerialize(using = ToStringSerializer::class)
     val id: Long?,
-
     /**
      * Name
      *
@@ -28,5 +27,5 @@ data class ModuleVo(
      * @since 1.0.0
      */
     @field:Schema(description = "模块名", example = "系统")
-    val name: String?
+    val name: String?,
 )

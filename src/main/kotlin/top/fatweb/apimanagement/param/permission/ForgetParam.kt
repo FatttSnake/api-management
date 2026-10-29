@@ -23,5 +23,5 @@ data class ForgetParam(
     @field:Schema(description = "邮箱", required = true, example = "user@email.com")
     @field:NotBlank(message = "Email can not be blank")
     @field:Pattern(regexp = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$", message = "Illegal email address")
-    var email: String?
+    var email: String?,
 ) : CaptchaCodeParam()

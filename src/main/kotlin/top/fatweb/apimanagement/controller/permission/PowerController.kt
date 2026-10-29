@@ -15,9 +15,7 @@ import top.fatweb.apimanagement.vo.permission.PowerSetVo
  * @since 1.0.0
  */
 @BaseController(path = ["/system/power"], name = "权限管理", description = "权限管理相关接口")
-class PowerController(
-    private val powerService: IPowerService
-) {
+class PowerController(private val powerService: IPowerService) {
     /**
      * Get power list
      *

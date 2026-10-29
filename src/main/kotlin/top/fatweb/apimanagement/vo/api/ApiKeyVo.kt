@@ -21,7 +21,6 @@ data class ApiKeyVo(
      */
     @field:JsonSerialize(using = ToStringSerializer::class)
     val id: Long?,
-
     /**
      * Owner user ID
      *
@@ -30,7 +29,6 @@ data class ApiKeyVo(
      */
     @field:JsonSerialize(using = ToStringSerializer::class)
     val userId: Long?,
-
     /**
      * Access key
      *
@@ -39,7 +37,6 @@ data class ApiKeyVo(
      */
     @field:Schema(description = "AccessKey", example = "AbC123...")
     val accessKey: String?,
-
     /**
      * Key name
      *
@@ -48,7 +45,6 @@ data class ApiKeyVo(
      */
     @field:Schema(description = "Key 名称", example = "my-key")
     val name: String?,
-
     /**
      * Scoped API codes
      *
@@ -57,7 +53,6 @@ data class ApiKeyVo(
      */
     @field:Schema(description = "权限 API 编码列表", example = "[\"api:echo:v1:ping\"]")
     val permissions: List<String>?,
-
     /**
      * Enabled status
      *
@@ -66,7 +61,6 @@ data class ApiKeyVo(
      */
     @field:Schema(description = "启用", example = "true")
     val enable: Boolean?,
-
     /**
      * Expire time
      *
@@ -75,7 +69,6 @@ data class ApiKeyVo(
      */
     @field:Schema(description = "过期时间", example = "2030-01-01T00:00:00.000Z")
     val expireTime: LocalDateTime?,
-
     /**
      * IP whitelist
      *
@@ -84,7 +77,6 @@ data class ApiKeyVo(
      */
     @field:Schema(description = "IP 白名单", example = "10.0.0.0/8,192.168.1.1")
     val ipWhitelist: String?,
-
     /**
      * Per-key rate limit per minute
      *
@@ -93,7 +85,6 @@ data class ApiKeyVo(
      */
     @field:Schema(description = "每分钟限流次数(0=用全局默认)", example = "60")
     val rateLimit: Int?,
-
     /**
      * Quota requests per period
      *
@@ -102,7 +93,6 @@ data class ApiKeyVo(
      */
     @field:Schema(description = "周期额度次数(0=用全局默认)", example = "100000")
     val quota: Long?,
-
     /**
      * Quota period in seconds
      *
@@ -111,7 +101,6 @@ data class ApiKeyVo(
      */
     @field:Schema(description = "额度周期(秒)", example = "86400")
     val quotaPeriod: Int?,
-
     /**
      * Last used time
      *
@@ -120,7 +109,6 @@ data class ApiKeyVo(
      */
     @field:Schema(description = "最后使用时间", example = "2026-01-01T00:00:00.000Z")
     val lastUsedTime: LocalDateTime?,
-
     /**
      * Remark
      *
@@ -129,7 +117,6 @@ data class ApiKeyVo(
      */
     @field:Schema(description = "备注")
     val remark: String?,
-
     /**
      * Create time
      *
@@ -138,7 +125,6 @@ data class ApiKeyVo(
      */
     @field:Schema(description = "创建时间", example = "2026-01-01T00:00:00.000Z")
     val createTime: LocalDateTime?,
-
     /**
      * Update time
      *
@@ -146,5 +132,5 @@ data class ApiKeyVo(
      * @since 1.0.0
      */
     @field:Schema(description = "修改时间", example = "2026-01-01T00:00:00.000Z")
-    val updateTime: LocalDateTime?
+    val updateTime: LocalDateTime?,
 )

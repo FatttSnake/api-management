@@ -6,14 +6,10 @@ import top.fatweb.apimanagement.api.v1.RouteDefinition
  * Handler object returned by [PluginApiHandlerMapping].
  *
  * @property match matched route
- * @property requestMethod HTTP method of the request
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-class PluginInvocation(
-    val match: RouteMatch,
-    val requestMethod: String
-) {
+class PluginInvocation(val match: RouteMatch) {
     /**
      * Matched route.
      *

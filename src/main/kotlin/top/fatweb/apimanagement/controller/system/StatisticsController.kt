@@ -1,14 +1,21 @@
 package top.fatweb.apimanagement.controller.system
 
 import io.swagger.v3.oas.annotations.Operation
+import jakarta.validation.Valid
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.GetMapping
 import top.fatweb.apimanagement.annotation.BaseController
+import top.fatweb.apimanagement.annotation.ProcessParam
 import top.fatweb.apimanagement.entity.common.ResponseResult
 import top.fatweb.apimanagement.param.system.ActiveInfoGetParam
 import top.fatweb.apimanagement.param.system.OnlineInfoGetParam
 import top.fatweb.apimanagement.service.system.IStatisticsService
-import top.fatweb.apimanagement.vo.system.*
+import top.fatweb.apimanagement.vo.system.ActiveInfoVo
+import top.fatweb.apimanagement.vo.system.CpuInfoVo
+import top.fatweb.apimanagement.vo.system.HardwareInfoVo
+import top.fatweb.apimanagement.vo.system.OnlineInfoVo
+import top.fatweb.apimanagement.vo.system.SoftwareInfoVo
+import top.fatweb.apimanagement.vo.system.StorageInfoVo
 
 /**
  * Statistics management controller
@@ -17,9 +24,7 @@ import top.fatweb.apimanagement.vo.system.*
  * @since 1.0.0
  */
 @BaseController(path = ["/system/statistics"], name = "统计接口", description = "系统信息统计相关接口")
-class StatisticsController(
-    private val statisticService: IStatisticsService
-) {
+class StatisticsController(private val statisticService: IStatisticsService) {
     /**
      * Get software information
      *
@@ -79,7 +84,7 @@ class StatisticsController(
     @Operation(summary = "获取在线用户数量信息")
     @GetMapping("/online")
     @PreAuthorize("hasAnyAuthority('system:statistics:usage:query')")
-    fun online(onlineInfoGetParam: OnlineInfoGetParam?): ResponseResult<OnlineInfoVo> =
+    fun online(@Valid @ProcessParam onlineInfoGetParam: OnlineInfoGetParam?): ResponseResult<OnlineInfoVo> =
         ResponseResult.success(data = statisticService.online(onlineInfoGetParam))
 
     /**
@@ -93,6 +98,6 @@ class StatisticsController(
     @Operation(summary = "获取用户活跃信息")
     @GetMapping("/active")
     @PreAuthorize("hasAnyAuthority('system:statistics:usage:query')")
-    fun active(activeInfoGetParam: ActiveInfoGetParam): ResponseResult<ActiveInfoVo> =
+    fun active(@Valid @ProcessParam activeInfoGetParam: ActiveInfoGetParam): ResponseResult<ActiveInfoVo> =
         ResponseResult.success(data = statisticService.active(activeInfoGetParam))
 }

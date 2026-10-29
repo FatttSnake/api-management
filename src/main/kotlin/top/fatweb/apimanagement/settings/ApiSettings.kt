@@ -17,7 +17,6 @@ data class ApiSettings(
      * @since 1.0.0
      */
     var defaultRateLimitPerMin: Int? = null,
-
     /**
      * Default quota requests per period per key (0 = unlimited)
      *
@@ -25,7 +24,6 @@ data class ApiSettings(
      * @since 1.0.0
      */
     var defaultQuota: Long? = null,
-
     /**
      * Default quota period in seconds
      *
@@ -33,7 +31,6 @@ data class ApiSettings(
      * @since 1.0.0
      */
     var defaultQuotaPeriodSeconds: Int? = null,
-
     /**
      * Length of generated access key
      *
@@ -41,7 +38,6 @@ data class ApiSettings(
      * @since 1.0.0
      */
     var accessKeyLength: Int? = null,
-
     /**
      * Length of generated secret key
      *
@@ -49,7 +45,6 @@ data class ApiSettings(
      * @since 1.0.0
      */
     var secretKeyLength: Int? = null,
-
     /**
      * Whether balance check is enable before billing
      *
@@ -57,12 +52,11 @@ data class ApiSettings(
      * @since 1.0.0
      */
     var balanceCheckEnable: Boolean? = null,
-
     /**
      * TTL of api key cache in seconds
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    var cacheTtlSeconds: Int? = null
+    var cacheTtlSeconds: Int? = null,
 )

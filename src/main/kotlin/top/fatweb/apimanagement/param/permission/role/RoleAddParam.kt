@@ -22,7 +22,6 @@ data class RoleAddParam(
     @field:Schema(description = "角色名称", required = true, example = "Role_1")
     @field:NotBlank(message = "Name can not be blank")
     var name: String?,
-
     /**
      * Enable
      *
@@ -31,7 +30,6 @@ data class RoleAddParam(
      */
     @field:Schema(description = "启用", allowableValues = ["true", "false"], defaultValue = "true", example = "true")
     val enable: Boolean = true,
-
     /**
      * List of power IDs
      *
@@ -39,5 +37,5 @@ data class RoleAddParam(
      * @since 1.0.0
      */
     @field:Schema(description = "权限 ID 列表")
-    val powerIds: List<Long>?
+    val powerIds: List<Long>?,
 )

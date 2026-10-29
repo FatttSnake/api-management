@@ -21,7 +21,6 @@ data class SensitiveWordVo(
      */
     @field:JsonSerialize(using = ToStringSerializer::class)
     val id: Long?,
-
     /**
      * Word
      *
@@ -30,7 +29,6 @@ data class SensitiveWordVo(
      */
     @field:Schema(description = "词")
     val word: String?,
-
     /**
      * Use for
      *
@@ -39,7 +37,6 @@ data class SensitiveWordVo(
      */
     @field:Schema(description = "用于")
     val useFor: Set<SensitiveWord.Use>?,
-
     /**
      * Enable
      *
@@ -47,5 +44,5 @@ data class SensitiveWordVo(
      * @since 1.0.0
      */
     @field:Schema(description = "启用")
-    val enable: Boolean?
+    val enable: Boolean?,
 )

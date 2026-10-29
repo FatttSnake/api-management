@@ -10,6 +10,4 @@ import top.fatweb.apimanagement.entity.system.EventLog
  */
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class EventLogRecord(
-    val event: EventLog.Event
-)
+annotation class EventLogRecord(val event: EventLog.Event)

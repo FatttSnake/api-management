@@ -3,12 +3,22 @@ package top.fatweb.apimanagement.controller.system
 import io.swagger.v3.oas.annotations.Operation
 import jakarta.validation.Valid
 import org.springframework.security.access.prepost.PreAuthorize
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PatchMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
+import org.springframework.web.bind.annotation.RequestBody
 import top.fatweb.apimanagement.annotation.BaseController
 import top.fatweb.apimanagement.annotation.ProcessParam
 import top.fatweb.apimanagement.entity.common.ResponseCode
 import top.fatweb.apimanagement.entity.common.ResponseResult
-import top.fatweb.apimanagement.param.system.apiKey.*
+import top.fatweb.apimanagement.param.system.apiKey.ApiKeyAddParam
+import top.fatweb.apimanagement.param.system.apiKey.ApiKeyDeleteParam
+import top.fatweb.apimanagement.param.system.apiKey.ApiKeyGetParam
+import top.fatweb.apimanagement.param.system.apiKey.ApiKeyUpdateParam
+import top.fatweb.apimanagement.param.system.apiKey.ApiKeyUpdateStatusParam
 import top.fatweb.apimanagement.service.api.IApiKeyService
 import top.fatweb.apimanagement.vo.PageVo
 import top.fatweb.apimanagement.vo.api.ApiKeyAvailableGroupVo
@@ -22,9 +32,7 @@ import top.fatweb.apimanagement.vo.api.ApiKeyWithSecretVo
  * @since 1.0.0
  */
 @BaseController(path = ["/system/api/key"], name = "API Key 管理", description = "API Key 管理相关接口")
-class ApiKeyController(
-    private val apiKeyService: IApiKeyService
-) {
+class ApiKeyController(private val apiKeyService: IApiKeyService) {
     /**
      * Get API key by ID
      *
@@ -66,7 +74,8 @@ class ApiKeyController(
     @PreAuthorize("hasAnyAuthority('system:api-keys:one:add')")
     fun add(@ProcessParam @Valid @RequestBody apiKeyAddParam: ApiKeyAddParam): ResponseResult<ApiKeyWithSecretVo> =
         ResponseResult.databaseSuccess(
-            ResponseCode.API_PLATFORM_KEY_CREATE_SUCCESS, data = apiKeyService.add(true, apiKeyAddParam)
+            ResponseCode.API_PLATFORM_KEY_CREATE_SUCCESS,
+            data = apiKeyService.add(true, apiKeyAddParam),
         )
 
     /**
@@ -114,10 +123,10 @@ class ApiKeyController(
     @Operation(summary = "重新生成 SecretKey")
     @PostMapping("/{id}/regenerate")
     @PreAuthorize("hasAnyAuthority('system:api-keys:one:regenerate')")
-    fun regenerate(@PathVariable id: Long): ResponseResult<ApiKeyWithSecretVo> =
-        ResponseResult.databaseSuccess(
-            ResponseCode.API_PLATFORM_KEY_REGENERATE_SUCCESS, data = apiKeyService.regenerate(true, id)
-        )
+    fun regenerate(@PathVariable id: Long): ResponseResult<ApiKeyWithSecretVo> = ResponseResult.databaseSuccess(
+        ResponseCode.API_PLATFORM_KEY_REGENERATE_SUCCESS,
+        data = apiKeyService.regenerate(true, id),
+    )
 
     /**
      * Delete API key by ID
@@ -161,8 +170,22 @@ class ApiKeyController(
      * @since 1.0.0
      */
     @Operation(summary = "获取可授权的 API 列表（按插件分组）")
-    @GetMapping(path = ["/available-apis", "/available-apis/{userId}"])
+    @GetMapping("/available-apis")
     @PreAuthorize("hasAnyAuthority('system:api-keys:one:add','system:api-keys:one:modify','system:api-keys:one:query')")
-    fun availableApis(@PathVariable userId: Long?): ResponseResult<List<ApiKeyAvailableGroupVo>> =
+    fun availableApis(): ResponseResult<List<ApiKeyAvailableGroupVo>> =
+        ResponseResult.databaseSuccess(data = apiKeyService.availableApis(true, null))
+
+    /**
+     * Get API interfaces a given user's key may grant, grouped by plugin
+     *
+     * @param userId user ID
+     * @return Response object includes API interface groups
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @Operation(summary = "获取指定用户可授权的 API 列表（按插件分组）")
+    @GetMapping("/available-apis/{userId}")
+    @PreAuthorize("hasAnyAuthority('system:api-keys:one:add','system:api-keys:one:modify','system:api-keys:one:query')")
+    fun availableApisForUser(@PathVariable userId: Long): ResponseResult<List<ApiKeyAvailableGroupVo>> =
         ResponseResult.databaseSuccess(data = apiKeyService.availableApis(true, userId))
 }

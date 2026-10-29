@@ -26,10 +26,12 @@ import top.fatweb.apimanagement.util.getToken
 class JwtAuthenticationTokenFilter(
     private val serverProperties: ServerProperties,
     private val redisProvider: RedisProvider,
-    private val jwtProvider: JwtProvider
+    private val jwtProvider: JwtProvider,
 ) : OncePerRequestFilter() {
     override fun doFilterInternal(
-        request: HttpServletRequest, response: HttpServletResponse, filterChain: FilterChain
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+        filterChain: FilterChain,
     ) {
         if (SecurityContextHolder.getContext().authentication != null) {
             filterChain.doFilter(request, response)
@@ -42,7 +44,8 @@ class JwtAuthenticationTokenFilter(
         // malformed authorization header must not be rejected here - this filter runs
         // before the dispatcher, where nothing can turn the failure into a response.
         val servletPath = request.servletPath
-        if (!StringUtils.hasText(tokenWithPrefix) || "/error/thrown" == servletPath ||
+        if (!StringUtils.hasText(tokenWithPrefix) ||
+            "/error/thrown" == servletPath ||
             servletPath.startsWith(StorageRoutes.PUBLIC_STORAGE_PATH) ||
             !tokenWithPrefix.startsWith(serverProperties.security.tokenPrefix)
         ) {
@@ -53,7 +56,7 @@ class JwtAuthenticationTokenFilter(
         val token = getToken(serverProperties, tokenWithPrefix)
         jwtProvider.parseJwt(token)
 
-        val redisKeyPattern = "${serverProperties.security.tokenIssuer}_access_*:${token}"
+        val redisKeyPattern = "${serverProperties.security.tokenIssuer}_access_*:$token"
         val redisKeys = redisProvider.keys(redisKeyPattern)
         if (redisKeys.isEmpty()) {
             throw TokenHasExpiredException()

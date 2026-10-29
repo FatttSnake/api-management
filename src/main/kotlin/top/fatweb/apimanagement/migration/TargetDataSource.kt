@@ -8,6 +8,4 @@ package top.fatweb.apimanagement.migration
  */
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class TargetDataSource(
-    val value: String
-)
+annotation class TargetDataSource(val value: String)

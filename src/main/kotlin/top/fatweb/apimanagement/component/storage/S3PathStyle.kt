@@ -8,5 +8,5 @@ package top.fatweb.apimanagement.component.storage
  */
 enum class S3PathStyle {
     Path,
-    VirtualHosted
+    VirtualHosted,
 }

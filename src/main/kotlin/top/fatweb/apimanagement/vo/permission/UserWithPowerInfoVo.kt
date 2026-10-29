@@ -3,7 +3,11 @@ package top.fatweb.apimanagement.vo.permission
 import io.swagger.v3.oas.annotations.media.Schema
 import tools.jackson.databind.annotation.JsonSerialize
 import tools.jackson.databind.ser.std.ToStringSerializer
-import top.fatweb.apimanagement.vo.permission.base.*
+import top.fatweb.apimanagement.vo.permission.base.MenuVo
+import top.fatweb.apimanagement.vo.permission.base.ModuleVo
+import top.fatweb.apimanagement.vo.permission.base.OperationVo
+import top.fatweb.apimanagement.vo.permission.base.ScopeVo
+import top.fatweb.apimanagement.vo.permission.base.UserInfoVo
 import java.time.LocalDateTime
 
 /**
@@ -22,7 +26,6 @@ data class UserWithPowerInfoVo(
      */
     @field:JsonSerialize(using = ToStringSerializer::class)
     val id: Long?,
-
     /**
      * Username
      *
@@ -31,7 +34,6 @@ data class UserWithPowerInfoVo(
      */
     @field:Schema(description = "用户名", example = "User")
     val username: String?,
-
     /**
      * Two-factor enable
      *
@@ -40,7 +42,6 @@ data class UserWithPowerInfoVo(
      */
     @field:Schema(description = "启用双因素验证", example = "true")
     val twoFactor: Boolean?,
-
     /**
      * Verified
      *
@@ -49,7 +50,6 @@ data class UserWithPowerInfoVo(
      */
     @field:Schema(description = "已验证", example = "true")
     val verified: Boolean?,
-
     /**
      * Locking
      *
@@ -58,7 +58,6 @@ data class UserWithPowerInfoVo(
      */
     @field:Schema(description = "是否锁定", example = "false")
     val locking: Boolean?,
-
     /**
      * Expiration time
      *
@@ -67,7 +66,6 @@ data class UserWithPowerInfoVo(
      */
     @field:Schema(description = "过期时间", example = "1900-01-01T00:00:00.000Z")
     val expiration: LocalDateTime?,
-
     /**
      * Credentials expiration time
      *
@@ -76,7 +74,6 @@ data class UserWithPowerInfoVo(
      */
     @field:Schema(description = "认证过期时间", example = "1900-01-01T00:00:00.000Z")
     val credentialsExpiration: LocalDateTime?,
-
     /**
      * Enable
      *
@@ -85,7 +82,6 @@ data class UserWithPowerInfoVo(
      */
     @field:Schema(description = "是否启用", example = "true")
     val enable: Boolean?,
-
     /**
      * Current login time
      *
@@ -94,7 +90,6 @@ data class UserWithPowerInfoVo(
      */
     @field:Schema(description = "当前登录时间", example = "1900-01-01T00:00:00.000Z")
     val currentLoginTime: LocalDateTime?,
-
     /**
      * Last login time
      *
@@ -103,7 +98,6 @@ data class UserWithPowerInfoVo(
      */
     @field:Schema(description = "当前登录 IP", example = "1.1.1.1")
     val currentLoginIp: String?,
-
     /**
      * Last login time
      *
@@ -112,7 +106,6 @@ data class UserWithPowerInfoVo(
      */
     @field:Schema(description = "最后登录时间", example = "1900-01-01T00:00:00.000Z")
     val lastLoginTime: LocalDateTime?,
-
     /**
      * Last login IP
      *
@@ -121,7 +114,6 @@ data class UserWithPowerInfoVo(
      */
     @field:Schema(description = "最后登录 IP", example = "1.1.1.1")
     val lastLoginIp: String?,
-
     /**
      * Create time
      *
@@ -130,7 +122,6 @@ data class UserWithPowerInfoVo(
      */
     @field:Schema(description = "创建时间", example = "1900-01-01T00:00:00.000Z")
     val createTime: LocalDateTime?,
-
     /**
      * Update time
      *
@@ -139,7 +130,6 @@ data class UserWithPowerInfoVo(
      */
     @field:Schema(description = "修改时间", example = "1900-01-01T00:00:00.000Z")
     val updateTime: LocalDateTime?,
-
     /**
      * User information object
      *
@@ -148,7 +138,6 @@ data class UserWithPowerInfoVo(
      */
     @field:Schema(description = "用户资料")
     val userInfo: UserInfoVo?,
-
     /**
      * List of ModuleVo object
      *
@@ -157,7 +146,6 @@ data class UserWithPowerInfoVo(
      */
     @field:Schema(description = "模块列表")
     val modules: List<ModuleVo>?,
-
     /**
      * List of MenuVo object
      *
@@ -166,7 +154,6 @@ data class UserWithPowerInfoVo(
      */
     @field:Schema(description = "菜单列表")
     val menus: List<MenuVo>?,
-
     /**
      * List of ScopeVo object
      *
@@ -175,7 +162,6 @@ data class UserWithPowerInfoVo(
      */
     @field:Schema(description = "作用域列表")
     val scopes: List<ScopeVo>?,
-
     /**
      * List of OperationVo object
      *
@@ -183,5 +169,5 @@ data class UserWithPowerInfoVo(
      * @since 1.0.0
      */
     @field:Schema(description = "操作列表")
-    val operations: List<OperationVo>?
+    val operations: List<OperationVo>?,
 )

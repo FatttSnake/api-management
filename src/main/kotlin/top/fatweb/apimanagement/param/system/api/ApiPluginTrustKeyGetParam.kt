@@ -22,7 +22,6 @@ data class ApiPluginTrustKeyGetParam(
      */
     @field:Schema(description = "查询密钥别名", example = "master")
     var searchAlias: String?,
-
     /**
      * Enable status
      *
@@ -33,7 +32,7 @@ data class ApiPluginTrustKeyGetParam(
         description = "启用状态",
         allowableValues = ["true", "false"],
         defaultValue = "true",
-        example = "true"
+        example = "true",
     )
-    var enable: Boolean?
+    var enable: Boolean?,
 ) : PageSortParam()

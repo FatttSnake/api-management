@@ -2,6 +2,8 @@ import org.gradle.api.publish.maven.MavenPublication
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.ktlint)
+    alias(libs.plugins.detekt)
     `java-gradle-plugin`
     `maven-publish`
 }

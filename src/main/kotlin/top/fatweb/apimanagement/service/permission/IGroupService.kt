@@ -2,7 +2,11 @@ package top.fatweb.apimanagement.service.permission
 
 import com.baomidou.mybatisplus.spring.service.IService
 import top.fatweb.apimanagement.entity.permission.Group
-import top.fatweb.apimanagement.param.permission.group.*
+import top.fatweb.apimanagement.param.permission.group.GroupAddParam
+import top.fatweb.apimanagement.param.permission.group.GroupDeleteParam
+import top.fatweb.apimanagement.param.permission.group.GroupGetParam
+import top.fatweb.apimanagement.param.permission.group.GroupUpdateParam
+import top.fatweb.apimanagement.param.permission.group.GroupUpdateStatusParam
 import top.fatweb.apimanagement.vo.PageVo
 import top.fatweb.apimanagement.vo.permission.GroupWithRoleVo
 import top.fatweb.apimanagement.vo.permission.base.GroupVo

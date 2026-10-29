@@ -22,7 +22,6 @@ data class ServerProperties(
      * @since 1.0.0
      */
     val startupTime: LocalDateTime = LocalDateTime.now(ZoneOffset.UTC),
-
     /**
      * Admin properties
      *
@@ -31,7 +30,6 @@ data class ServerProperties(
      * @see AdminProperties
      */
     @field:Valid val admin: AdminProperties = AdminProperties(),
-
     /**
      * Security properties
      *
@@ -40,7 +38,6 @@ data class ServerProperties(
      * @see SecurityProperties
      */
     @field:Valid val security: SecurityProperties = SecurityProperties(),
-
     /**
      * Storage properties
      *
@@ -48,5 +45,5 @@ data class ServerProperties(
      * @since 1.0.0
      * @see StorageProperties
      */
-    @field:Valid val storage: StorageProperties = StorageProperties()
+    @field:Valid val storage: StorageProperties = StorageProperties(),
 )

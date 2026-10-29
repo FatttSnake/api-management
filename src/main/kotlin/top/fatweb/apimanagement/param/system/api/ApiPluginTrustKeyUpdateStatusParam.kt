@@ -23,7 +23,6 @@ data class ApiPluginTrustKeyUpdateStatusParam(
     @field:Schema(description = "公钥指纹", required = true)
     @field:NotBlank(message = "Key ID can not be blank")
     var keyId: String,
-
     /**
      * Enable status
      *
@@ -32,5 +31,5 @@ data class ApiPluginTrustKeyUpdateStatusParam(
      */
     @field:Schema(description = "启用", required = true)
     @field:NotNull(message = "Enable can not be null")
-    var enable: Boolean
+    var enable: Boolean,
 )

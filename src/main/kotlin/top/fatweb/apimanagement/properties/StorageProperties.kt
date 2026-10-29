@@ -27,7 +27,6 @@ data class StorageProperties(
      * @since 1.0.0
      */
     val mode: FileStorageMode = FileStorageMode.Local,
-
     /**
      * Local storage properties
      *
@@ -36,7 +35,6 @@ data class StorageProperties(
      * @see LocalStorageProperties
      */
     @field:Valid val local: LocalStorageProperties = LocalStorageProperties(),
-
     /**
      * Directory where plugin jars are materialized for class loading
      *
@@ -44,7 +42,6 @@ data class StorageProperties(
      * @since 1.0.0
      */
     @field:NotBlank val pluginDir: String = "data/plugins",
-
     /**
      * Directory holding plugin dependency modules
      *
@@ -52,7 +49,6 @@ data class StorageProperties(
      * @since 1.0.0
      */
     @field:NotBlank val pluginModuleDir: String = "data/plugin-modules",
-
     /**
      * Maximum accepted dependency module size in bytes
      *
@@ -60,7 +56,6 @@ data class StorageProperties(
      * @since 1.0.0
      */
     @field:Min(1) val pluginModuleMaxBytes: Long = 256L * 1024 * 1024,
-
     /**
      * Maximum number of installed dependency modules
      *
@@ -68,7 +63,6 @@ data class StorageProperties(
      * @since 1.0.0
      */
     @field:Min(1) val pluginModuleMaxCount: Int = 4096,
-
     /**
      * Hours an unreferenced dependency module is retained before collection
      *
@@ -76,7 +70,6 @@ data class StorageProperties(
      * @since 1.0.0
      */
     @field:Min(0) val pluginModuleGcGraceHours: Long = 24,
-
     /**
      * Maximum accepted plugin jar size in bytes
      *
@@ -84,7 +77,6 @@ data class StorageProperties(
      * @since 1.0.0
      */
     @field:Min(1) val pluginJarMaxBytes: Long = 200L * 1024 * 1024,
-
     /**
      * Directory holding the SQLite databases of the plugins that declare one
      *
@@ -92,7 +84,6 @@ data class StorageProperties(
      * @since 1.0.0
      */
     @field:NotBlank val pluginDatasourceDir: String = "data/db/plugin",
-
     /**
      * Most connections one plugin datasource may hold open
      *
@@ -102,7 +93,6 @@ data class StorageProperties(
      * @since 1.0.0
      */
     @field:Min(1) val pluginDatasourcePoolSize: Int = 5,
-
     /**
      * Public base URL used to build external storage links
      *
@@ -114,9 +104,8 @@ data class StorageProperties(
      */
     @field:Pattern(
         regexp = "^https?://\\S+$",
-        message = "Public base URL must be an absolute http(s) URL"
+        message = "Public base URL must be an absolute http(s) URL",
     ) val publicBaseUrl: String? = null,
-
     /**
      * Default life of an external storage link
      *
@@ -124,7 +113,6 @@ data class StorageProperties(
      * @since 1.0.0
      */
     val externalUrlDefaultTtl: Long = 1L,
-
     /**
      * Life unit of external storage links
      *
@@ -132,7 +120,6 @@ data class StorageProperties(
      * @since 1.0.0
      */
     val externalUrlTtlUnit: TimeUnit = TimeUnit.HOURS,
-
     /**
      * Maximum life of an external storage link, a longer request is clamped down
      *
@@ -140,7 +127,6 @@ data class StorageProperties(
      * @since 1.0.0
      */
     val externalUrlMaxTtl: Long = 168L,
-
     /**
      * S3 storage properties
      *
@@ -148,7 +134,7 @@ data class StorageProperties(
      * @since 1.0.0
      * @see S3StorageProperties
      */
-    @field:Valid val s3: S3StorageProperties? = null
+    @field:Valid val s3: S3StorageProperties? = null,
 ) {
     /**
      * Local storage properties
@@ -175,7 +161,6 @@ data class StorageProperties(
          * @since 1.0.0
          */
         @field:NotBlank val endpoint: String = "",
-
         /**
          * S3 access key
          *
@@ -183,7 +168,6 @@ data class StorageProperties(
          * @since 1.0.0
          */
         @field:NotBlank val accessKey: String = "",
-
         /**
          * S3 secret key
          *
@@ -191,7 +175,6 @@ data class StorageProperties(
          * @since 1.0.0
          */
         @field:NotBlank val secretKey: String = "",
-
         /**
          * S3 region
          *
@@ -199,7 +182,6 @@ data class StorageProperties(
          * @since 1.0.0
          */
         @field:NotBlank val region: String = "",
-
         /**
          * S3 path style
          *
@@ -208,7 +190,6 @@ data class StorageProperties(
          * @see S3PathStyle
          */
         @field:NotNull val pathStyle: S3PathStyle = S3PathStyle.Path,
-
         /**
          * S3 bucket
          *
@@ -216,7 +197,6 @@ data class StorageProperties(
          * @since 1.0.0
          */
         @field:NotBlank val bucket: String = "",
-
         /**
          * S3 storage path prefix
          *
@@ -224,7 +204,6 @@ data class StorageProperties(
          * @since 1.0.0
          */
         @field:NotNull val prefix: String = "",
-
         /**
          * Public S3 endpoint used to build presigned URLs, falls back to [endpoint]
          *
@@ -233,9 +212,8 @@ data class StorageProperties(
          */
         @field:Pattern(
             regexp = "^https?://\\S+$",
-            message = "Public S3 endpoint must be an absolute http(s) URL"
+            message = "Public S3 endpoint must be an absolute http(s) URL",
         ) val publicEndpoint: String? = null,
-
         /**
          * Region used to sign presigned URLs, falls back to [region]
          *
@@ -245,7 +223,7 @@ data class StorageProperties(
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
          */
-        val signingRegion: String? = null
+        val signingRegion: String? = null,
     )
 
     /**
@@ -255,8 +233,7 @@ data class StorageProperties(
      * @since 1.0.0
      */
     @AssertTrue(message = "S3 configuration must be added")
-    fun isS3(): Boolean =
-        mode == FileStorageMode.Local || s3 !== null
+    fun isS3(): Boolean = mode == FileStorageMode.Local || s3 !== null
 
     /**
      * Check external link ttl properties
@@ -265,8 +242,7 @@ data class StorageProperties(
      * @since 1.0.0
      */
     @AssertTrue(message = "External storage link default life must not exceed the maximum")
-    fun isExternalUrlTtl(): Boolean =
-        externalUrlDefaultTtl <= externalUrlMaxTtl
+    fun isExternalUrlTtl(): Boolean = externalUrlDefaultTtl <= externalUrlMaxTtl
 
     /**
      * Get the default life of an external storage link
@@ -275,8 +251,7 @@ data class StorageProperties(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun externalUrlDefaultDuration(): Duration =
-        ttlToDuration(externalUrlDefaultTtl)
+    fun externalUrlDefaultDuration(): Duration = ttlToDuration(externalUrlDefaultTtl)
 
     /**
      * Get the maximum life of an external storage link
@@ -285,9 +260,7 @@ data class StorageProperties(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun externalUrlMaxDuration(): Duration =
-        ttlToDuration(externalUrlMaxTtl)
+    fun externalUrlMaxDuration(): Duration = ttlToDuration(externalUrlMaxTtl)
 
-    private fun ttlToDuration(value: Long): Duration =
-        Duration.ofNanos(externalUrlTtlUnit.toNanos(value))
+    private fun ttlToDuration(value: Long): Duration = Duration.ofNanos(externalUrlTtlUnit.toNanos(value))
 }

@@ -50,7 +50,6 @@ interface IStorageBlobService : IService<StorageBlob> {
      */
     fun saveFile(data: ByteArray): String
 
-
     /**
      * Save file to file storage and update reference count
      *

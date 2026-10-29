@@ -20,7 +20,6 @@ data class ApiKeyAvailableGroupVo(
      */
     @Schema(description = "所属插件 ID", example = "echo")
     val pluginId: String?,
-
     /**
      * Plugin display name
      *
@@ -29,7 +28,6 @@ data class ApiKeyAvailableGroupVo(
      */
     @Schema(description = "插件名称", example = "Echo 插件")
     val pluginName: String?,
-
     /**
      * Interfaces of the plugin that may be granted
      *
@@ -37,5 +35,5 @@ data class ApiKeyAvailableGroupVo(
      * @since 1.0.0
      */
     @Schema(description = "该插件下可授权的接口列表")
-    val interfaces: List<ApiKeyAvailableInterfaceVo>
+    val interfaces: List<ApiKeyAvailableInterfaceVo>,
 )

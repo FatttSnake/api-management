@@ -1,3 +1,4 @@
+import java.io.File
 import java.security.MessageDigest
 
 plugins {
@@ -5,7 +6,40 @@ plugins {
     alias(libs.plugins.kotlin.spring)
     alias(libs.plugins.spring.boot)
     alias(libs.plugins.dokka)
+    alias(libs.plugins.ktlint)
+    alias(libs.plugins.detekt)
     id("signing")
+}
+
+subprojects {
+    // The extension only exists once the subproject applies detekt in its own plugins block,
+    // which happens after this block runs
+    plugins.withId("dev.detekt") {
+        extensions.configure<dev.detekt.gradle.extensions.DetektExtension> {
+            buildUponDefaultConfig = true
+            config.setFrom(rootProject.files("config/detekt/detekt.yml"))
+            baseline = rootProject.file("config/detekt/baseline-${project.name}.xml")
+            parallel = true
+        }
+    }
+
+    // `check` is registered by the Java plugin the subproject applies later
+    plugins.withId("java") {
+        tasks.named("check") {
+            dependsOn("detekt")
+        }
+    }
+}
+
+extensions.configure<dev.detekt.gradle.extensions.DetektExtension> {
+    buildUponDefaultConfig = true
+    config.setFrom(files("config/detekt/detekt.yml"))
+    baseline = file("config/detekt/baseline-root.xml")
+    parallel = true
+}
+
+tasks.named("check") {
+    dependsOn("detekt")
 }
 
 group = "top.fatweb"
@@ -83,12 +117,11 @@ dependencies {
     testImplementation(libs.mybatis.plus.test)
 }
 
-fun Project.envOrProperty(name: String): Provider<String> {
-    return providers.gradleProperty(name)
-        .orElse(providers.environmentVariable(name))
-        .orElse(providers.environmentVariable("ORG_GRADLE_PROJECT_$name"))
-        .map { it }
-}
+fun Project.envOrProperty(name: String): Provider<String> = providers
+    .gradleProperty(name)
+    .orElse(providers.environmentVariable(name))
+    .orElse(providers.environmentVariable("ORG_GRADLE_PROJECT_$name"))
+    .map { it }
 
 kotlin {
     compilerOptions {
@@ -116,7 +149,7 @@ if (envOrProperty("debug").orNull?.toBoolean() == true) {
     tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
         jvmArgs(
             "-agentlib:jdwp=transport=dt_socket,server=y," +
-                "suspend=$debugSuspend,address=$debugAddress:$debugPort"
+                "suspend=$debugSuspend,address=$debugAddress:$debugPort",
         )
     }
 }
@@ -135,23 +168,35 @@ if (env == "dev" || env == "release") {
 }
 
 tasks.register("generateChecksums") {
-    description = "Generate checksums"
-    dependsOn(tasks.jar)
+    description = "Generate SHA-256 and SHA-512 checksums of the executable jar"
+    dependsOn(tasks.bootJar)
+
+    // Providers are resolved at configuration time so the task body does not touch `project`,
+    // which the configuration cache forbids
+    val bootJarFile = tasks.bootJar.flatMap { it.archiveFile }
+    val outputDirProvider = layout.buildDirectory.dir("checksums")
+
     doLast {
-        val jarFile = tasks.jar.get().archiveFile.get().asFile
-        val outputDir = layout.buildDirectory.dir("checksums").get().asFile
+        val jarFile = bootJarFile.get().asFile
+        val outputDir = outputDirProvider.get().asFile
         outputDir.mkdirs()
 
-        listOf("MD5", "SHA-1", "SHA-256", "SHA-512").forEach { algorithm ->
-            val checksumFile = File(outputDir, "${jarFile.name}.${algorithm}")
-            val checksum = MessageDigest.getInstance(algorithm)
-                .digest(jarFile.readBytes())
-                .joinToString(separator = "") { byte ->
-                    "%02x".format(byte)
-                }
+        listOf("SHA-256", "SHA-512").forEach { algorithm ->
+            val checksumFile = File(outputDir, "${jarFile.name}.$algorithm")
+            val checksum =
+                MessageDigest
+                    .getInstance(algorithm)
+                    .digest(jarFile.readBytes())
+                    .joinToString(separator = "") { byte ->
+                        "%02x".format(byte)
+                    }
             checksumFile.writeText("$checksum  ${jarFile.name}")
         }
     }
+}
+
+tasks.named("assemble") {
+    dependsOn("generateChecksums")
 }
 
 if (env == "release") {
@@ -170,4 +215,3 @@ if (env == "release") {
         finalizedBy("signBootJar")
     }
 }
-

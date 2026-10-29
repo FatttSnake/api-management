@@ -14,5 +14,5 @@ import top.fatweb.apimanagement.vo.permission.base.ScopeVo
 fun Scope.toVo() = ScopeVo(
     id = this.id,
     name = this.name,
-    menuId = this.menuId
+    menuId = this.menuId,
 )

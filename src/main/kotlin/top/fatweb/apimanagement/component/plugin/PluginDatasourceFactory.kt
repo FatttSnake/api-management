@@ -5,8 +5,8 @@ import com.zaxxer.hikari.HikariDataSource
 import org.springframework.stereotype.Component
 import top.fatweb.apimanagement.exception.PluginDatasourceException
 import top.fatweb.apimanagement.properties.ServerProperties
-import top.fatweb.apimanagement.util.PluginIdUtil
 import top.fatweb.apimanagement.util.PluginDatasourceUtil
+import top.fatweb.apimanagement.util.PluginIdUtil
 import top.fatweb.apimanagement.util.ResolvedDatasource
 import java.nio.file.Files
 import java.nio.file.Path
@@ -28,7 +28,7 @@ import javax.sql.DataSource
 class PluginDatasourceFactory(
     private val serverProperties: ServerProperties,
     private val pluginSettingReader: PluginSettingReader,
-    private val pluginConfigSchemaCache: PluginConfigSchemaCache
+    private val pluginConfigSchemaCache: PluginConfigSchemaCache,
 ) {
     companion object {
         /**
@@ -74,11 +74,14 @@ class PluginDatasourceFactory(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun create(pluginId: String, schema: PluginConfigSchema?): Map<String, DataSource> =
-        schema?.datasources.orEmpty().mapNotNull { declaration ->
-            val resolved = PluginDatasourceUtil.resolve(declaration) { key ->
-                pluginSettingReader.resolve(pluginId, key)
-            } ?: return@mapNotNull null
+    fun create(pluginId: String, schema: PluginConfigSchema?): Map<String, DataSource> = schema
+        ?.datasources
+        .orEmpty()
+        .mapNotNull { declaration ->
+            val resolved =
+                PluginDatasourceUtil.resolve(declaration) { key ->
+                    pluginSettingReader.resolve(pluginId, key)
+                } ?: return@mapNotNull null
 
             declaration.name to sourceOf(pluginId, resolved)
         }.toMap()
@@ -98,18 +101,20 @@ class PluginDatasourceFactory(
      * @since 1.0.0
      */
     fun test(pluginId: String, name: String, values: Map<String, String?>) {
-        val schema = pluginConfigSchemaCache.get(pluginId)
-            ?: throw PluginDatasourceException("Plugin '$pluginId' declares no configuration")
+        val schema =
+            pluginConfigSchemaCache.get(pluginId)
+                ?: throw PluginDatasourceException("Plugin '$pluginId' declares no configuration")
 
-        val declaration = schema.datasourceOf(name)
-            ?: throw PluginDatasourceException("Plugin '$pluginId' does not declare a datasource named '$name'")
+        val declaration =
+            schema.datasourceOf(name)
+                ?: throw PluginDatasourceException("Plugin '$pluginId' does not declare a datasource named '$name'")
 
         // Nothing is connected to, so there is nothing to test: the file is created when the
         // gateway supplies it, and a test would only create one early
         if (declaration.dbType == PluginDatasourceType.SQLITE) {
             throw PluginDatasourceException(
                 "Datasource '$name' is a SQLITE datasource, which the gateway supplies itself and which" +
-                    " cannot be tested"
+                    " cannot be tested",
             )
         }
 
@@ -118,16 +123,17 @@ class PluginDatasourceFactory(
         val foreign = values.keys - declaration.slots.values.toSet()
         if (foreign.isNotEmpty()) {
             throw PluginDatasourceException(
-                "Datasource '$name' is not described by ${foreign.joinToString()}"
+                "Datasource '$name' is not described by ${foreign.joinToString()}",
             )
         }
 
         // A value the caller left out, or sent with no value, is the stored one: a form that
         // was not filled in is testing the configuration the plugin is running with
-        val resolved = PluginDatasourceUtil.resolve(declaration) { key ->
-            values[key] ?: pluginSettingReader.resolve(pluginId, key)
-        } as? ResolvedDatasource.Mysql
-            ?: throw PluginDatasourceException("Datasource '$name' is not configured")
+        val resolved =
+            PluginDatasourceUtil.resolve(declaration) { key ->
+                values[key] ?: pluginSettingReader.resolve(pluginId, key)
+            } as? ResolvedDatasource.Mysql
+                ?: throw PluginDatasourceException("Datasource '$name' is not configured")
 
         connect(resolved)
     }
@@ -173,19 +179,20 @@ class PluginDatasourceFactory(
                 url = PluginDatasourceUtil.sqliteUrl(datasourceDir, pluginId, resolved.name),
                 username = null,
                 password = null,
-                params = Properties()
+                params = Properties(),
             )
         }
 
-        is ResolvedDatasource.Mysql -> pool(
-            pluginId = pluginId,
-            name = resolved.name,
-            driver = PluginDatasourceUtil.MYSQL_DRIVER,
-            url = PluginDatasourceUtil.mysqlUrl(resolved.host, resolved.port, resolved.database),
-            username = resolved.username,
-            password = resolved.password,
-            params = resolved.params
-        )
+        is ResolvedDatasource.Mysql ->
+            pool(
+                pluginId = pluginId,
+                name = resolved.name,
+                driver = PluginDatasourceUtil.MYSQL_DRIVER,
+                url = PluginDatasourceUtil.mysqlUrl(resolved.host, resolved.port, resolved.database),
+                username = resolved.username,
+                password = resolved.password,
+                params = resolved.params,
+            )
     }
 
     /**
@@ -201,7 +208,7 @@ class PluginDatasourceFactory(
         url: String,
         username: String?,
         password: String?,
-        params: Properties
+        params: Properties,
     ): DataSource {
         val config = HikariConfig()
         config.driverClassName = driver
@@ -267,16 +274,17 @@ class PluginDatasourceFactory(
         params["connectTimeout"] = CONNECT_TIMEOUT_MILLIS.toString()
 
         try {
-            DriverManager.getConnection(
-                PluginDatasourceUtil.mysqlUrl(mysql.host, mysql.port, mysql.database),
-                params
-            ).use { connection ->
-                if (!connection.isValid(CONNECT_TIMEOUT_SECONDS)) {
-                    throw PluginDatasourceException(
-                        "The datasource did not answer within $CONNECT_TIMEOUT_SECONDS s"
-                    )
+            DriverManager
+                .getConnection(
+                    PluginDatasourceUtil.mysqlUrl(mysql.host, mysql.port, mysql.database),
+                    params,
+                ).use { connection ->
+                    if (!connection.isValid(CONNECT_TIMEOUT_SECONDS)) {
+                        throw PluginDatasourceException(
+                            "The datasource did not answer within $CONNECT_TIMEOUT_SECONDS s",
+                        )
+                    }
                 }
-            }
         } catch (e: PluginDatasourceException) {
             throw e
         } catch (e: Exception) {

@@ -13,4 +13,6 @@ import top.fatweb.apimanagement.service.permission.IOperationService
  * @since 1.0.0
  */
 @Service
-class OperationServiceImpl : ServiceImpl<OperationMapper, Operation>(), IOperationService
+class OperationServiceImpl :
+    ServiceImpl<OperationMapper, Operation>(),
+    IOperationService

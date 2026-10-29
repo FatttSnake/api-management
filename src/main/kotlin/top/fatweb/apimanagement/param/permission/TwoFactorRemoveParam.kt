@@ -19,5 +19,5 @@ data class TwoFactorRemoveParam(
      */
     @field:Schema(description = "验证码")
     @field:NotBlank(message = "Code can not be blank")
-    val code: String?
+    val code: String?,
 )

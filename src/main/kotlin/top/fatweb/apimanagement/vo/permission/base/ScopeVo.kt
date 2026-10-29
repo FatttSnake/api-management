@@ -20,7 +20,6 @@ data class ScopeVo(
      */
     @field:JsonSerialize(using = ToStringSerializer::class)
     val id: Long?,
-
     /**
      * Name
      *
@@ -29,7 +28,6 @@ data class ScopeVo(
      */
     @field:Schema(description = "功能名", example = "AddButton")
     val name: String?,
-
     /**
      * Menu ID
      *
@@ -38,5 +36,5 @@ data class ScopeVo(
      */
     @field:Schema(description = "菜单 ID")
     @field:JsonSerialize(using = ToStringSerializer::class)
-    val menuId: Long?
+    val menuId: Long?,
 )

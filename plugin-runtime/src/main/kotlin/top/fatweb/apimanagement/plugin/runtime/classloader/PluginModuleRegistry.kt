@@ -18,10 +18,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-class PluginModuleRegistry(
-    private val store: PluginModuleStore,
-    private val platform: ClassLoader
-) : AutoCloseable {
+class PluginModuleRegistry(private val store: PluginModuleStore, private val platform: ClassLoader) : AutoCloseable {
     private val shared = LinkedHashMap<ModuleKey, SharedModule>()
     private val monitor = Any()
     private var closed = false
@@ -37,9 +34,10 @@ class PluginModuleRegistry(
      */
     fun acquire(lock: PluginModuleLock): PluginModuleGraph {
         lock.validate()
-        val missing = lock.modules
-            .filterNot { store.contains(it.sha256) }
-            .map { it.coordinate }
+        val missing =
+            lock.modules
+                .filterNot { store.contains(it.sha256) }
+                .map { it.coordinate }
         if (missing.isNotEmpty()) {
             throw PluginModuleMissingException(missing)
         }
@@ -54,40 +52,43 @@ class PluginModuleRegistry(
 
             try {
                 ordered.forEach { module ->
-                    val dependencyFingerprints = module.dependencies
-                        .map { digest ->
-                            keyByDigest[digest]?.fingerprint()
-                                ?: throw PluginModuleLockException(
-                                    "${module.coordinate} depends on an unresolved module $digest"
-                                )
-                        }
-                        .sorted()
+                    val dependencyFingerprints =
+                        module.dependencies
+                            .map { digest ->
+                                keyByDigest[digest]?.fingerprint()
+                                    ?: throw PluginModuleLockException(
+                                        "${module.coordinate} depends on an unresolved module $digest",
+                                    )
+                            }.sorted()
                     val key = ModuleKey(module.coordinate, module.sha256, dependencyFingerprints)
                     keyByDigest[module.sha256] = key
 
                     val existing = shared[key]
-                    val loader = if (existing != null) {
-                        if (acquired.add(key)) {
-                            existing.references++
-                        }
-                        existing.loader
-                    } else {
-                        val dependencyLoaders = module.dependencies.map { digest ->
-                            loaderByDigest[digest]
-                                ?: throw PluginModuleLockException(
-                                    "${module.coordinate} depends on an unloaded module $digest"
+                    val loader =
+                        if (existing != null) {
+                            if (acquired.add(key)) {
+                                existing.references++
+                            }
+                            existing.loader
+                        } else {
+                            val dependencyLoaders =
+                                module.dependencies.map { digest ->
+                                    loaderByDigest[digest]
+                                        ?: throw PluginModuleLockException(
+                                            "${module.coordinate} depends on an unloaded module $digest",
+                                        )
+                                }
+                            val created =
+                                ModuleClassLoader(
+                                    key,
+                                    store.path(module.sha256),
+                                    platform,
+                                    dependencyLoaders,
                                 )
+                            shared[key] = SharedModule(created)
+                            acquired.add(key)
+                            created
                         }
-                        val created = ModuleClassLoader(
-                            key,
-                            store.path(module.sha256),
-                            platform,
-                            dependencyLoaders
-                        )
-                        shared[key] = SharedModule(created)
-                        acquired.add(key)
-                        created
-                    }
                     loaderByDigest[module.sha256] = loader
                 }
             } catch (ex: Throwable) {
@@ -192,7 +193,7 @@ class PluginModuleRegistry(
 class PluginModuleGraph internal constructor(
     val loadersByDigest: Map<String, ModuleClassLoader>,
     private val keys: List<ModuleKey>,
-    private val registry: PluginModuleRegistry
+    private val registry: PluginModuleRegistry,
 ) : AutoCloseable {
     private val released = AtomicBoolean(false)
 

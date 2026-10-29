@@ -18,9 +18,11 @@ import kotlin.reflect.KMutableProperty1
 object SettingsOperator {
     private const val SETTINGS_FILE_NAME = "data/config/settings.yml"
 
-    private val yamlMapper = YAMLMapper.builder()
-        .addModules(KotlinModule.Builder().build())
-        .build()
+    private val yamlMapper =
+        YAMLMapper
+            .builder()
+            .addModules(KotlinModule.Builder().build())
+            .build()
     private val settingFile = File(SETTINGS_FILE_NAME)
     private lateinit var systemSettings: SystemSettings
 
@@ -108,8 +110,7 @@ object SettingsOperator {
      * @since 1.0.0
      */
     @JvmName("getBaseValue")
-    fun <V> getValue(field: KMutableProperty1<BaseSettings, V?>): V? =
-        getValue(field, null)
+    fun <V> getValue(field: KMutableProperty1<BaseSettings, V?>): V? = getValue(field, null)
 
     /**
      * Get base settings value with default value
@@ -157,8 +158,7 @@ object SettingsOperator {
      * @since 1.0.0
      */
     @JvmName("getMailValue")
-    fun <V> getValue(field: KMutableProperty1<MailSettings, V?>): V? =
-        getValue(field, null)
+    fun <V> getValue(field: KMutableProperty1<MailSettings, V?>): V? = getValue(field, null)
 
     /**
      * Get value from mail settings with default value
@@ -199,8 +199,7 @@ object SettingsOperator {
      * @since 1.0.0
      */
     @JvmName("getTwoFactorValue")
-    fun <V> getValue(field: KMutableProperty1<TwoFactorSettings, V?>): V? =
-        getValue(field, null)
+    fun <V> getValue(field: KMutableProperty1<TwoFactorSettings, V?>): V? = getValue(field, null)
 
     /**
      * Get value from two-factor settings with default value
@@ -241,8 +240,7 @@ object SettingsOperator {
      * @since 1.0.0
      */
     @JvmName("getApiValue")
-    fun <V> getValue(field: KMutableProperty1<ApiSettings, V?>): V? =
-        getValue(field, null)
+    fun <V> getValue(field: KMutableProperty1<ApiSettings, V?>): V? = getValue(field, null)
 
     /**
      * Get value from API platform settings with default value

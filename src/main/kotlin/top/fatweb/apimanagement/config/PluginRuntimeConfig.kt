@@ -49,7 +49,7 @@ class PluginRuntimeConfig {
     @Bean
     fun pluginModuleRegistry(
         platform: GatewayApiClassLoader,
-        moduleService: IPluginModuleService
+        moduleService: IPluginModuleService,
     ): PluginModuleRegistry = PluginModuleRegistry(moduleService.store(), platform)
 
     /**
@@ -64,6 +64,6 @@ class PluginRuntimeConfig {
     @Bean
     fun pluginRuntimeLoader(
         platform: GatewayApiClassLoader,
-        moduleRegistry: PluginModuleRegistry
+        moduleRegistry: PluginModuleRegistry,
     ): PluginRuntimeLoader = PluginRuntimeLoader(platform, moduleRegistry)
 }

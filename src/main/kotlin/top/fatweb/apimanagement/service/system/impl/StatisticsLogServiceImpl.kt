@@ -15,4 +15,6 @@ import top.fatweb.apimanagement.service.system.IStatisticsLogService
  */
 @DS("sqlite")
 @Service
-class StatisticsLogServiceImpl : ServiceImpl<StatisticsLogMapper, StatisticsLog>(), IStatisticsLogService
+class StatisticsLogServiceImpl :
+    ServiceImpl<StatisticsLogMapper, StatisticsLog>(),
+    IStatisticsLogService

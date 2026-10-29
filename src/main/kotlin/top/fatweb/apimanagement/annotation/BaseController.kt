@@ -21,8 +21,6 @@ import org.springframework.web.bind.annotation.RestController
 @Retention(AnnotationRetention.RUNTIME)
 annotation class BaseController(
     @get:AliasFor(annotation = RequestMapping::class, attribute = "path") val path: Array<String> = [""],
-
     @get:AliasFor(annotation = Tag::class, attribute = "name") val name: String,
-
-    @get:AliasFor(annotation = Tag::class, attribute = "description") val description: String
+    @get:AliasFor(annotation = Tag::class, attribute = "description") val description: String,
 )

@@ -18,5 +18,5 @@ fun UserInfo.toVo() = UserInfoVo(
     avatar = this.avatar,
     email = this.email,
     createTime = this.createTime,
-    updateTime = this.updateTime
+    updateTime = this.updateTime,
 )

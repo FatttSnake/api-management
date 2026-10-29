@@ -22,7 +22,6 @@ data class ApiKeyGetParam(
      */
     @field:Schema(description = "查询 Key 名称", example = "my-key")
     var searchName: String?,
-
     /**
      * Enable status
      *
@@ -31,7 +30,6 @@ data class ApiKeyGetParam(
      */
     @field:Schema(description = "状态", allowableValues = ["true", "false"], example = "true")
     var enable: Boolean?,
-
     /**
      * Owner user ID (admin only)
      *
@@ -39,5 +37,5 @@ data class ApiKeyGetParam(
      * @since 1.0.0
      */
     @field:Schema(description = "所属用户 ID（管理员查询指定用户）")
-    var userId: Long?
+    var userId: Long?,
 ) : PageSortParam()

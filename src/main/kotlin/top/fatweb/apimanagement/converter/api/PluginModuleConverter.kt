@@ -22,7 +22,7 @@ fun PluginModule.toVo() = PluginModuleVo(
     source = this.source,
     installTime = this.installTime,
     createTime = this.createTime,
-    updateTime = this.updateTime
+    updateTime = this.updateTime,
 )
 
 /**
@@ -37,5 +37,5 @@ fun IPage<PluginModule>.toVoPage(): PageVo<PluginModuleVo> = PageVo(
     pages = pages,
     size = size,
     current = current,
-    records = records.map(PluginModule::toVo)
+    records = records.map(PluginModule::toVo),
 )

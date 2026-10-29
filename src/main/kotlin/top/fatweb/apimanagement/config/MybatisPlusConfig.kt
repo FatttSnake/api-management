@@ -15,9 +15,8 @@ import org.springframework.context.annotation.Configuration
 @Configuration
 class MybatisPlusConfig {
     @Bean
-    fun mybatisPlusInterceptor(): MybatisPlusInterceptor =
-        MybatisPlusInterceptor().apply {
-            addInnerInterceptor(OptimisticLockerInnerInterceptor())
-            addInnerInterceptor(PaginationInnerInterceptor())
-        }
+    fun mybatisPlusInterceptor(): MybatisPlusInterceptor = MybatisPlusInterceptor().apply {
+        addInnerInterceptor(OptimisticLockerInnerInterceptor())
+        addInnerInterceptor(PaginationInnerInterceptor())
+    }
 }

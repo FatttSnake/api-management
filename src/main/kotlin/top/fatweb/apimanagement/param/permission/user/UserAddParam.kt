@@ -24,7 +24,6 @@ data class UserAddParam(
     @field:Schema(description = "用户名", required = true, example = "User_1")
     @field:NotBlank(message = "Username can not be blank")
     var username: String?,
-
     /**
      * Password
      *
@@ -33,7 +32,6 @@ data class UserAddParam(
      */
     @field:Schema(description = "密码(为空自动生成随机密码)")
     val password: String?,
-
     /**
      * Verified
      *
@@ -44,10 +42,9 @@ data class UserAddParam(
         description = "是否已验证",
         allowableValues = ["true", "false"],
         defaultValue = "false",
-        example = "false"
+        example = "false",
     )
     val verified: Boolean = false,
-
     /**
      * Locking
      *
@@ -56,7 +53,6 @@ data class UserAddParam(
      */
     @field:Schema(description = "锁定", allowableValues = ["true", "false"], defaultValue = "false", example = "false")
     val locking: Boolean = false,
-
     /**
      * Expiration time
      *
@@ -65,7 +61,6 @@ data class UserAddParam(
      */
     @field:Schema(description = "过期时间", example = "1900-01-01T00:00:00.000Z")
     val expiration: LocalDateTime?,
-
     /**
      * Credentials expiration time
      *
@@ -74,7 +69,6 @@ data class UserAddParam(
      */
     @field:Schema(description = "认证过期时间", example = "1900-01-01T00:00:00.000Z")
     val credentialsExpiration: LocalDateTime?,
-
     /**
      * Enable
      *
@@ -83,7 +77,6 @@ data class UserAddParam(
      */
     @field:Schema(description = "启用", allowableValues = ["true", "false"], defaultValue = "true", example = "true")
     val enable: Boolean = true,
-
     /**
      * Nickname
      *
@@ -93,7 +86,6 @@ data class UserAddParam(
     @field:Schema(description = "昵称", required = true, example = "Nickname_1")
     @field:NotBlank(message = "Nickname can not be blank")
     var nickname: String?,
-
     /**
      * Avatar base63
      *
@@ -102,7 +94,6 @@ data class UserAddParam(
      */
     @field:Schema(description = "头像")
     val avatar: String?,
-
     /**
      * Email
      *
@@ -113,7 +104,6 @@ data class UserAddParam(
     @field:NotBlank(message = "Email can not be blank")
     @field:Pattern(regexp = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$", message = "Illegal email address")
     var email: String?,
-
     /**
      * List of role IDs
      *
@@ -122,7 +112,6 @@ data class UserAddParam(
      */
     @field:Schema(description = "角色 ID 列表")
     val roleIds: List<Long>?,
-
     /**
      * List of group IDs
      *
@@ -130,5 +119,5 @@ data class UserAddParam(
      * @since 1.0.0
      */
     @field:Schema(description = "用户组 ID 列表")
-    val groupIds: List<Long>?
+    val groupIds: List<Long>?,
 )

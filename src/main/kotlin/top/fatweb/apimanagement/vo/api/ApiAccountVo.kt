@@ -23,7 +23,6 @@ data class ApiAccountVo(
      */
     @field:JsonSerialize(using = ToStringSerializer::class)
     val id: Long?,
-
     /**
      * Owner user ID
      *
@@ -32,7 +31,6 @@ data class ApiAccountVo(
      */
     @field:JsonSerialize(using = ToStringSerializer::class)
     val userId: Long?,
-
     /**
      * Prepaid balance
      *
@@ -42,7 +40,6 @@ data class ApiAccountVo(
     @field:Schema(description = "余额", example = "100.0000")
     @field:JsonSerialize(using = ToStringSerializer::class)
     val balance: BigDecimal?,
-
     /**
      * Account status
      *
@@ -51,7 +48,6 @@ data class ApiAccountVo(
      */
     @field:Schema(description = "账户状态", example = "true")
     val enable: Boolean?,
-
     /**
      * Create time
      *
@@ -60,7 +56,6 @@ data class ApiAccountVo(
      */
     @field:Schema(description = "创建时间", example = "2026-01-01T00:00:00.000Z")
     val createTime: LocalDateTime?,
-
     /**
      * Update time
      *
@@ -69,7 +64,6 @@ data class ApiAccountVo(
      */
     @field:Schema(description = "修改时间", example = "2026-01-01T00:00:00.000Z")
     val updateTime: LocalDateTime?,
-
     /**
      * User value object
      *
@@ -77,5 +71,5 @@ data class ApiAccountVo(
      * @since 1.0.0
      */
     @field:Schema(description = "用户")
-    val userVo: UserWithInfoVo?
+    val userVo: UserWithInfoVo?,
 )

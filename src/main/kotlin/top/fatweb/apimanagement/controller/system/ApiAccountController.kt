@@ -29,7 +29,7 @@ import top.fatweb.apimanagement.vo.api.ApiTransactionVo
 @BaseController(path = ["/system/api/account"], name = "API 账户", description = "API 账户与流水相关接口")
 class ApiAccountController(
     private val apiAccountService: IApiAccountService,
-    private val apiTransactionService: IApiTransactionService
+    private val apiTransactionService: IApiTransactionService,
 ) {
     /**
      * Get API accounts paging information
@@ -54,10 +54,9 @@ class ApiAccountController(
     @Operation(summary = "获取 API 账户")
     @GetMapping("/{userId}")
     @PreAuthorize("hasAnyAuthority('system:operations:account:query')")
-    fun get(@PathVariable userId: Long): ResponseResult<ApiAccountVo> =
-        ResponseResult.databaseSuccess(
-            data = apiAccountService.getOne(true, userId)
-        )
+    fun get(@PathVariable userId: Long): ResponseResult<ApiAccountVo> = ResponseResult.databaseSuccess(
+        data = apiAccountService.getOne(true, userId),
+    )
 
     /**
      * Get API transaction paging information
@@ -71,11 +70,10 @@ class ApiAccountController(
     @GetMapping("/transactions")
     @PreAuthorize("hasAnyAuthority('system:operations:account:transactions')")
     fun getTransactions(
-        @ProcessParam @Valid apiTransactionGetParam: ApiTransactionGetParam?
-    ): ResponseResult<PageVo<ApiTransactionVo>> =
-        ResponseResult.databaseSuccess(
-            data = apiTransactionService.getPage(true, apiTransactionGetParam)
-        )
+        @ProcessParam @Valid apiTransactionGetParam: ApiTransactionGetParam?,
+    ): ResponseResult<PageVo<ApiTransactionVo>> = ResponseResult.databaseSuccess(
+        data = apiTransactionService.getPage(true, apiTransactionGetParam),
+    )
 
     /**
      * Top up API account
@@ -91,6 +89,6 @@ class ApiAccountController(
     fun topUp(@ProcessParam @Valid @RequestBody apiTopUpParam: ApiTopUpParam): ResponseResult<ApiTransactionVo> =
         ResponseResult.databaseSuccess(
             ResponseCode.API_PLATFORM_KEY_TOPUP_SUCCESS,
-            data = apiAccountService.topUp(true, apiTopUpParam)
+            data = apiAccountService.topUp(true, apiTopUpParam),
         )
 }

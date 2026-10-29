@@ -25,10 +25,9 @@ data class SysLogGetParam(
     @field:Schema(
         description = "类型过滤(多个使用逗号分隔)",
         allowableValues = ["INFO", "LOGIN", "LOGOUT", "REGISTER", "STATISTICS", "API", "ERROR"],
-        example = "INFO"
+        example = "INFO",
     )
     val logType: String?,
-
     /**
      * Trace ID to search for
      *
@@ -37,10 +36,9 @@ data class SysLogGetParam(
      */
     @field:Schema(
         description = "查询 Trace ID",
-        example = "2c5898e1d67d47768aa1942afada1823"
+        example = "2c5898e1d67d47768aa1942afada1823",
     )
     val searchTraceId: String?,
-
     /**
      * Request method to filter
      *
@@ -50,10 +48,9 @@ data class SysLogGetParam(
     @field:Schema(
         description = "请求方式过滤(多个使用逗号分隔)",
         allowableValues = ["GET", "POST", "PUT", "PATCH", "DELETE", "DELETE", "OPTIONS"],
-        example = "GET,POST"
+        example = "GET,POST",
     )
     val requestMethod: String?,
-
     /**
      * Request URL to search for
      *
@@ -62,7 +59,6 @@ data class SysLogGetParam(
      */
     @field:Schema(description = "查询请求 Url")
     var searchRequestUrl: String?,
-
     /**
      * Start time to search for
      *
@@ -72,7 +68,6 @@ data class SysLogGetParam(
     @field:Schema(description = "查询开始时间", example = "1900-01-01T00:00:00.000Z")
     @field:DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     val searchStartTime: LocalDateTime?,
-
     /**
      * End time to search for
      *
@@ -81,5 +76,5 @@ data class SysLogGetParam(
      */
     @field:Schema(description = "查询结束时间", example = "1900-01-01T00:00:00.000Z")
     @field:DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
-    val searchEndTime: LocalDateTime?
+    val searchEndTime: LocalDateTime?,
 ) : PageSortParam()

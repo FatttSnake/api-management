@@ -17,12 +17,11 @@ data class ApiCallableScope(
      * @since 1.0.0
      */
     val unrestricted: Boolean,
-
     /**
      * Operation codes the owner holds, empty when it holds none
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    val codes: Set<String>
+    val codes: Set<String>,
 )

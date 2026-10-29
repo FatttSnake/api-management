@@ -22,10 +22,7 @@ import tools.jackson.databind.jsontype.BasicPolymorphicTypeValidator
 @Configuration
 class RedisConfig {
     @Bean
-    fun redisTemplate(
-        redisConnectionFactory: RedisConnectionFactory,
-        jsonMapper: JsonMapper
-    ): RedisTemplate<*, *> {
+    fun redisTemplate(redisConnectionFactory: RedisConnectionFactory, jsonMapper: JsonMapper): RedisTemplate<*, *> {
         val redisTemplate = RedisTemplate<String, Any>()
         redisTemplate.connectionFactory = redisConnectionFactory
         val stringRedisSerializer = StringRedisSerializer()
@@ -33,18 +30,20 @@ class RedisConfig {
         // Rebuild the auto-configured mapper with default typing enabled, so non-final
         // types carry a `@class` property and values read back as `Any` deserialize to
         // their original type.
-        val redisObjectMapper = jsonMapper.rebuild()
-            .changeDefaultVisibility { it.withVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY) }
-            .activateDefaultTyping(
-                BasicPolymorphicTypeValidator.builder()
-                    .allowIfSubType("top.fatweb.apimanagement")
-                    .allowIfSubType("java.util")
-                    .allowIfSubType("java.time")
-                    .build(),
-                DefaultTyping.NON_FINAL,
-                JsonTypeInfo.As.PROPERTY
-            )
-            .build()
+        val redisObjectMapper =
+            jsonMapper
+                .rebuild()
+                .changeDefaultVisibility { it.withVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY) }
+                .activateDefaultTyping(
+                    BasicPolymorphicTypeValidator
+                        .builder()
+                        .allowIfSubType("top.fatweb.apimanagement")
+                        .allowIfSubType("java.util")
+                        .allowIfSubType("java.time")
+                        .build(),
+                    DefaultTyping.NON_FINAL,
+                    JsonTypeInfo.As.PROPERTY,
+                ).build()
 
         val anyJacksonJsonRedisSerializer = JacksonJsonRedisSerializer(redisObjectMapper, Any::class.java)
 

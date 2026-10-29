@@ -22,7 +22,6 @@ data class PowerSetVo(
      */
     @field:Schema(description = "模块列表")
     val moduleList: List<ModuleVo>?,
-
     /**
      * List of MenuVo object
      *
@@ -31,7 +30,6 @@ data class PowerSetVo(
      */
     @field:Schema(description = "菜单列表")
     val menuList: List<MenuVo>?,
-
     /**
      * List of ScopeVo object
      *
@@ -40,7 +38,6 @@ data class PowerSetVo(
      */
     @field:Schema(description = "作用域列表")
     val scopeList: List<ScopeVo>?,
-
     /**
      * List of OperationVo object
      *
@@ -48,5 +45,5 @@ data class PowerSetVo(
      * @since 1.0.0
      */
     @field:Schema(description = "操作列表")
-    val operationList: List<OperationVo>?
+    val operationList: List<OperationVo>?,
 )

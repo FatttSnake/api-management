@@ -4,7 +4,11 @@ import com.baomidou.mybatisplus.spring.service.IService
 import top.fatweb.apimanagement.entity.api.ApiCallableScope
 import top.fatweb.apimanagement.entity.api.ApiInterface
 import top.fatweb.apimanagement.entity.api.ApiKey
-import top.fatweb.apimanagement.param.system.apiKey.*
+import top.fatweb.apimanagement.param.system.apiKey.ApiKeyAddParam
+import top.fatweb.apimanagement.param.system.apiKey.ApiKeyDeleteParam
+import top.fatweb.apimanagement.param.system.apiKey.ApiKeyGetParam
+import top.fatweb.apimanagement.param.system.apiKey.ApiKeyUpdateParam
+import top.fatweb.apimanagement.param.system.apiKey.ApiKeyUpdateStatusParam
 import top.fatweb.apimanagement.vo.PageVo
 import top.fatweb.apimanagement.vo.api.ApiKeyAvailableGroupVo
 import top.fatweb.apimanagement.vo.api.ApiKeyVo

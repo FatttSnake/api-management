@@ -1,6 +1,11 @@
 package top.fatweb.apimanagement.entity.api
 
-import com.baomidou.mybatisplus.annotation.*
+import com.baomidou.mybatisplus.annotation.EnumValue
+import com.baomidou.mybatisplus.annotation.FieldFill
+import com.baomidou.mybatisplus.annotation.TableField
+import com.baomidou.mybatisplus.annotation.TableId
+import com.baomidou.mybatisplus.annotation.TableName
+import com.baomidou.mybatisplus.annotation.Version
 import com.fasterxml.jackson.annotation.JsonValue
 import java.io.Serializable
 import java.math.BigDecimal
@@ -21,7 +26,9 @@ class ApiInterface : Serializable {
      * @since 1.0.0
      */
     enum class BillingMode(@field:EnumValue @field:JsonValue val code: String) {
-        FREE("FREE"), SUCCESS_ONLY("SUCCESS_ONLY"), ALWAYS("ALWAYS")
+        FREE("FREE"),
+        SUCCESS_ONLY("SUCCESS_ONLY"),
+        ALWAYS("ALWAYS"),
     }
 
     /**
@@ -36,7 +43,8 @@ class ApiInterface : Serializable {
      * @since 1.0.0
      */
     enum class AccessMode(@field:EnumValue @field:JsonValue val code: String) {
-        DEFAULT("DEFAULT"), RESTRICTED("RESTRICTED")
+        DEFAULT("DEFAULT"),
+        RESTRICTED("RESTRICTED"),
     }
 
     /**
@@ -193,7 +201,6 @@ class ApiInterface : Serializable {
     @Version
     var version: Int? = null
 
-    override fun toString(): String {
-        return "ApiInterface(id=$id, pluginId=$pluginId, code=$code, name=$name, description=$description, path=$path, method=$method, apiVersion=$apiVersion, price=$price, billingMode=$billingMode, needKey=$needKey, rateLimit=$rateLimit, enable=$enable, accessMode=$accessMode, createTime=$createTime, updateTime=$updateTime, version=$version)"
-    }
+    override fun toString(): String =
+        "ApiInterface(id=$id, pluginId=$pluginId, code=$code, name=$name, description=$description, path=$path, method=$method, apiVersion=$apiVersion, price=$price, billingMode=$billingMode, needKey=$needKey, rateLimit=$rateLimit, enable=$enable, accessMode=$accessMode, createTime=$createTime, updateTime=$updateTime, version=$version)"
 }

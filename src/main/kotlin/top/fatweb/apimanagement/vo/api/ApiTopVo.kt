@@ -21,7 +21,6 @@ data class ApiTopVo(
      */
     @field:Schema(description = "API 编码")
     val apiCode: String?,
-
     /**
      * Request count
      *
@@ -30,7 +29,6 @@ data class ApiTopVo(
      */
     @field:Schema(description = "调用次数")
     val count: Long?,
-
     /**
      * Billed cost
      *
@@ -40,7 +38,6 @@ data class ApiTopVo(
     @field:Schema(description = "费用")
     @field:JsonSerialize(using = ToStringSerializer::class)
     val cost: BigDecimal?,
-
     /**
      * API plugin information
      *
@@ -49,7 +46,6 @@ data class ApiTopVo(
      */
     @field:Schema(description = "API 插件信息")
     val pluginVo: ApiPluginVo?,
-
     /**
      * API interface information
      *
@@ -57,5 +53,5 @@ data class ApiTopVo(
      * @since 1.0.0
      */
     @field:Schema(description = "API 接口信息")
-    val interfaceVo: ApiInterfaceVo?
+    val interfaceVo: ApiInterfaceVo?,
 )

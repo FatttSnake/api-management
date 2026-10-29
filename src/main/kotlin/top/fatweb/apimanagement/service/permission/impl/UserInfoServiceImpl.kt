@@ -13,4 +13,6 @@ import top.fatweb.apimanagement.service.permission.IUserInfoService
  * @since 1.0.0
  */
 @Service
-class UserInfoServiceImpl : ServiceImpl<UserInfoMapper, UserInfo>(), IUserInfoService
+class UserInfoServiceImpl :
+    ServiceImpl<UserInfoMapper, UserInfo>(),
+    IUserInfoService

@@ -29,7 +29,7 @@ class ApiResponse private constructor(
     val message: String,
     val data: Any?,
     val rawBody: ByteArray?,
-    val contentType: String?
+    val contentType: String?,
 ) {
     /**
      * Response headers.
@@ -133,17 +133,16 @@ class ApiResponse private constructor(
          * @since 1.0.0
          */
         @JvmStatic
-        fun raw(httpStatus: Int, contentType: String?, body: ByteArray): ApiResponse =
-            ApiResponse(
-                httpStatus,
-                emptyMap(),
-                0,
-                true,
-                "",
-                null,
-                body,
-                contentType ?: "application/octet-stream"
-            )
+        fun raw(httpStatus: Int, contentType: String?, body: ByteArray): ApiResponse = ApiResponse(
+            httpStatus,
+            emptyMap(),
+            0,
+            true,
+            "",
+            null,
+            body,
+            contentType ?: "application/octet-stream",
+        )
 
         /**
          * Builds a plain-text raw response.

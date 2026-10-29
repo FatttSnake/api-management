@@ -21,7 +21,6 @@ data class ApiDocVo(
      */
     @field:Schema(description = "插件 ID", example = "echo")
     val pluginId: String?,
-
     /**
      * Plugin display name
      *
@@ -30,7 +29,6 @@ data class ApiDocVo(
      */
     @field:Schema(description = "插件名称", example = "Echo 插件")
     val name: String?,
-
     /**
      * Plugin description
      *
@@ -39,7 +37,6 @@ data class ApiDocVo(
      */
     @field:Schema(description = "插件描述")
     val description: String?,
-
     /**
      * Plugin version name
      *
@@ -48,7 +45,6 @@ data class ApiDocVo(
      */
     @field:Schema(description = "插件版本名", example = "1.0.0")
     val versionName: String?,
-
     /**
      * Plugin version code
      *
@@ -57,7 +53,6 @@ data class ApiDocVo(
      */
     @field:Schema(description = "插件版本号", example = "1")
     val versionCode: Int?,
-
     /**
      * Enable status
      *
@@ -66,7 +61,6 @@ data class ApiDocVo(
      */
     @field:Schema(description = "启用", example = "true")
     val enable: Boolean?,
-
     /**
      * Enabled interfaces of the plugin
      *
@@ -75,7 +69,6 @@ data class ApiDocVo(
      */
     @field:Schema(description = "该插件下的接口列表")
     val interfaces: List<ApiInterfaceVo>,
-
     /**
      * Embedded OpenAPI fragment (paths / components.schemas), null when absent
      *
@@ -83,5 +76,5 @@ data class ApiDocVo(
      * @since 1.0.0
      */
     @field:Schema(description = "内嵌 OpenAPI 片段")
-    val openapi: JsonNode?
+    val openapi: JsonNode?,
 )

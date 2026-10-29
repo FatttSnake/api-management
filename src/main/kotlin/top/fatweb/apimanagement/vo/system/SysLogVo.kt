@@ -22,7 +22,6 @@ data class SysLogVo(
      */
     @field:JsonSerialize(using = ToStringSerializer::class)
     val id: Long?,
-
     /**
      * Log type
      *
@@ -31,7 +30,6 @@ data class SysLogVo(
      */
     @field:Schema(description = "日志类型")
     val logType: SysLog.LogType?,
-
     /**
      * Trace ID
      *
@@ -40,7 +38,6 @@ data class SysLogVo(
      */
     @field:Schema(description = "Trace ID")
     val traceId: String?,
-
     /**
      * Operate user ID
      *
@@ -50,7 +47,6 @@ data class SysLogVo(
     @field:Schema(description = "操作用户 ID")
     @field:JsonSerialize(using = ToStringSerializer::class)
     val operateUserId: Long?,
-
     /**
      * Operate time
      *
@@ -59,7 +55,6 @@ data class SysLogVo(
      */
     @field:Schema(description = "操作时间")
     val operateTime: LocalDateTime?,
-
     /**
      * Request URI
      *
@@ -68,7 +63,6 @@ data class SysLogVo(
      */
     @field:Schema(description = "请求 Uri")
     val requestUri: String?,
-
     /**
      * Request Method
      *
@@ -77,7 +71,6 @@ data class SysLogVo(
      */
     @field:Schema(description = "请求方式")
     val requestMethod: String?,
-
     /**
      * Request parameters
      *
@@ -86,7 +79,6 @@ data class SysLogVo(
      */
     @field:Schema(description = "请求参数")
     val requestParams: String?,
-
     /**
      * Request IP
      *
@@ -95,7 +87,6 @@ data class SysLogVo(
      */
     @field:Schema(description = "请求 IP")
     val requestIp: String?,
-
     /**
      * Request server address
      *
@@ -104,7 +95,6 @@ data class SysLogVo(
      */
     @field:Schema(description = "请求服务器地址")
     val requestServerAddress: String?,
-
     /**
      * Is exception
      *
@@ -113,7 +103,6 @@ data class SysLogVo(
      */
     @field:Schema(description = "是否异常")
     val exception: Boolean?,
-
     /**
      * Exception information
      *
@@ -122,7 +111,6 @@ data class SysLogVo(
      */
     @field:Schema(description = "异常信息")
     val exceptionInfo: String?,
-
     /**
      * Start time
      *
@@ -131,7 +119,6 @@ data class SysLogVo(
      */
     @field:Schema(description = "开始时间")
     val startTime: LocalDateTime?,
-
     /**
      * End time
      *
@@ -140,7 +127,6 @@ data class SysLogVo(
      */
     @field:Schema(description = "结束时间")
     val endTime: LocalDateTime?,
-
     /**
      * Execute time
      *
@@ -149,7 +135,6 @@ data class SysLogVo(
      */
     @field:Schema(description = "执行时间")
     val executeTime: Long?,
-
     /**
      * User agent
      *
@@ -158,7 +143,6 @@ data class SysLogVo(
      */
     @field:Schema(description = "用户代理")
     val userAgent: String?,
-
     /**
      * Operate username
      *
@@ -166,5 +150,5 @@ data class SysLogVo(
      * @since 1.0.0
      */
     @field:Schema(description = "操作用户名")
-    val operateUsername: String?
+    val operateUsername: String?,
 )

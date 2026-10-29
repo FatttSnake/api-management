@@ -16,5 +16,5 @@ fun Menu.toVo() = MenuVo(
     name = this.name,
     url = this.url,
     parentId = this.parentId,
-    moduleId = this.moduleId
+    moduleId = this.moduleId,
 )

@@ -23,8 +23,12 @@ class SysLog : Serializable {
      * @since 1.0.0
      */
     enum class LogType(@field:EnumValue @field:JsonValue val code: String) {
-        INFO("INFO"), ERROR("ERROR"), LOGIN("LOGIN"), LOGOUT("LOGOUT"), REGISTER("REGISTER"),
-        STATISTICS("STATISTICS")
+        INFO("INFO"),
+        ERROR("ERROR"),
+        LOGIN("LOGIN"),
+        LOGOUT("LOGOUT"),
+        REGISTER("REGISTER"),
+        STATISTICS("STATISTICS"),
     }
 
     /**
@@ -189,7 +193,6 @@ class SysLog : Serializable {
     @TableField(exist = false)
     var operateUsername: String? = null
 
-    override fun toString(): String {
-        return "SysLog(id=$id, logType=$logType, traceId=$traceId, operateUserId=$operateUserId, apiKeyId=$apiKeyId, operateTime=$operateTime, requestUri=$requestUri, requestMethod=$requestMethod, requestParams=$requestParams, requestIp=$requestIp, requestServerAddress=$requestServerAddress, exception=$exception, exceptionInfo=$exceptionInfo, startTime=$startTime, endTime=$endTime, executeTime=$executeTime, userAgent=$userAgent, operateUsername=$operateUsername)"
-    }
+    override fun toString(): String =
+        "SysLog(id=$id, logType=$logType, traceId=$traceId, operateUserId=$operateUserId, apiKeyId=$apiKeyId, operateTime=$operateTime, requestUri=$requestUri, requestMethod=$requestMethod, requestParams=$requestParams, requestIp=$requestIp, requestServerAddress=$requestServerAddress, exception=$exception, exceptionInfo=$exceptionInfo, startTime=$startTime, endTime=$endTime, executeTime=$executeTime, userAgent=$userAgent, operateUsername=$operateUsername)"
 }

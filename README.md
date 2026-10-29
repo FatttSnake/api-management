@@ -60,13 +60,13 @@ api-management/
 │       ├── ApiPlugin.kt                          # Applies the apiPlugin DSL, adds gateway-api as compileOnly
 │       ├── GeneratePluginLock.kt                 # Resolves runtime dependencies into api-plugin-deps.json
 │       ├── CheckPluginAbi.kt                     # Verifies plugin bytecode against gateway-api.abi.json
-│       └── ApiPluginTasks.kt                     # descriptor / keys / sign / verify / deployPlugin
+│       └── GeneratePluginDescriptor / GenPluginKeys / SignPlugin / VerifyPlugin / DeployPlugin
 ├── src/main/kotlin/top/fatweb/apimanagement/
 │   ├── ApiManagementApplication.kt               # Entry point (ensures data dirs, generates config template on first run)
 │   ├── annotation / aspectj                      # Annotations & interceptors (API access, parameter processing, event/sys logs)
 │   ├── component/
 │   │   ├── api/                                  # Route registration & version matching (/api/{plugin}/v{version}/...)
-│   │   ├── plugin/                               # Isolated plugin classloading & runtime context
+│   │   ├── plugin/                               # Plugin artifacts, config schema, datasources, runtime registry
 │   │   ├── security/                             # JWT, CSRF tokens
 │   │   └── storage/                              # Local / S3 file storage
 │   ├── config/                                   # Security / Jackson / Redis / Flyway / MyBatis-Plus / Knife4j ...
@@ -78,10 +78,10 @@ api-management/
 │   ├── cron/                                     # Scheduled aggregation of usage metrics & statistics
 │   ├── filter / handler / exception / http       # Filters, global exception handling, HTTP client, Turnstile verification
 │   ├── migration / properties / settings / util
-│   └── resources/
-│       ├── application.yaml                      # Base application config (datasource skeleton, SQLite, logging, MyBatis-Plus)
-│       ├── application-config-template.yml       # Config template generated on first run
-│       └── db/migration/{master,sqlite}/         # Flyway SQL migrations
+├── src/main/resources/
+│   ├── application.yaml                          # Base application config (datasource skeleton, SQLite, logging, MyBatis-Plus)
+│   ├── application-config-template.yml           # Config template generated on first run
+│   └── db/migration/{master,sqlite}/             # Flyway SQL migrations
 └── data/                                         # Runtime data (auto-created when absent)
     ├── db/sqlite.db                              # SQLite (high-volume data such as logs)
     ├── log/                                      # Application logs
@@ -110,13 +110,13 @@ api-management/
 
 ```shell
 ./gradlew bootJar          # on Windows use gradlew.bat bootJar
-# The artifact lands in build/libs/, named like api-management.jar
+# The artifact lands in build/libs/, named like api-management-<version>.jar
 ```
 
 2. Run once to generate the configuration-file template
 
 ```shell
-java -jar api-management.jar
+java -jar api-management-<version>.jar
 ```
 
 > When no `application-config.yml` exists in the running directory or the `data` directory, the program writes a configuration template (containing an auto-generated random `token-secret`) to `data/application-config.example.yml` and then exits.
@@ -132,7 +132,7 @@ cp ./data/application-config.example.yml application-config.yml
 5. Run again
 
 ```shell
-java -jar api-management.jar
+java -jar api-management-<version>.jar
 ```
 
 The service listens on port `8080` by default (changeable via `server.port`). The databases are initialized automatically by Flyway on the first start.
@@ -144,7 +144,7 @@ The program reads `application-config.yml` from the **running directory or the `
 | Block | Purpose | Key options |
 | --- | --- | --- |
 | `app.admin` | Administrator created when the database is initialized (optional) | `username`, `password`, `nickname`, `email` |
-| `app.security` | JWT token & security | `token-secret` (required; random value in the generated template), `token-prefix`, `access-token-ttl`, `refresh-token-ttl` |
+| `app.security` | JWT token & security | `token-secret` (required; random value in the generated template), `token-prefix`, `access-token-ttl`, `refresh-token-ttl`, `trust-proxy-headers`, `allowed-origin-patterns` |
 | `app.storage` | File storage | `mode` (`local`/`s3`), `local.root`, `public-base-url`, `external-url-*`, `s3.*` |
 | `server.port` | Server port | default `8080` |
 | `spring.datasource.dynamic.datasource.master` | MySQL (key business data) | `url`, `username`, `password` |
@@ -185,7 +185,7 @@ knife4j:
 
 # Plugin Development
 
-For the full architecture walkthrough — modules, class loading, install/startup flow, request path and data model — see [docs/plugin-platform.md](docs/plugin-platform.md).
+For the full architecture walkthrough — modules, class loading, install/startup flow, request path and data model — see [docs/plugin-platform.md](docs/plugin-platform.md). Conventions for code layout, declaration order, imports, KDoc and errors are in [docs/code-style.md](docs/code-style.md); `./gradlew ktlintCheck detekt` enforces them.
 
 Every API is contributed by a plugin. A plugin is a standalone Gradle project applying the
 **`top.fatweb.api-plugin`** Gradle plugin; its only compile dependency is
@@ -235,7 +235,7 @@ properties.
 `storage()`, `users()`, `audit()`, `events()`, `http()`, `scheduler()`, `json()`, `logger()` and
 `metadata()`. It never exposes the Spring container, beans, mappers or the gateway object mapper.
 
-The request body is raw bytes (`request.body()` / `request.bodyText()`). Use `context.json()` for
+The request body is raw bytes (`request.body` / `request.bodyText()`). Use `context.json()` for
 structured JSON, or a library the plugin brings itself. A response body can be bytes, a string, a
 map or a plain bean; `ApiResponse.raw(...)` bypasses the business envelope.
 

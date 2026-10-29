@@ -15,12 +15,16 @@ import top.fatweb.apimanagement.aspectj.SysLogInterceptor
 @Configuration
 class SysLogConfig(
     private val sysLogInterceptor: SysLogInterceptor,
-    private val apiAccessInterceptor: ApiAccessInterceptor
+    private val apiAccessInterceptor: ApiAccessInterceptor,
 ) : WebMvcConfigurer {
     override fun addInterceptors(registry: InterceptorRegistry) {
-        registry.addInterceptor(sysLogInterceptor).addPathPatterns("/**")
+        registry
+            .addInterceptor(sysLogInterceptor)
+            .addPathPatterns("/**")
             .excludePathPatterns("/error/thrown", "/webjars/**")
-        registry.addInterceptor(apiAccessInterceptor).addPathPatterns("/**")
+        registry
+            .addInterceptor(apiAccessInterceptor)
+            .addPathPatterns("/**")
             .excludePathPatterns("/error/thrown", "/webjars/**")
     }
 }

@@ -27,6 +27,6 @@ interface IEventLogService : IService<EventLog> {
         userId: Long,
         apiKeyId: Long? = null,
         targetUserId: Long? = null,
-        detail: String? = null
+        detail: String? = null,
     )
 }

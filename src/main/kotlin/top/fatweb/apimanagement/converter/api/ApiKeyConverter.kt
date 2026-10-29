@@ -3,7 +3,6 @@ package top.fatweb.apimanagement.converter.api
 import com.baomidou.mybatisplus.core.metadata.IPage
 import top.fatweb.apimanagement.entity.api.ApiKey
 import top.fatweb.apimanagement.param.system.apiKey.ApiKeyAddParam
-import top.fatweb.apimanagement.param.system.apiKey.ApiKeyUpdateParam
 import top.fatweb.apimanagement.param.system.apiKey.ApiKeyUpdateStatusParam
 import top.fatweb.apimanagement.vo.PageVo
 import top.fatweb.apimanagement.vo.api.ApiKeyVo
@@ -22,7 +21,11 @@ fun ApiKey.toVo() = ApiKeyVo(
     userId = this.userId,
     accessKey = this.accessKey,
     name = this.name,
-    permissions = this.permissions?.split(",")?.map(String::trim)?.filter(String::isNotEmpty),
+    permissions =
+    this.permissions
+        ?.split(",")
+        ?.map(String::trim)
+        ?.filter(String::isNotEmpty),
     enable = this.enable?.let { it == 1 },
     expireTime = this.expireTime,
     ipWhitelist = this.ipWhitelist,
@@ -32,7 +35,7 @@ fun ApiKey.toVo() = ApiKeyVo(
     lastUsedTime = this.lastUsedTime,
     remark = this.remark,
     createTime = this.createTime,
-    updateTime = this.updateTime
+    updateTime = this.updateTime,
 )
 
 /**
@@ -46,7 +49,7 @@ fun ApiKey.toVo() = ApiKeyVo(
  */
 fun ApiKey.toVoWithSecret(secretKey: String) = ApiKeyWithSecretVo(
     apiKey = this.toVo(),
-    secretKey = secretKey
+    secretKey = secretKey,
 )
 
 /**
@@ -62,7 +65,7 @@ fun IPage<ApiKey>.toVoPage() = PageVo(
     pages = this.pages,
     size = this.size,
     current = this.current,
-    records = this.records.map(ApiKey::toVo)
+    records = this.records.map(ApiKey::toVo),
 )
 
 /**
@@ -76,25 +79,6 @@ fun IPage<ApiKey>.toVoPage() = PageVo(
 fun ApiKeyAddParam.toEntity() = ApiKey().apply {
     name = this@toEntity.name
     enable = 1
-    expireTime = this@toEntity.expireTime
-    ipWhitelist = this@toEntity.ipWhitelist
-    rateLimit = this@toEntity.rateLimit
-    quota = this@toEntity.quota
-    quotaPeriod = this@toEntity.quotaPeriod
-    remark = this@toEntity.remark
-}
-
-/**
- * Convert to ApiKey object
- *
- * @return ApiKey object
- * @author FatttSnake, fatttsnake@gmail.com
- * @since 1.0.0
- * @see ApiKey
- */
-fun ApiKeyUpdateParam.toEntity() = ApiKey().apply {
-    id = this@toEntity.id
-    name = this@toEntity.name
     expireTime = this@toEntity.expireTime
     ipWhitelist = this@toEntity.ipWhitelist
     rateLimit = this@toEntity.rateLimit

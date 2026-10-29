@@ -17,12 +17,18 @@ import top.fatweb.apimanagement.service.system.IStatisticsLogService
 import top.fatweb.apimanagement.service.system.IStatisticsService
 import top.fatweb.apimanagement.util.ByteUtil
 import top.fatweb.apimanagement.util.TimezoneUtil
-import top.fatweb.apimanagement.vo.system.*
+import top.fatweb.apimanagement.vo.system.ActiveInfoVo
+import top.fatweb.apimanagement.vo.system.CpuInfoVo
+import top.fatweb.apimanagement.vo.system.FileStoreInfoVo
+import top.fatweb.apimanagement.vo.system.HardwareInfoVo
+import top.fatweb.apimanagement.vo.system.OnlineInfoVo
+import top.fatweb.apimanagement.vo.system.SoftwareInfoVo
+import top.fatweb.apimanagement.vo.system.StorageInfoVo
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
-import java.util.*
+import java.util.Properties
 import java.util.concurrent.TimeUnit
 
 /**
@@ -46,7 +52,7 @@ class StatisticsServiceImpl(
     private val serverProperties: ServerProperties,
     private val redisProvider: RedisProvider,
     private val statisticsLogService: IStatisticsLogService,
-    private val eventLogService: IEventLogService
+    private val eventLogService: IEventLogService,
 ) : IStatisticsService {
     private val systemProperties: Properties = System.getProperties()
     private val systemInfo: SystemInfo = SystemInfo()
@@ -65,7 +71,7 @@ class StatisticsServiceImpl(
         jvmVendor = systemProperties.getProperty("java.vm.vendor"),
         javaClassVersion = systemProperties.getProperty("java.class.version"),
         osBootTime = LocalDateTime.ofEpochSecond(systemInfo.operatingSystem.systemBootTime, 0, ZoneOffset.UTC),
-        serverStartupTime = serverProperties.startupTime
+        serverStartupTime = serverProperties.startupTime,
     )
 
     override fun hardware() = HardwareInfoVo(
@@ -77,17 +83,26 @@ class StatisticsServiceImpl(
         cpuLogicalProcessorCount = systemInfo.hardware.processor.logicalProcessorCount,
         microarchitecture = systemInfo.hardware.processor.processorIdentifier.microarchitecture,
         memories = "${ByteUtil.formatByteSize(systemInfo.hardware.memory.total)} (${
-            if (systemInfo.hardware.memory.physicalMemory.isNotEmpty()) systemInfo.hardware.memory.physicalMemory.joinToString(
-                " + "
-            ) { ByteUtil.formatByteSize(it.capacity) }
-            else "Unknown"
+            if (systemInfo.hardware.memory.physicalMemory
+                    .isNotEmpty()
+            ) {
+                systemInfo.hardware.memory.physicalMemory.joinToString(
+                    " + ",
+                ) { ByteUtil.formatByteSize(it.capacity) }
+            } else {
+                "Unknown"
+            }
         })",
-        disks = if (systemInfo.hardware.diskStores.isNotEmpty()) "${ByteUtil.formatByteSize(systemInfo.hardware.diskStores.sumOf { it.size })} (${
-            systemInfo.hardware.diskStores.joinToString(
-                " + "
-            ) { ByteUtil.formatByteSize(it.size) }
-        })"
-        else "Unknown"
+        disks =
+        if (systemInfo.hardware.diskStores.isNotEmpty()) {
+            "${ByteUtil.formatByteSize(systemInfo.hardware.diskStores.sumOf { it.size })} (${
+                systemInfo.hardware.diskStores.joinToString(
+                    " + ",
+                ) { ByteUtil.formatByteSize(it.size) }
+            })"
+        } else {
+            "Unknown"
+        },
     )
 
     override fun cpu(): CpuInfoVo {
@@ -118,39 +133,52 @@ class StatisticsServiceImpl(
             softirq,
             steal,
             total,
-            listOf(*processorPrevTicksList.mapIndexed { index, processorPrevTicks ->
-                val processorTicks = processorTicksList[index]
-                val processorUser =
-                    processorTicks[CentralProcessor.TickType.USER.index] - processorPrevTicks[CentralProcessor.TickType.USER.index]
-                val processorNice =
-                    processorTicks[CentralProcessor.TickType.NICE.index] - processorPrevTicks[CentralProcessor.TickType.NICE.index]
-                val processorSystem =
-                    processorTicks[CentralProcessor.TickType.SYSTEM.index] - processorPrevTicks[CentralProcessor.TickType.SYSTEM.index]
-                val processorIdle =
-                    processorTicks[CentralProcessor.TickType.IDLE.index] - processorPrevTicks[CentralProcessor.TickType.IDLE.index]
-                val processorIowait =
-                    processorTicks[CentralProcessor.TickType.IOWAIT.index] - processorPrevTicks[CentralProcessor.TickType.IOWAIT.index]
-                val processorIrq =
-                    processorTicks[CentralProcessor.TickType.IRQ.index] - processorPrevTicks[CentralProcessor.TickType.IRQ.index]
-                val processorSoftirq =
-                    processorTicks[CentralProcessor.TickType.SOFTIRQ.index] - processorPrevTicks[CentralProcessor.TickType.SOFTIRQ.index]
-                val processorSteal =
-                    processorTicks[CentralProcessor.TickType.STEAL.index] - processorPrevTicks[CentralProcessor.TickType.STEAL.index]
-                val processorTotal =
-                    processorUser + processorNice + processorSystem + processorIdle + processorIowait + processorIrq + processorSoftirq + processorSteal
-                CpuInfoVo(
-                    processorUser,
-                    processorNice,
-                    processorSystem,
-                    processorIdle,
-                    processorIowait,
-                    processorIrq,
-                    processorSoftirq,
-                    processorSteal,
-                    processorTotal
-                )
-
-            }.toTypedArray())
+            listOf(
+                *processorPrevTicksList
+                    .mapIndexed { index, processorPrevTicks ->
+                        val processorTicks = processorTicksList[index]
+                        val processorUser =
+                            processorTicks[CentralProcessor.TickType.USER.index] -
+                                processorPrevTicks[CentralProcessor.TickType.USER.index]
+                        val processorNice =
+                            processorTicks[CentralProcessor.TickType.NICE.index] -
+                                processorPrevTicks[CentralProcessor.TickType.NICE.index]
+                        val processorSystem =
+                            processorTicks[CentralProcessor.TickType.SYSTEM.index] -
+                                processorPrevTicks[CentralProcessor.TickType.SYSTEM.index]
+                        val processorIdle =
+                            processorTicks[CentralProcessor.TickType.IDLE.index] -
+                                processorPrevTicks[CentralProcessor.TickType.IDLE.index]
+                        val processorIowait =
+                            processorTicks[CentralProcessor.TickType.IOWAIT.index] -
+                                processorPrevTicks[CentralProcessor.TickType.IOWAIT.index]
+                        val processorIrq =
+                            processorTicks[CentralProcessor.TickType.IRQ.index] -
+                                processorPrevTicks[CentralProcessor.TickType.IRQ.index]
+                        val processorSoftirq =
+                            processorTicks[CentralProcessor.TickType.SOFTIRQ.index] -
+                                processorPrevTicks[CentralProcessor.TickType.SOFTIRQ.index]
+                        val processorSteal =
+                            processorTicks[CentralProcessor.TickType.STEAL.index] -
+                                processorPrevTicks[CentralProcessor.TickType.STEAL.index]
+                        val processorTotal =
+                            processorUser + processorNice + processorSystem + processorIdle + processorIowait +
+                                processorIrq +
+                                processorSoftirq +
+                                processorSteal
+                        CpuInfoVo(
+                            processorUser,
+                            processorNice,
+                            processorSystem,
+                            processorIdle,
+                            processorIowait,
+                            processorIrq,
+                            processorSoftirq,
+                            processorSteal,
+                            processorTotal,
+                        )
+                    }.toTypedArray(),
+            ),
         )
     }
 
@@ -163,52 +191,62 @@ class StatisticsServiceImpl(
         swapUsed = systemInfo.hardware.memory.virtualMemory.swapUsed,
         jvmTotal = runtime.totalMemory(),
         jvmFree = runtime.freeMemory(),
-        fileStores = systemInfo.operatingSystem.fileSystem.fileStores.map {
+        fileStores =
+        systemInfo.operatingSystem.fileSystem.fileStores.map {
             FileStoreInfoVo(
                 mount = it.mount,
                 total = it.totalSpace,
-                free = it.freeSpace
+                free = it.freeSpace,
             )
-        }
+        },
     )
 
     override fun online(onlineInfoGetParam: OnlineInfoGetParam?): OnlineInfoVo {
-        val history: List<OnlineInfoVo.HistoryVo> = statisticsLogService.list(
-            KtQueryWrapper(StatisticsLog())
-                .select(StatisticsLog::value, StatisticsLog::recordTime)
-                .eq(StatisticsLog::key, StatisticsLog.KeyItem.ONLINE_USERS_COUNT)
-                .between(
-                    onlineInfoGetParam?.scope != OnlineInfoGetParam.Scope.ALL,
-                    StatisticsLog::recordTime,
-                    TimezoneUtil.startOfLocalDayUtc().run {
-                        when (onlineInfoGetParam?.scope) {
-                            OnlineInfoGetParam.Scope.DAY -> minusDays(1)
-                            OnlineInfoGetParam.Scope.MONTH -> minusMonths(1)
-                            OnlineInfoGetParam.Scope.QUARTER -> minusMonths(3)
-                            OnlineInfoGetParam.Scope.YEAR -> minusYears(1)
-                            OnlineInfoGetParam.Scope.TWO_YEARS -> minusYears(2)
-                            OnlineInfoGetParam.Scope.THREE_YEARS -> minusYears(3)
-                            OnlineInfoGetParam.Scope.FIVE_YEARS -> minusYears(5)
-                            else -> minusWeeks(1)
-                        }
-                    }.format(SQL_TIME_FORMATTER),
-                    TimezoneUtil.startOfLocalDayUtc(offsetDays = 1).format(SQL_TIME_FORMATTER)
-                )
-        ).map {
-            OnlineInfoVo.HistoryVo(
-                time = it.recordTime!!,
-                record = it.value!!
-            )
-        }
+        val history: List<OnlineInfoVo.HistoryVo> =
+            statisticsLogService
+                .list(
+                    KtQueryWrapper(StatisticsLog())
+                        .select(StatisticsLog::value, StatisticsLog::recordTime)
+                        .eq(StatisticsLog::key, StatisticsLog.KeyItem.ONLINE_USERS_COUNT)
+                        .between(
+                            onlineInfoGetParam?.scope != OnlineInfoGetParam.Scope.ALL,
+                            StatisticsLog::recordTime,
+                            TimezoneUtil
+                                .startOfLocalDayUtc()
+                                .run {
+                                    when (onlineInfoGetParam?.scope) {
+                                        OnlineInfoGetParam.Scope.DAY -> minusDays(1)
+                                        OnlineInfoGetParam.Scope.MONTH -> minusMonths(1)
+                                        OnlineInfoGetParam.Scope.QUARTER -> minusMonths(3)
+                                        OnlineInfoGetParam.Scope.YEAR -> minusYears(1)
+                                        OnlineInfoGetParam.Scope.TWO_YEARS -> minusYears(2)
+                                        OnlineInfoGetParam.Scope.THREE_YEARS -> minusYears(3)
+                                        OnlineInfoGetParam.Scope.FIVE_YEARS -> minusYears(5)
+                                        else -> minusWeeks(1)
+                                    }
+                                }.format(SQL_TIME_FORMATTER),
+                            TimezoneUtil.startOfLocalDayUtc(offsetDays = 1).format(SQL_TIME_FORMATTER),
+                        ),
+                ).map {
+                    OnlineInfoVo.HistoryVo(
+                        time = it.recordTime!!,
+                        record = it.value!!,
+                    )
+                }
 
         return OnlineInfoVo(
-            current = redisProvider.keys("${serverProperties.security.tokenIssuer}_access_*")
+            current =
+            redisProvider
+                .keys("${serverProperties.security.tokenIssuer}_access_*")
                 .distinctBy {
-                    Regex("${serverProperties.security.tokenIssuer}_access_(.*?)_.*:.*").matchEntire(it)?.groupValues?.getOrNull(
-                        1
+                    Regex(
+                        "${serverProperties.security.tokenIssuer}_access_(.*?)_.*:.*",
+                    ).matchEntire(it)?.groupValues?.getOrNull(
+                        1,
                     )
-                }.size.toLong(),
-            history = history
+                }.size
+                .toLong(),
+            history = history,
         )
     }
 
@@ -216,35 +254,40 @@ class StatisticsServiceImpl(
         val offsetMinutes = TimezoneUtil.offsetMinutes()
         val dayModifier = if (offsetMinutes < 0) "$offsetMinutes minutes" else "+$offsetMinutes minutes"
 
-        fun getHistory(event: String) = eventLogService.listMaps(
-            QueryWrapper<EventLog?>()
-                .select(
-                    "strftime('%Y-%m-%d', operate_time, '$dayModifier') time, count(distinct operate_user_id) count"
+        fun getHistory(event: String) = eventLogService
+            .listMaps(
+                QueryWrapper<EventLog?>()
+                    .select(
+                        "strftime('%Y-%m-%d', operate_time, '$dayModifier') time, count(distinct operate_user_id) count",
+                    ).eq("event", event)
+                    .groupBy("time")
+                    .between(
+                        activeInfoGetParam?.scope != ActiveInfoGetParam.Scope.ALL,
+                        "operate_time",
+                        TimezoneUtil
+                            .startOfLocalDayUtc()
+                            .run {
+                                when (activeInfoGetParam?.scope) {
+                                    ActiveInfoGetParam.Scope.MONTH -> minusMonths(1)
+                                    ActiveInfoGetParam.Scope.QUARTER -> minusMonths(3)
+                                    ActiveInfoGetParam.Scope.YEAR -> minusYears(1)
+                                    ActiveInfoGetParam.Scope.TWO_YEARS -> minusYears(2)
+                                    ActiveInfoGetParam.Scope.THREE_YEARS -> minusYears(3)
+                                    ActiveInfoGetParam.Scope.FIVE_YEARS -> minusYears(5)
+                                    else -> minusWeeks(1)
+                                }
+                            }.format(SQL_TIME_FORMATTER),
+                        TimezoneUtil.startOfLocalDayUtc(offsetDays = 1).format(SQL_TIME_FORMATTER),
+                    ),
+            ).map {
+                ActiveInfoVo.HistoryVo(
+                    LocalDate.parse(
+                        it["time"] as String,
+                        DateTimeFormatter.ofPattern("yyyy-MM-dd"),
+                    ),
+                    it["count"] as Int,
                 )
-                .eq("event", event).groupBy("time").between(
-                    activeInfoGetParam?.scope != ActiveInfoGetParam.Scope.ALL,
-                    "operate_time",
-                    TimezoneUtil.startOfLocalDayUtc().run {
-                        when (activeInfoGetParam?.scope) {
-                            ActiveInfoGetParam.Scope.MONTH -> minusMonths(1)
-                            ActiveInfoGetParam.Scope.QUARTER -> minusMonths(3)
-                            ActiveInfoGetParam.Scope.YEAR -> minusYears(1)
-                            ActiveInfoGetParam.Scope.TWO_YEARS -> minusYears(2)
-                            ActiveInfoGetParam.Scope.THREE_YEARS -> minusYears(3)
-                            ActiveInfoGetParam.Scope.FIVE_YEARS -> minusYears(5)
-                            else -> minusWeeks(1)
-                        }
-                    }.format(SQL_TIME_FORMATTER),
-                    TimezoneUtil.startOfLocalDayUtc(offsetDays = 1).format(SQL_TIME_FORMATTER)
-                )
-        ).map {
-            ActiveInfoVo.HistoryVo(
-                LocalDate.parse(
-                    it["time"] as String,
-                    DateTimeFormatter.ofPattern("yyyy-MM-dd")
-                ), it["count"] as Int
-            )
-        }
+            }
 
         return ActiveInfoVo(getHistory("REGISTER"), getHistory("LOGIN"), getHistory("VERIFY"))
     }

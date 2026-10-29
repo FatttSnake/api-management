@@ -1,7 +1,7 @@
 package top.fatweb.apimanagement.util
 
 import org.slf4j.MDC
-import java.util.*
+import java.util.UUID
 
 /**
  * Trace ID utility

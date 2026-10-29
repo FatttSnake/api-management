@@ -26,7 +26,7 @@ class LoadedPlugin internal constructor(
     val classLoader: PluginClassLoader,
     val moduleGraph: PluginModuleGraph,
     val routes: List<RegisteredRoute>,
-    val context: GatewayContextImpl
+    val context: GatewayContextImpl,
 ) : AutoCloseable {
     /**
      * Stops the plugin.
@@ -59,12 +59,16 @@ class LoadedPlugin internal constructor(
     }
 
     /**
-     * Closes the plugin class loader and releases module references.
+     * Releases the plugin capabilities, class loader and module references.
+     *
+     * Capabilities are closed first: a datasource pool may still need classes from the plugin
+     * class loader while it shuts its connections down.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
     override fun close() {
+        context.close()
         classLoader.close()
         moduleGraph.close()
     }

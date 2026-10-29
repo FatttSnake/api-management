@@ -13,4 +13,6 @@ import top.fatweb.apimanagement.service.permission.IRRoleGroupService
  * @since 1.0.0
  */
 @Service
-class RRoleGroupServiceImpl : ServiceImpl<RRoleGroupMapper, RRoleGroup>(), IRRoleGroupService
+class RRoleGroupServiceImpl :
+    ServiceImpl<RRoleGroupMapper, RRoleGroup>(),
+    IRRoleGroupService

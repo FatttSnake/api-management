@@ -8,5 +8,5 @@ package top.fatweb.apimanagement.component.storage
  */
 enum class FileStorageMode {
     Local,
-    S3
+    S3,
 }

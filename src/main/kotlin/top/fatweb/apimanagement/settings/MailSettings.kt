@@ -17,7 +17,6 @@ data class MailSettings(
      * @since 1.0.0
      */
     var host: String? = null,
-
     /**
      * Port
      *
@@ -25,7 +24,6 @@ data class MailSettings(
      * @since 1.0.0
      */
     var port: Int? = null,
-
     /**
      * Security type
      *
@@ -33,7 +31,6 @@ data class MailSettings(
      * @since 1.0.0
      */
     var securityType: MailSecurityType? = null,
-
     /**
      * Username
      *
@@ -41,7 +38,6 @@ data class MailSettings(
      * @since 1.0.0
      */
     var username: String? = null,
-
     /**
      * Password
      *
@@ -49,7 +45,6 @@ data class MailSettings(
      * @since 1.0.0
      */
     var password: String? = null,
-
     /**
      * Sender
      *
@@ -57,12 +52,11 @@ data class MailSettings(
      * @since 1.0.0
      */
     var from: String? = null,
-
     /**
      * Sender name
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    var fromName: String? = null
+    var fromName: String? = null,
 )

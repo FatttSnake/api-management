@@ -22,7 +22,7 @@ data class ParameterSpec @JvmOverloads constructor(
     val description: String = "",
     val format: String? = null,
     val enumValues: List<Any> = emptyList(),
-    val example: Any? = null
+    val example: Any? = null,
 ) {
     init {
         require(name.isNotBlank()) { "name must not be blank" }
@@ -46,14 +46,14 @@ data class ParameterSpec @JvmOverloads constructor(
             name: String,
             type: String = "string",
             description: String = "",
-            example: Any? = null
+            example: Any? = null,
         ): ParameterSpec = ParameterSpec(
             name = name,
             location = ParameterLocation.PATH,
             type = type,
             required = true,
             description = description,
-            example = example
+            example = example,
         )
 
         /**
@@ -75,14 +75,14 @@ data class ParameterSpec @JvmOverloads constructor(
             type: String = "string",
             required: Boolean = false,
             description: String = "",
-            example: Any? = null
+            example: Any? = null,
         ): ParameterSpec = ParameterSpec(
             name = name,
             location = ParameterLocation.QUERY,
             type = type,
             required = required,
             description = description,
-            example = example
+            example = example,
         )
     }
 }

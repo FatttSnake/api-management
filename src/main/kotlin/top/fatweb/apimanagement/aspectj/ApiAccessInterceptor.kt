@@ -2,6 +2,7 @@ package top.fatweb.apimanagement.aspectj
 
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Component
@@ -15,7 +16,14 @@ import top.fatweb.apimanagement.entity.api.ApiKeyPrincipal
 import top.fatweb.apimanagement.entity.api.ApiPlugin
 import top.fatweb.apimanagement.entity.api.ApiUsage
 import top.fatweb.apimanagement.entity.permission.LoginUser
-import top.fatweb.apimanagement.exception.*
+import top.fatweb.apimanagement.exception.ApiAccountNotFoundException
+import top.fatweb.apimanagement.exception.ApiDisabledException
+import top.fatweb.apimanagement.exception.ApiKeyPermissionDeniedException
+import top.fatweb.apimanagement.exception.ApiKeyRequiredException
+import top.fatweb.apimanagement.exception.ApiPermissionDeniedException
+import top.fatweb.apimanagement.exception.InsufficientBalanceException
+import top.fatweb.apimanagement.exception.QuotaExceededException
+import top.fatweb.apimanagement.exception.RequestTooFrequentException
 import top.fatweb.apimanagement.plugin.runtime.route.PluginInvocation
 import top.fatweb.apimanagement.properties.ServerProperties
 import top.fatweb.apimanagement.service.api.IApiAccountService
@@ -44,8 +52,10 @@ class ApiAccessInterceptor(
     private val apiUsageService: IApiUsageService,
     private val apiAccountService: IApiAccountService,
     private val apiTransactionService: IApiTransactionService,
-    private val pluginInFlightTracker: PluginInFlightTracker
+    private val pluginInFlightTracker: PluginInFlightTracker,
 ) : AsyncHandlerInterceptor {
+    private val logger = LoggerFactory.getLogger(ApiAccessInterceptor::class.java)
+
     private companion object {
         const val ATTR_API = "apimanagement.api"
         const val ATTR_INFLIGHT = "apimanagement.inflight"
@@ -59,11 +69,7 @@ class ApiAccessInterceptor(
         const val METRICS_WINDOW_SECONDS = 120L
     }
 
-    override fun preHandle(
-        request: HttpServletRequest,
-        response: HttpServletResponse,
-        handler: Any
-    ): Boolean {
+    override fun preHandle(request: HttpServletRequest, response: HttpServletResponse, handler: Any): Boolean {
         if (handler !is PluginInvocation) {
             // A switched-off plugin has no routes. Its requests land on the static-resource
             // handler; answer them as "disabled" rather than as a wrong URL, when the URL
@@ -88,7 +94,7 @@ class ApiAccessInterceptor(
             plugin = plugin,
             api = apiInterface,
             pluginId = pluginId,
-            classLoader = handler.classLoader
+            classLoader = handler.classLoader,
         )
     }
 
@@ -97,25 +103,27 @@ class ApiAccessInterceptor(
         plugin: ApiPlugin,
         api: ApiInterface,
         pluginId: String,
-        classLoader: ClassLoader
+        classLoader: ClassLoader,
     ): Boolean {
         request.setAttribute(ATTR_API, api)
         request.setAttribute(ATTR_START, System.nanoTime())
 
         when (val principal = SecurityContextHolder.getContext().authentication?.principal) {
-            is ApiKeyPrincipal -> admitApiKey(
-                request = request,
-                plugin = plugin,
-                api = api,
-                principal = principal
-            )
+            is ApiKeyPrincipal ->
+                admitApiKey(
+                    request = request,
+                    plugin = plugin,
+                    api = api,
+                    principal = principal,
+                )
 
-            is LoginUser -> admitAccount(
-                request = request,
-                plugin = plugin,
-                api = api,
-                principal = principal
-            )
+            is LoginUser ->
+                admitAccount(
+                    request = request,
+                    plugin = plugin,
+                    api = api,
+                    principal = principal,
+                )
 
             else -> {
                 if (api.needKey == 1) {
@@ -148,7 +156,7 @@ class ApiAccessInterceptor(
         request: HttpServletRequest,
         response: HttpServletResponse,
         handler: Any,
-        ex: Exception?
+        ex: Exception?,
     ) {
         // Restored first, before anything else can return early: the thread carries a plugin's
         // class loader only for the span of its own request, and the pool hands it on afterwards
@@ -175,27 +183,30 @@ class ApiAccessInterceptor(
 
         recordMetrics(api = api, success = success, executeTime = executeTime, apiKeyId = apiKeyId)
 
-        val usage = ApiUsage().apply {
-            this.apiKeyId = apiKeyId
-            this.apiId = api.id
-            this.apiCode = api.code
-            this.userId = userId
-            this.requestPath = request.requestURI
-            this.requestMethod = request.method
-            this.responseCode = response.status
-            this.success = if (success) 1 else 0
-            this.executeTime = executeTime
-            this.requestIp = getRequestIp(request)
-            this.traceId = TraceIdUtil.get()
-            this.cost = cost
-            this.billingMode = billingMode
-        }
+        val usage =
+            ApiUsage().apply {
+                this.apiKeyId = apiKeyId
+                this.apiId = api.id
+                this.apiCode = api.code
+                this.userId = userId
+                this.requestPath = request.requestURI
+                this.requestMethod = request.method
+                this.responseCode = response.status
+                this.success = if (success) 1 else 0
+                this.executeTime = executeTime
+                this.requestIp = getRequestIp(request, serverProperties.security.trustProxyHeaders)
+                this.traceId = TraceIdUtil.get()
+                this.cost = cost
+                this.billingMode = billingMode
+            }
 
-        val shouldCharge = cost.signum() > 0 && when (billingMode) {
-            ApiInterface.BillingMode.ALWAYS -> true
-            ApiInterface.BillingMode.SUCCESS_ONLY -> success
-            else -> false
-        }
+        val shouldCharge =
+            cost.signum() > 0 &&
+                when (billingMode) {
+                    ApiInterface.BillingMode.ALWAYS -> true
+                    ApiInterface.BillingMode.SUCCESS_ONLY -> success
+                    else -> false
+                }
 
         if (!shouldCharge) {
             customThreadPoolTaskExecutor.execute(SaveUsageThread(usage = usage, apiUsageService = apiUsageService))
@@ -203,13 +214,29 @@ class ApiAccessInterceptor(
         }
 
         customThreadPoolTaskExecutor.execute {
-            val usageId = runCatching { apiUsageService.saveUsage(usage) }.getOrNull() ?: return@execute
+            val usageId =
+                try {
+                    apiUsageService.saveUsage(usage)
+                } catch (ex: Exception) {
+                    logger.error("Cannot record usage for API {} of user {}", usage.apiCode, usage.userId, ex)
+                    return@execute
+                }
             usage.id = usageId
             val ownerId = usage.userId ?: return@execute
             val deducted = alreadyDeducted || apiAccountService.deduct(userId = ownerId, cost = cost)
             if (deducted) {
                 val balanceAfter = apiAccountService.getBalance(ownerId)
-                runCatching { apiTransactionService.saveDeduct(apiUsage = usage, balanceAfter = balanceAfter) }
+                try {
+                    apiTransactionService.saveDeduct(apiUsage = usage, balanceAfter = balanceAfter)
+                } catch (ex: Exception) {
+                    logger.error(
+                        "Cannot record a deduction of {} for user {} (usage {})",
+                        cost,
+                        ownerId,
+                        usageId,
+                        ex,
+                    )
+                }
             }
         }
     }
@@ -217,7 +244,7 @@ class ApiAccessInterceptor(
     override fun afterConcurrentHandlingStarted(
         request: HttpServletRequest,
         response: HttpServletResponse,
-        handler: Any
+        handler: Any,
     ) {
         // An async handler returns to the container before afterCompletion runs on the dispatch
         // thread. Restore here so the pool never keeps a plugin's class loader.
@@ -235,7 +262,7 @@ class ApiAccessInterceptor(
         request: HttpServletRequest,
         plugin: ApiPlugin,
         api: ApiInterface,
-        principal: ApiKeyPrincipal
+        principal: ApiKeyPrincipal,
     ) {
         if (api.needKey == 1 && !principal.permissions.contains(api.code)) {
             throw ApiKeyPermissionDeniedException()
@@ -264,26 +291,24 @@ class ApiAccessInterceptor(
 
             ApiInterface.BillingMode.SUCCESS_ONLY -> {
                 val ownerId = principal.userId ?: throw ApiAccountNotFoundException()
-                if (!apiAccountService.checkBalance(userId = ownerId, cost = cost)) {
+                if (balanceCheckEnabled() && !apiAccountService.checkBalance(userId = ownerId, cost = cost)) {
                     throw InsufficientBalanceException()
                 }
             }
         }
     }
 
-    private fun admitAccount(
-        request: HttpServletRequest,
-        plugin: ApiPlugin,
-        api: ApiInterface,
-        principal: LoginUser
-    ) {
+    private fun admitAccount(request: HttpServletRequest, plugin: ApiPlugin, api: ApiInterface, principal: LoginUser) {
         val userId = principal.user.id ?: throw ApiAccountNotFoundException()
         request.setAttribute(ATTR_USER_ID, userId)
 
         // Access mode: RESTRICTED requires the caller to hold the api:* operation code
         val accessMode = api.accessMode ?: plugin.defaultAccessMode ?: ApiInterface.AccessMode.RESTRICTED
         if (accessMode == ApiInterface.AccessMode.RESTRICTED) {
-            val codes = principal.user.operations?.mapNotNull { it.code }?.toSet() ?: emptySet()
+            val codes =
+                principal.user.operations
+                    ?.mapNotNull { it.code }
+                    ?.toSet() ?: emptySet()
             if (api.code !in codes) {
                 throw ApiPermissionDeniedException()
             }
@@ -314,29 +339,28 @@ class ApiAccessInterceptor(
             }
 
             ApiInterface.BillingMode.SUCCESS_ONLY -> {
-                if (!apiAccountService.checkBalance(userId = userId, cost = cost)) {
+                if (balanceCheckEnabled() && !apiAccountService.checkBalance(userId = userId, cost = cost)) {
                     throw InsufficientBalanceException()
                 }
             }
         }
     }
 
-    private fun checkRateLimit(
-        principal: ApiKeyPrincipal,
-        plugin: ApiPlugin,
-        api: ApiInterface
-    ) {
+    private fun balanceCheckEnabled(): Boolean = SettingsOperator.getValue(ApiSettings::balanceCheckEnable, true)
+
+    private fun checkRateLimit(principal: ApiKeyPrincipal, plugin: ApiPlugin, api: ApiInterface) {
         val epochMinute = Instant.now().epochSecond / 60
         val keyId = principal.keyId ?: return
         val apiId = api.id ?: return
 
         val keyLimit = principal.rateLimit ?: SettingsOperator.getValue(ApiSettings::defaultRateLimitPerMin, 0)
         if (keyLimit > 0) {
-            val count = redisProvider.increment(
-                key = "${serverProperties.security.tokenIssuer}_apikey_rl:$keyId:$apiId:$epochMinute",
-                delta = 1,
-                ttlSeconds = 60
-            )
+            val count =
+                redisProvider.increment(
+                    key = "${serverProperties.security.tokenIssuer}_apikey_rl:$keyId:$apiId:$epochMinute",
+                    delta = 1,
+                    ttlSeconds = 60,
+                )
             if (count > keyLimit) {
                 throw RequestTooFrequentException()
             }
@@ -350,11 +374,12 @@ class ApiAccessInterceptor(
         val apiId = api.id ?: return
         val apiLimit = api.rateLimit ?: plugin.defaultRateLimit ?: 0
         if (apiLimit > 0) {
-            val count = redisProvider.increment(
-                key = "${serverProperties.security.tokenIssuer}_apikey_rl:$apiId:global:$epochMinute",
-                delta = 1,
-                ttlSeconds = 60
-            )
+            val count =
+                redisProvider.increment(
+                    key = "${serverProperties.security.tokenIssuer}_apikey_rl:$apiId:global:$epochMinute",
+                    delta = 1,
+                    ttlSeconds = 60,
+                )
             if (count > apiLimit) {
                 throw RequestTooFrequentException()
             }
@@ -366,18 +391,22 @@ class ApiAccessInterceptor(
         if (quotaLimit <= 0) {
             return
         }
-        val periodSeconds = (principal.quotaPeriod
-            ?: SettingsOperator.getValue(ApiSettings::defaultQuotaPeriodSeconds, 86400)).toLong()
+        val periodSeconds =
+            (
+                principal.quotaPeriod
+                    ?: SettingsOperator.getValue(ApiSettings::defaultQuotaPeriodSeconds, 86400)
+                ).toLong()
         if (periodSeconds <= 0) {
             return
         }
         val keyId = principal.keyId ?: return
         val periodIdx = Instant.now().epochSecond / periodSeconds
-        val count = redisProvider.increment(
-            key = "${serverProperties.security.tokenIssuer}_apikey_quota:$keyId:$periodIdx",
-            delta = 1,
-            ttlSeconds = periodSeconds
-        )
+        val count =
+            redisProvider.increment(
+                key = "${serverProperties.security.tokenIssuer}_apikey_quota:$keyId:$periodIdx",
+                delta = 1,
+                ttlSeconds = periodSeconds,
+            )
         if (count > quotaLimit) {
             throw QuotaExceededException()
         }
@@ -389,29 +418,26 @@ class ApiAccessInterceptor(
         redisProvider.increment(
             key = "${prefix}_count:$code",
             delta = 1,
-            ttlSeconds = METRICS_WINDOW_SECONDS
+            ttlSeconds = METRICS_WINDOW_SECONDS,
         )
         if (!success) {
             redisProvider.increment(
                 key = "${prefix}_error:$code",
                 delta = 1,
-                ttlSeconds = METRICS_WINDOW_SECONDS
+                ttlSeconds = METRICS_WINDOW_SECONDS,
             )
         }
         if (executeTime > 0) {
             redisProvider.increment(
                 key = "${prefix}_latency:$code",
                 delta = executeTime,
-                ttlSeconds = METRICS_WINDOW_SECONDS
+                ttlSeconds = METRICS_WINDOW_SECONDS,
             )
         }
         apiKeyId?.let { redisProvider.setAdd("${prefix}_keys", it, ttlSeconds = METRICS_WINDOW_SECONDS) }
     }
 
-    private class SaveUsageThread(
-        val usage: ApiUsage,
-        val apiUsageService: IApiUsageService
-    ) : Thread() {
+    private class SaveUsageThread(val usage: ApiUsage, val apiUsageService: IApiUsageService) : Thread() {
         override fun run() {
             runCatching { apiUsageService.saveUsage(usage) }
         }

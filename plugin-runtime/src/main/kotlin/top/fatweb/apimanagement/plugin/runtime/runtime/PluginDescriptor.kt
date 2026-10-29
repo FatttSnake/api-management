@@ -1,10 +1,8 @@
 package top.fatweb.apimanagement.plugin.runtime.runtime
 
-import tools.jackson.databind.DeserializationFeature
-import tools.jackson.databind.json.JsonMapper
-import tools.jackson.module.kotlin.KotlinModule
 import top.fatweb.apimanagement.api.v1.version.VersionRange
 import top.fatweb.apimanagement.api.v1.version.VersionRangeException
+import top.fatweb.apimanagement.plugin.runtime.PLUGIN_JSON_MAPPER
 import java.nio.charset.StandardCharsets
 
 /**
@@ -38,7 +36,7 @@ data class PluginDescriptor(
     val requiresGatewayApi: String,
     val description: String = "",
     val author: String = "",
-    val dependencies: Map<String, String> = emptyMap()
+    val dependencies: Map<String, String> = emptyMap(),
 )
 
 /**
@@ -48,11 +46,6 @@ data class PluginDescriptor(
  * @since 1.0.0
  */
 class PluginDescriptorParser {
-    private val mapper: JsonMapper = JsonMapper.builder()
-        .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-        .addModules(KotlinModule.Builder().build())
-        .build()
-
     /**
      * Parses a descriptor.
      *
@@ -63,30 +56,33 @@ class PluginDescriptorParser {
      * @since 1.0.0
      */
     fun parse(bytes: ByteArray): PluginDescriptor {
-        val json = try {
-            mapper.readValue(bytes, DescriptorJson::class.java)
-        } catch (ex: Exception) {
-            throw PluginDescriptorException("Cannot parse plugin descriptor: ${ex.message}")
-        }
-        val apiVersion = try {
-            VersionRange.parse(json.requiresGatewayApi).minimumMajor()
-        } catch (ex: VersionRangeException) {
-            throw PluginDescriptorException("Invalid requiresGatewayApi: ${ex.message}")
-        }
-        val descriptor = PluginDescriptor(
-            format = json.format,
-            pluginId = json.pluginId,
-            name = json.name,
-            versionName = json.versionName,
-            versionCode = json.versionCode,
-            mainClass = json.mainClass,
-            apiVersion = apiVersion,
-            requiresGateway = json.requiresGateway,
-            requiresGatewayApi = json.requiresGatewayApi,
-            description = json.description,
-            author = json.author,
-            dependencies = json.dependencies
-        )
+        val json =
+            try {
+                PLUGIN_JSON_MAPPER.readValue(bytes, DescriptorJson::class.java)
+            } catch (ex: Exception) {
+                throw PluginDescriptorException("Cannot parse plugin descriptor: ${ex.message}")
+            }
+        val apiVersion =
+            try {
+                VersionRange.parse(json.requiresGatewayApi).minimumMajor()
+            } catch (ex: VersionRangeException) {
+                throw PluginDescriptorException("Invalid requiresGatewayApi: ${ex.message}")
+            }
+        val descriptor =
+            PluginDescriptor(
+                format = json.format,
+                pluginId = json.pluginId,
+                name = json.name,
+                versionName = json.versionName,
+                versionCode = json.versionCode,
+                mainClass = json.mainClass,
+                apiVersion = apiVersion,
+                requiresGateway = json.requiresGateway,
+                requiresGatewayApi = json.requiresGatewayApi,
+                description = json.description,
+                author = json.author,
+                dependencies = json.dependencies,
+            )
         validate(descriptor)
         return descriptor
     }
@@ -142,7 +138,7 @@ class PluginDescriptorParser {
         val requiresGatewayApi: String = "",
         val description: String = "",
         val author: String = "",
-        val dependencies: Map<String, String> = emptyMap()
+        val dependencies: Map<String, String> = emptyMap(),
     )
 
     private companion object {

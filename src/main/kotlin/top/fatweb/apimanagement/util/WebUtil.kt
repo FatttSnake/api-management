@@ -15,9 +15,11 @@ import top.fatweb.apimanagement.properties.ServerProperties
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-fun getLoginUser(): LoginUser? =
-    if (SecurityContextHolder.getContext().authentication?.principal is String) null
-    else SecurityContextHolder.getContext().authentication?.principal as? LoginUser
+fun getLoginUser(): LoginUser? = if (SecurityContextHolder.getContext().authentication?.principal is String) {
+    null
+} else {
+    SecurityContextHolder.getContext().authentication?.principal as? LoginUser
+}
 
 /**
  * Get ID of the user currently calling api
@@ -36,8 +38,7 @@ fun getLoginUserId(): Long? = getLoginUser()?.user?.id
  * @since 1.0.0
  * @see AccessDeniedException
  */
-fun getLoginUserIdOrThrow(): Long =
-    getLoginUserId() ?: throw AccessDeniedException("Not logged in")
+fun getLoginUserIdOrThrow(): Long = getLoginUserId() ?: throw AccessDeniedException("Not logged in")
 
 /**
  * Get username of the user currently calling api
@@ -79,11 +80,10 @@ fun getToken(serverProperties: ServerProperties, tokenWithPrefix: String): Strin
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-fun getToken(serverProperties: ServerProperties, request: HttpServletRequest): String =
-    getToken(
-        serverProperties = serverProperties,
-        tokenWithPrefix = request.getHeader(serverProperties.security.headerKey)
-    )
+fun getToken(serverProperties: ServerProperties, request: HttpServletRequest): String = getToken(
+    serverProperties = serverProperties,
+    tokenWithPrefix = request.getHeader(serverProperties.security.headerKey),
+)
 
 /**
  * Offline user
@@ -94,14 +94,10 @@ fun getToken(serverProperties: ServerProperties, request: HttpServletRequest): S
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-fun offlineUser(
-    serverProperties: ServerProperties,
-    redisProvider: RedisProvider,
-    vararg userIds: Long
-) {
+fun offlineUser(serverProperties: ServerProperties, redisProvider: RedisProvider, vararg userIds: Long) {
     val keys = HashSet<String>()
     userIds.forEach {
-        keys.addAll(redisProvider.keys("${serverProperties.security.tokenIssuer}_token_${it}:*"))
+        keys.addAll(redisProvider.keys("${serverProperties.security.tokenIssuer}_token_$it:*"))
         keys.addAll(redisProvider.keys("${serverProperties.security.tokenIssuer}_access_${it}_*:*"))
     }
 
@@ -109,14 +105,23 @@ fun offlineUser(
 }
 
 /**
- * Get real request IP
+ * Get the caller IP
+ *
+ * Forwarding headers are only trusted when the deployment says a reverse proxy sets them;
+ * otherwise any client could choose the address that is checked against an API key's
+ * allowlist and written to the audit log.
  *
  * @param request HttpServletRequest object
+ * @param trustProxyHeaders whether `X-Real-IP` and `X-Forwarded-For` may be believed
  * @return IP address
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-fun getRequestIp(request: HttpServletRequest): String {
+fun getRequestIp(request: HttpServletRequest, trustProxyHeaders: Boolean = false): String {
+    if (!trustProxyHeaders) {
+        return request.remoteAddr
+    }
+
     var ip = request.getHeader("X-Real-IP")
     if (!ip.isNullOrBlank() && !"unknown".equals(ip, true)) {
         return ip
@@ -125,9 +130,9 @@ fun getRequestIp(request: HttpServletRequest): String {
     return if (!ip.isNullOrBlank() && !"unknown".equals(ip, true)) {
         val index = ip.indexOf(",")
         if (index != -1) {
-            ip.take(index)
+            ip.take(index).trim()
         } else {
-            ip
+            ip.trim()
         }
     } else {
         request.remoteAddr

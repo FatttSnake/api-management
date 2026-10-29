@@ -13,4 +13,6 @@ import top.fatweb.apimanagement.service.permission.IScopeService
  * @since 1.0.0
  */
 @Service
-class ScopeServiceImpl : ServiceImpl<ScopeMapper, Scope>(), IScopeService
+class ScopeServiceImpl :
+    ServiceImpl<ScopeMapper, Scope>(),
+    IScopeService

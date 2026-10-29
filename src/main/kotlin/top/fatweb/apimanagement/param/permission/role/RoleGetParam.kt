@@ -22,7 +22,6 @@ data class RoleGetParam(
      */
     @field:Schema(description = "查询角色名称", example = "Role_1")
     var searchName: String?,
-
     /**
      * Use regex
      *
@@ -33,7 +32,7 @@ data class RoleGetParam(
         description = "查询使用正则表达式",
         allowableValues = ["true", "false"],
         defaultValue = "false",
-        example = "false"
+        example = "false",
     )
     val searchRegex: Boolean = false,
 ) : PageSortParam()

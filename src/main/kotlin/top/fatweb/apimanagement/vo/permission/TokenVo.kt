@@ -18,10 +18,9 @@ data class TokenVo(
      */
     @field:Schema(
         description = "Refresh Token",
-        example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJkYTllYjFkYmVmZDQ0OWRkOThlOGNjNzZlNzZkMDgyNSIsInN1YiI6IjE3MDk5ODYwNTg2Nzk5NzU5MzgiLCJpc3MiOiJGYXRXZWIiLCJpYXQiOjE2OTY1MjgxMTcsImV4cCI6MTY5NjUzNTMxN30.U2ZsyrGk7NbsP-DJfdz9xgWSfect5r2iKQnlEsscAA8"
+        example = "eyJhbGciOiJIUzI1NiJ9.e30.signature",
     )
     val refreshToken: String,
-
     /**
      * Access Token
      *
@@ -30,10 +29,9 @@ data class TokenVo(
      */
     @field:Schema(
         description = "Access Token",
-        example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJkYTllYjFkYmVmZDQ0OWRkOThlOGNjNzZlNzZkMDgyNSIsInN1YiI6IjE3MDk5ODYwNTg2Nzk5NzU5MzgiLCJpc3MiOiJGYXRXZWIiLCJpYXQiOjE2OTY1MjgxMTcsImV4cCI6MTY5NjUzNTMxN30.U2ZsyrGk7NbsP-DJfdz9xgWSfect5r2iKQnlEsscAA8"
+        example = "eyJhbGciOiJIUzI1NiJ9.e30.signature",
     )
     val accessToken: String,
-
     /**
      * CSRF Token
      *
@@ -42,7 +40,7 @@ data class TokenVo(
      */
     @field:Schema(
         description = "CSRF Token",
-        example = "a1b2c3d4e5f6g7h8"
+        example = "a1b2c3d4e5f6g7h8",
     )
-    val csrfToken: String
+    val csrfToken: String,
 )

@@ -39,10 +39,34 @@ interface HttpCapability {
         val method: String = "GET",
         val headers: Map<String, List<String>> = emptyMap(),
         val body: ByteArray = ByteArray(0),
-        val timeout: Duration? = null
+        val timeout: Duration? = null,
     ) {
         init {
             require(method.isNotBlank()) { "method must not be blank" }
+        }
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as HttpRequest
+
+            if (uri != other.uri) return false
+            if (method != other.method) return false
+            if (headers != other.headers) return false
+            if (!body.contentEquals(other.body)) return false
+            if (timeout != other.timeout) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = uri.hashCode()
+            result = 31 * result + method.hashCode()
+            result = 31 * result + headers.hashCode()
+            result = 31 * result + body.contentHashCode()
+            result = 31 * result + timeout.hashCode()
+            return result
         }
 
         companion object {
@@ -69,30 +93,6 @@ interface HttpCapability {
             @JvmStatic
             fun post(uri: URI, body: ByteArray): HttpRequest = HttpRequest(uri, "POST", body = body)
         }
-
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as HttpRequest
-
-            if (uri != other.uri) return false
-            if (method != other.method) return false
-            if (headers != other.headers) return false
-            if (!body.contentEquals(other.body)) return false
-            if (timeout != other.timeout) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            var result = uri.hashCode()
-            result = 31 * result + method.hashCode()
-            result = 31 * result + headers.hashCode()
-            result = 31 * result + body.contentHashCode()
-            result = 31 * result + timeout.hashCode()
-            return result
-        }
     }
 
     /**
@@ -107,7 +107,7 @@ interface HttpCapability {
     data class HttpResponse @JvmOverloads constructor(
         val status: Int,
         val headers: Map<String, List<String>> = emptyMap(),
-        val body: ByteArray = ByteArray(0)
+        val body: ByteArray = ByteArray(0),
     ) {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true

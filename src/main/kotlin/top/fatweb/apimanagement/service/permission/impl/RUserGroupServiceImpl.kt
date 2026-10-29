@@ -13,4 +13,6 @@ import top.fatweb.apimanagement.service.permission.IRUserGroupService
  * @since 1.0.0
  */
 @Service
-class RUserGroupServiceImpl : ServiceImpl<RUserGroupMapper, RUserGroup>(), IRUserGroupService
+class RUserGroupServiceImpl :
+    ServiceImpl<RUserGroupMapper, RUserGroup>(),
+    IRUserGroupService

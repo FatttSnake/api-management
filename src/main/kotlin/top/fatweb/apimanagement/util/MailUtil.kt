@@ -6,7 +6,8 @@ import top.fatweb.apimanagement.exception.NoEmailConfigException
 import top.fatweb.apimanagement.settings.MailSecurityType
 import top.fatweb.apimanagement.settings.MailSettings
 import top.fatweb.apimanagement.settings.SettingsOperator
-import java.util.*
+import java.util.Date
+import java.util.Properties
 
 /**
  * Mail util

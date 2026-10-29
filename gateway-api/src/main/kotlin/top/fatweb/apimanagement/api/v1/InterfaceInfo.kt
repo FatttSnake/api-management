@@ -32,7 +32,7 @@ data class InterfaceInfo(
     val rateLimit: Int? = null,
     val accessMode: String = "",
     val path: String = "",
-    val method: String = ""
+    val method: String = "",
 ) {
     init {
         require(code.isNotBlank()) { "code must not be blank" }

@@ -22,9 +22,9 @@ data class OnlineInfoGetParam(
         description = "范围",
         allowableValues = ["WEEK", "MONTH", "QUARTER", "YEAR", "TWO_YEARS", "THREE_YEARS", "FIVE_YEARS", "ALL"],
         defaultValue = "WEEK",
-        example = "WEEK"
+        example = "WEEK",
     )
-    val scope: Scope = Scope.WEEK
+    val scope: Scope = Scope.WEEK,
 ) {
     enum class Scope(@field:EnumValue @field:JsonValue val code: String) {
         DAY("DAY"),
@@ -43,6 +43,6 @@ data class OnlineInfoGetParam(
 
         FIVE_YEARS("FIVE_YEARS"),
 
-        ALL("ALL")
+        ALL("ALL"),
     }
 }

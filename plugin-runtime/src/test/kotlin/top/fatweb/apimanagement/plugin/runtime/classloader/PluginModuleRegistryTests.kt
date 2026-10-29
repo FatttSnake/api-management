@@ -87,7 +87,7 @@ class PluginModuleRegistryTests {
         assertNotSame(loader1, loader2)
         assertNotSame(
             loader1.loadClass("fixture.a.FixtureA"),
-            loader2.loadClass("fixture.a.FixtureA")
+            loader2.loadClass("fixture.a.FixtureA"),
         )
 
         first.close()
@@ -97,10 +97,11 @@ class PluginModuleRegistryTests {
     @Test
     fun `resolves plugin classes through the module graph`() {
         setUp()
-        val lock = lockOf(
-            LockedModule("fixture", "a", "1.0.0", shaA),
-            LockedModule("fixture", "b", "1.0.0", shaB, dependencies = listOf(shaA))
-        )
+        val lock =
+            lockOf(
+                LockedModule("fixture", "a", "1.0.0", shaA),
+                LockedModule("fixture", "b", "1.0.0", shaB, dependencies = listOf(shaA)),
+            )
         val graph = registry.acquire(lock)
         val pluginJar = root.resolve("plugin.jar")
         Files.write(pluginJar, jarOf(FixturePlugin::class))
@@ -123,6 +124,5 @@ class PluginModuleRegistryTests {
         }
     }
 
-    private fun lockOf(vararg modules: LockedModule): PluginModuleLock =
-        PluginModuleLock(modules = modules.toList())
+    private fun lockOf(vararg modules: LockedModule): PluginModuleLock = PluginModuleLock(modules = modules.toList())
 }

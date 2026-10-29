@@ -19,7 +19,6 @@ data class OnlineInfoVo(
      */
     @field:Schema(description = "当前在线用户数量")
     val current: Long,
-
     /**
      * Online number history
      *
@@ -27,7 +26,7 @@ data class OnlineInfoVo(
      * @since 1.0.0
      */
     @field:Schema(description = "历史记录")
-    val history: List<HistoryVo>
+    val history: List<HistoryVo>,
 ) {
     data class HistoryVo(
         /**
@@ -38,7 +37,6 @@ data class OnlineInfoVo(
          */
         @field:Schema(description = "记录时间")
         val time: LocalDateTime,
-
         /**
          * Record
          *
@@ -46,6 +44,6 @@ data class OnlineInfoVo(
          * @since 1.0.0
          */
         @field:Schema(description = "记录")
-        val record: String
+        val record: String,
     )
 }

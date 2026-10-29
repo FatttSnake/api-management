@@ -25,10 +25,7 @@ class PluginRegistryCache {
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    private class Snapshot(
-        val interfaces: Map<String, ApiInterface>,
-        val plugins: Map<String, ApiPlugin>
-    )
+    private class Snapshot(val interfaces: Map<String, ApiInterface>, val plugins: Map<String, ApiPlugin>)
 
     @Volatile
     private var snapshot: Snapshot = Snapshot(emptyMap(), emptyMap())

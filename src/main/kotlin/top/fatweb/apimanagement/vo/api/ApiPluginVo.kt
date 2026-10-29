@@ -23,7 +23,6 @@ data class ApiPluginVo(
      */
     @field:JsonSerialize(using = ToStringSerializer::class)
     val id: Long?,
-
     /**
      * Unique plugin ID
      *
@@ -32,7 +31,6 @@ data class ApiPluginVo(
      */
     @field:Schema(description = "插件 ID", example = "echo")
     val pluginId: String?,
-
     /**
      * Plugin display name
      *
@@ -41,7 +39,6 @@ data class ApiPluginVo(
      */
     @field:Schema(description = "插件名称", example = "Echo 插件")
     val name: String?,
-
     /**
      * Description
      *
@@ -50,7 +47,6 @@ data class ApiPluginVo(
      */
     @field:Schema(description = "插件描述")
     val description: String?,
-
     /**
      * Enable status
      *
@@ -59,7 +55,6 @@ data class ApiPluginVo(
      */
     @field:Schema(description = "启用", example = "true")
     val enable: Boolean?,
-
     /**
      * Default price per call
      *
@@ -69,7 +64,6 @@ data class ApiPluginVo(
     @field:Schema(description = "默认每次调用单价 (null=免费)", example = "0.0100")
     @field:JsonSerialize(using = ToStringSerializer::class)
     val defaultPrice: BigDecimal?,
-
     /**
      * Default rate limit per minute
      *
@@ -78,7 +72,6 @@ data class ApiPluginVo(
      */
     @field:Schema(description = "默认每分钟限流次数 (null=不限)", example = "100")
     val defaultRateLimit: Int?,
-
     /**
      * Default access mode inherited by interfaces whose access_mode is null
      *
@@ -87,7 +80,6 @@ data class ApiPluginVo(
      */
     @field:Schema(description = "默认访问模式 (接口继承此值)", allowableValues = ["DEFAULT", "RESTRICTED"])
     val defaultAccessMode: ApiInterface.AccessMode?,
-
     /**
      * Plugin source: BUILT_IN or UPLOADED
      *
@@ -96,7 +88,6 @@ data class ApiPluginVo(
      */
     @field:Schema(description = "插件来源", allowableValues = ["BUILT_IN", "UPLOADED"])
     val source: String?,
-
     /**
      * Plugin version name
      *
@@ -105,7 +96,6 @@ data class ApiPluginVo(
      */
     @field:Schema(description = "插件版本名", example = "1.2.0")
     val versionName: String?,
-
     /**
      * Plugin version code
      *
@@ -114,7 +104,6 @@ data class ApiPluginVo(
      */
     @field:Schema(description = "插件版本号 (升级需严格递增)", example = "12")
     val versionCode: Int?,
-
     /**
      * Original jar file name
      *
@@ -123,7 +112,6 @@ data class ApiPluginVo(
      */
     @field:Schema(description = "插件 jar 文件名", example = "echo-1.0.0.jar")
     val jarName: String?,
-
     /**
      * Signer public key fingerprint
      *
@@ -132,7 +120,6 @@ data class ApiPluginVo(
      */
     @field:Schema(description = "签名公钥指纹")
     val signerKeyId: String?,
-
     /**
      * Last mount error message (null when loaded successfully)
      *
@@ -141,7 +128,6 @@ data class ApiPluginVo(
      */
     @field:Schema(description = "最近挂载错误信息")
     val loadError: String?,
-
     /**
      * Load status
      *
@@ -150,7 +136,6 @@ data class ApiPluginVo(
      */
     @field:Schema(description = "加载状态", allowableValues = ["LOADED", "LOAD_ERROR", "DISABLED", "UNRESOLVED"])
     val loadStatus: String?,
-
     /**
      * Load error code
      *
@@ -159,7 +144,6 @@ data class ApiPluginVo(
      */
     @field:Schema(description = "加载错误码")
     val loadErrorCode: String?,
-
     /**
      * Gateway API major version the plugin was compiled against
      *
@@ -168,7 +152,6 @@ data class ApiPluginVo(
      */
     @field:Schema(description = "插件编译所针对的网关 API 大版本", example = "1")
     val gatewayApiVersion: Int?,
-
     /**
      * Required gateway version range
      *
@@ -177,7 +160,6 @@ data class ApiPluginVo(
      */
     @field:Schema(description = "要求的网关版本范围", example = ">=1.0.0 <2.0.0")
     val requiresGateway: String?,
-
     /**
      * Required gateway API version range
      *
@@ -186,7 +168,6 @@ data class ApiPluginVo(
      */
     @field:Schema(description = "要求的网关 API 版本范围", example = "^1.0")
     val requiresGatewayApi: String?,
-
     /**
      * Create time
      *
@@ -195,7 +176,6 @@ data class ApiPluginVo(
      */
     @field:Schema(description = "创建时间", example = "2026-01-01T00:00:00.000Z")
     val createTime: LocalDateTime?,
-
     /**
      * Update time
      *
@@ -203,5 +183,5 @@ data class ApiPluginVo(
      * @since 1.0.0
      */
     @field:Schema(description = "修改时间", example = "2026-01-01T00:00:00.000Z")
-    val updateTime: LocalDateTime?
+    val updateTime: LocalDateTime?,
 )

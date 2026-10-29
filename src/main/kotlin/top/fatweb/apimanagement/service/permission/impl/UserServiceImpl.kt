@@ -23,10 +23,33 @@ import top.fatweb.apimanagement.entity.permission.User
 import top.fatweb.apimanagement.entity.permission.UserInfo
 import top.fatweb.apimanagement.exception.UserNotFoundException
 import top.fatweb.apimanagement.mapper.permission.UserMapper
-import top.fatweb.apimanagement.param.permission.user.*
+import top.fatweb.apimanagement.param.permission.user.AvatarGenerateParam
+import top.fatweb.apimanagement.param.permission.user.UserAddParam
+import top.fatweb.apimanagement.param.permission.user.UserChangePasswordParam
+import top.fatweb.apimanagement.param.permission.user.UserDeleteParam
+import top.fatweb.apimanagement.param.permission.user.UserGetParam
+import top.fatweb.apimanagement.param.permission.user.UserInfoUpdateParam
+import top.fatweb.apimanagement.param.permission.user.UserUpdateParam
+import top.fatweb.apimanagement.param.permission.user.UserUpdatePasswordParam
 import top.fatweb.apimanagement.properties.ServerProperties
-import top.fatweb.apimanagement.service.permission.*
-import top.fatweb.apimanagement.util.*
+import top.fatweb.apimanagement.service.permission.IMenuService
+import top.fatweb.apimanagement.service.permission.IModuleService
+import top.fatweb.apimanagement.service.permission.IOperationService
+import top.fatweb.apimanagement.service.permission.IRUserGroupService
+import top.fatweb.apimanagement.service.permission.IRUserRoleService
+import top.fatweb.apimanagement.service.permission.IScopeService
+import top.fatweb.apimanagement.service.permission.IUserInfoService
+import top.fatweb.apimanagement.service.permission.IUserService
+import top.fatweb.apimanagement.util.generateRandomPassword
+import top.fatweb.apimanagement.util.getLoginUserId
+import top.fatweb.apimanagement.util.getLoginUserIdOrThrow
+import top.fatweb.apimanagement.util.getLoginUsername
+import top.fatweb.apimanagement.util.getRandomLong
+import top.fatweb.apimanagement.util.offlineUser
+import top.fatweb.apimanagement.util.queryOrThrowException
+import top.fatweb.apimanagement.util.saveOrThrowException
+import top.fatweb.apimanagement.util.setPageSort
+import top.fatweb.apimanagement.util.updateOrThrowException
 import top.fatweb.apimanagement.vo.PageVo
 import top.fatweb.apimanagement.vo.permission.UserWithInfoVo
 import top.fatweb.apimanagement.vo.permission.UserWithPowerInfoVo
@@ -39,7 +62,7 @@ import top.fatweb.avatargenerator.layer.background.ColorPaintBackgroundLayer
 import java.awt.Color
 import java.time.LocalDateTime
 import java.time.ZoneOffset
-import java.util.*
+import java.util.UUID
 import kotlin.io.encoding.Base64
 
 /**
@@ -60,8 +83,9 @@ class UserServiceImpl(
     private val scopeService: IScopeService,
     private val operationService: IOperationService,
     private val rUserRoleService: IRUserRoleService,
-    private val rUserGroupService: IRUserGroupService
-) : ServiceImpl<UserMapper, User>(), IUserService {
+    private val rUserGroupService: IRUserGroupService,
+) : ServiceImpl<UserMapper, User>(),
+    IUserService {
     override fun generateAvatar(avatarGenerateParam: AvatarGenerateParam?): String = when ((1..4).random()) {
         1 -> AvatarGenerator.triangleBase64(avatarGenerateParam)
         2 -> AvatarGenerator.squareBase64(avatarGenerateParam)
@@ -82,20 +106,17 @@ class UserServiceImpl(
         return user
     }
 
-    override fun getInfo(): UserWithPowerInfoVo =
-        queryOrThrowException(UserNotFoundException()) {
-            getLoginUsername()?.let(::getUserWithPowerByAccount)
-        }.let(User::toVoWithPowerInfo)
+    override fun getInfo(): UserWithPowerInfoVo = queryOrThrowException(UserNotFoundException()) {
+        getLoginUsername()?.let(::getUserWithPowerByAccount)
+    }.let(User::toVoWithPowerInfo)
 
-    override fun getBasicInfo(username: String): UserWithInfoVo =
-        queryOrThrowException(UserNotFoundException()) {
-            baseMapper.selectOneWithBasicInfoByUsername(username)
-        }.let(User::toVoWithInfo)
+    override fun getBasicInfo(username: String): UserWithInfoVo = queryOrThrowException(UserNotFoundException()) {
+        baseMapper.selectOneWithBasicInfoByUsername(username)
+    }.let(User::toVoWithInfo)
 
-    override fun getBasicInfoById(userId: Long): UserWithInfoVo =
-        queryOrThrowException(UserNotFoundException()) {
-            baseMapper.selectOneWithBasicInfoById(userId)
-        }.let(User::toVoWithInfo)
+    override fun getBasicInfoById(userId: Long): UserWithInfoVo = queryOrThrowException(UserNotFoundException()) {
+        baseMapper.selectOneWithBasicInfoById(userId)
+    }.let(User::toVoWithInfo)
 
     override fun getBasicInfoByIds(userIds: List<Long>): Map<Long, UserWithInfoVo> =
         baseMapper.selectOneWithBasicInfoByIds(userIds).map(User::toVoWithInfo).associateBy { it.id!! }
@@ -104,23 +125,25 @@ class UserServiceImpl(
         val userId = getLoginUserIdOrThrow()
         updateOrThrowException {
             userInfoService.update(
-                KtUpdateWrapper(UserInfo()).eq(UserInfo::userId, userId)
+                KtUpdateWrapper(UserInfo())
+                    .eq(UserInfo::userId, userId)
                     .set(!userInfoUpdateParam.avatar.isNullOrBlank(), UserInfo::avatar, userInfoUpdateParam.avatar)
                     .set(
                         !userInfoUpdateParam.nickname.isNullOrBlank(),
                         UserInfo::nickname,
-                        userInfoUpdateParam.nickname
-                    )
+                        userInfoUpdateParam.nickname,
+                    ),
             )
         }
     }
 
     override fun password(userChangePasswordParam: UserChangePasswordParam) {
-        val user = queryOrThrowException(UserNotFoundException()) {
-            getById(
-                getLoginUserIdOrThrow()
-            )
-        }
+        val user =
+            queryOrThrowException(UserNotFoundException()) {
+                getById(
+                    getLoginUserIdOrThrow(),
+                )
+            }
 
         if (!passwordEncoder.matches(userChangePasswordParam.originalPassword, user.password)) {
             throw BadCredentialsException("Passwords do not match")
@@ -132,17 +155,16 @@ class UserServiceImpl(
                     .eq(User::id, user.id)
                     .set(User::password, passwordEncoder.encode(userChangePasswordParam.newPassword))
                     .set(User::credentialsExpiration, null)
-                    .set(User::updateTime, LocalDateTime.now(ZoneOffset.UTC))
+                    .set(User::updateTime, LocalDateTime.now(ZoneOffset.UTC)),
             )
         }
 
         offlineUser(serverProperties = serverProperties, redisProvider = redisProvider, user.id!!)
     }
 
-    override fun getOne(id: Long): UserWithRoleInfoVo =
-        queryOrThrowException(UserNotFoundException()) {
-            baseMapper.selectOneWithRoleInfoById(id)
-        }.let(User::toVoWithRoleInfo)
+    override fun getOne(id: Long): UserWithRoleInfoVo = queryOrThrowException(UserNotFoundException()) {
+        baseMapper.selectOneWithRoleInfoById(id)
+    }.let(User::toVoWithRoleInfo)
 
     override fun getPage(userGetParam: UserGetParam?): PageVo<UserWithRoleInfoVo> {
         val userIdsPage = Page<Long>(userGetParam?.currentPage ?: 1, userGetParam?.pageSize ?: 20)
@@ -154,7 +176,7 @@ class UserServiceImpl(
                 userIdsPage,
                 userGetParam?.searchType ?: "ALL",
                 userGetParam?.searchValue,
-                userGetParam?.searchRegex ?: false
+                userGetParam?.searchRegex ?: false,
             )
         val userPage = Page<User>(userIdsIPage.current, userIdsIPage.size, userIdsIPage.total)
         if (userIdsIPage.total > 0) {
@@ -169,14 +191,25 @@ class UserServiceImpl(
     @Transactional
     override fun add(userAddParam: UserAddParam): UserWithRoleInfoVo {
         val newPassword =
-            if (userAddParam.password.isNullOrBlank()) Sha512DigestUtils.shaHex(generateRandomPassword(10)) else userAddParam.password
+            if (userAddParam.password.isNullOrBlank()) {
+                Sha512DigestUtils.shaHex(
+                    generateRandomPassword(10),
+                )
+            } else {
+                userAddParam.password
+            }
         val user = userAddParam.toEntity()
 
         user.apply {
             password = passwordEncoder.encode(newPassword)
-            verify = if (userAddParam.verified) null else "${
-                LocalDateTime.now(ZoneOffset.UTC).toInstant(ZoneOffset.UTC).toEpochMilli()
-            }-${UUID.randomUUID()}-${UUID.randomUUID()}-${UUID.randomUUID()}"
+            verify =
+                if (userAddParam.verified) {
+                    null
+                } else {
+                    "${
+                        LocalDateTime.now(ZoneOffset.UTC).toInstant(ZoneOffset.UTC).toEpochMilli()
+                    }-${UUID.randomUUID()}-${UUID.randomUUID()}-${UUID.randomUUID()}"
+                }
         }
 
         saveOrThrowException { save(user) }
@@ -185,23 +218,27 @@ class UserServiceImpl(
 
         if (!user.roles.isNullOrEmpty()) {
             saveOrThrowException {
-                rUserRoleService.saveBatch(user.roles!!.map {
-                    RUserRole().apply {
-                        userId = user.id
-                        roleId = it.id
-                    }
-                })
+                rUserRoleService.saveBatch(
+                    user.roles!!.map {
+                        RUserRole().apply {
+                            userId = user.id
+                            roleId = it.id
+                        }
+                    },
+                )
             }
         }
 
         if (!user.groups.isNullOrEmpty()) {
             saveOrThrowException {
-                rUserGroupService.saveBatch(user.groups!!.map {
-                    RUserGroup().apply {
-                        userId = user.id
-                        groupId = it.id
-                    }
-                })
+                rUserGroupService.saveBatch(
+                    user.groups!!.map {
+                        RUserGroup().apply {
+                            userId = user.id
+                            groupId = it.id
+                        }
+                    },
+                )
             }
         }
 
@@ -213,11 +250,13 @@ class UserServiceImpl(
         val user = userUpdateParam.toEntity()
         user.updateTime = LocalDateTime.now(ZoneOffset.UTC)
 
-        val oldRoleList = rUserRoleService.list(
-            KtQueryWrapper(RUserRole())
-                .select(RUserRole::roleId)
-                .eq(RUserRole::userId, userUpdateParam.id)
-        ).map(RUserRole::roleId)
+        val oldRoleList =
+            rUserRoleService
+                .list(
+                    KtQueryWrapper(RUserRole())
+                        .select(RUserRole::roleId)
+                        .eq(RUserRole::userId, userUpdateParam.id),
+                ).map(RUserRole::roleId)
         val addRoleIds = HashSet<Long>()
         val removeRoleIds = HashSet<Long>()
         userUpdateParam.roleIds?.forEach(addRoleIds::add)
@@ -227,11 +266,13 @@ class UserServiceImpl(
         removeRoleIds.removeAll(addRoleIds)
         oldRoleList.toSet().let(addRoleIds::removeAll)
 
-        val oldGroupList = rUserGroupService.list(
-            KtQueryWrapper(RUserGroup())
-                .select(RUserGroup::groupId)
-                .eq(RUserGroup::userId, userUpdateParam.id)
-        ).map(RUserGroup::groupId)
+        val oldGroupList =
+            rUserGroupService
+                .list(
+                    KtQueryWrapper(RUserGroup())
+                        .select(RUserGroup::groupId)
+                        .eq(RUserGroup::userId, userUpdateParam.id),
+                ).map(RUserGroup::groupId)
         val addGroupIds = HashSet<Long>()
         val removeGroupIds = HashSet<Long>()
         userUpdateParam.groupIds?.forEach(addGroupIds::add)
@@ -244,65 +285,78 @@ class UserServiceImpl(
         updateOrThrowException { updateById(user) }
         updateOrThrowException {
             update(
-                KtUpdateWrapper(User()).eq(User::id, user.id)
+                KtUpdateWrapper(User())
+                    .eq(User::id, user.id)
                     .set(
                         User::verify,
-                        if (userUpdateParam.verified || userUpdateParam.id == 0L) null else "${
-                            LocalDateTime.now(ZoneOffset.UTC).toInstant(ZoneOffset.UTC).toEpochMilli()
-                        }-${UUID.randomUUID()}-${UUID.randomUUID()}-${UUID.randomUUID()}"
-                    )
-                    .set(User::expiration, if (userUpdateParam.id == 0L) null else user.expiration)
+                        if (userUpdateParam.verified || userUpdateParam.id == 0L) {
+                            null
+                        } else {
+                            "${
+                                LocalDateTime.now(ZoneOffset.UTC).toInstant(ZoneOffset.UTC).toEpochMilli()
+                            }-${UUID.randomUUID()}-${UUID.randomUUID()}-${UUID.randomUUID()}"
+                        },
+                    ).set(User::expiration, if (userUpdateParam.id == 0L) null else user.expiration)
                     .set(
                         User::credentialsExpiration,
-                        if (userUpdateParam.id == 0L) null else user.credentialsExpiration
-                    )
+                        if (userUpdateParam.id == 0L) null else user.credentialsExpiration,
+                    ),
             )
         }
 
         user.userInfo?.let { userInfo ->
-            userInfoService.getOne(
-                KtQueryWrapper(UserInfo())
-                    .select(UserInfo::id)
-                    .eq(UserInfo::userId, userUpdateParam.id)
-            )?.let {
-                userInfo.id = it.id
-                updateOrThrowException {
-                    userInfoService.updateById(userInfo)
+            userInfoService
+                .getOne(
+                    KtQueryWrapper(UserInfo())
+                        .select(UserInfo::id)
+                        .eq(UserInfo::userId, userUpdateParam.id),
+                )?.let {
+                    userInfo.id = it.id
+                    updateOrThrowException {
+                        userInfoService.updateById(userInfo)
+                    }
                 }
-            }
         }
 
         removeRoleIds.forEach {
             rUserRoleService.remove(
-                KtQueryWrapper(RUserRole()).eq(
-                    RUserRole::userId, userUpdateParam.id
-                ).eq(RUserRole::roleId, it)
+                KtQueryWrapper(RUserRole())
+                    .eq(
+                        RUserRole::userId,
+                        userUpdateParam.id,
+                    ).eq(RUserRole::roleId, it),
             )
         }
 
         addRoleIds.forEach {
             saveOrThrowException {
-                rUserRoleService.save(RUserRole().apply {
-                    userId = userUpdateParam.id
-                    roleId = it
-                })
+                rUserRoleService.save(
+                    RUserRole().apply {
+                        userId = userUpdateParam.id
+                        roleId = it
+                    },
+                )
             }
         }
 
         removeGroupIds.forEach {
             rUserGroupService.remove(
-                KtQueryWrapper(RUserGroup()).eq(
-                    RUserGroup::userId, userUpdateParam.id
-                ).eq(RUserGroup::groupId, it)
+                KtQueryWrapper(RUserGroup())
+                    .eq(
+                        RUserGroup::userId,
+                        userUpdateParam.id,
+                    ).eq(RUserGroup::groupId, it),
             )
         }
 
         addGroupIds.forEach {
             saveOrThrowException {
-                rUserGroupService.save(RUserGroup().apply {
-                    userId = userUpdateParam.id
-                    groupId = it
-                })
+                rUserGroupService.save(
+                    RUserGroup().apply {
+                        userId = userUpdateParam.id
+                        groupId = it
+                    },
+                )
             }
         }
 
@@ -322,9 +376,8 @@ class UserServiceImpl(
                     .set(User::password, passwordEncoder.encode(userUpdatePasswordParam.password))
                     .set(
                         User::credentialsExpiration,
-                        if (user.id != 0L) userUpdatePasswordParam.credentialsExpiration else null
-                    )
-                    .set(User::updateTime, LocalDateTime.now(ZoneOffset.UTC))
+                        if (user.id != 0L) userUpdatePasswordParam.credentialsExpiration else null,
+                    ).set(User::updateTime, LocalDateTime.now(ZoneOffset.UTC)),
             )
         }
 
@@ -332,7 +385,7 @@ class UserServiceImpl(
             offlineUser(
                 serverProperties = serverProperties,
                 redisProvider = redisProvider,
-                it
+                it,
             )
         }
     }
@@ -367,12 +420,15 @@ class UserServiceImpl(
 
     object AvatarGenerator {
         fun triangle(avatarGenerateParam: AvatarGenerateParam?): ByteArray {
-            val avatar = (
-                    if (avatarGenerateParam == null || avatarGenerateParam.colors.isNullOrEmpty())
+            val avatar =
+                (
+                    if (avatarGenerateParam == null || avatarGenerateParam.colors.isNullOrEmpty()) {
                         TriangleAvatar.newAvatarBuilder()
-                    else TriangleAvatar.newAvatarBuilder(
-                        *avatarGenerateParam.colors!!.map(::decodeColor).toTypedArray()
-                    )
+                    } else {
+                        TriangleAvatar.newAvatarBuilder(
+                            *avatarGenerateParam.colors!!.map(::decodeColor).toTypedArray(),
+                        )
+                    }
                     ).apply {
                     avatarGenerateParam?.size?.let(::size)
                     avatarGenerateParam?.margin?.let(::margin)
@@ -383,16 +439,18 @@ class UserServiceImpl(
             return avatar.createAsPngBytes(avatarGenerateParam?.seed ?: getRandomLong())
         }
 
-        fun triangleBase64(avatarGenerateParam: AvatarGenerateParam?) =
-            Base64.encode(triangle(avatarGenerateParam))
+        fun triangleBase64(avatarGenerateParam: AvatarGenerateParam?) = Base64.encode(triangle(avatarGenerateParam))
 
         fun square(avatarGenerateParam: AvatarGenerateParam?): ByteArray {
-            val avatar = (
-                    if (avatarGenerateParam == null || avatarGenerateParam.colors.isNullOrEmpty())
+            val avatar =
+                (
+                    if (avatarGenerateParam == null || avatarGenerateParam.colors.isNullOrEmpty()) {
                         SquareAvatar.newAvatarBuilder()
-                    else SquareAvatar.newAvatarBuilder(
-                        *avatarGenerateParam.colors!!.map(::decodeColor).toTypedArray()
-                    )
+                    } else {
+                        SquareAvatar.newAvatarBuilder(
+                            *avatarGenerateParam.colors!!.map(::decodeColor).toTypedArray(),
+                        )
+                    }
                     ).apply {
                     avatarGenerateParam?.size?.let(::size)
                     avatarGenerateParam?.margin?.let(::margin)
@@ -403,54 +461,55 @@ class UserServiceImpl(
             return avatar.createAsPngBytes(avatarGenerateParam?.seed ?: getRandomLong())
         }
 
-        fun squareBase64(avatarGenerateParam: AvatarGenerateParam?) =
-            Base64.encode(square(avatarGenerateParam))
+        fun squareBase64(avatarGenerateParam: AvatarGenerateParam?) = Base64.encode(square(avatarGenerateParam))
 
         fun identicon(avatarGenerateParam: AvatarGenerateParam?): ByteArray {
-            val avatar = IdenticonAvatar.newAvatarBuilder().apply {
-                avatarGenerateParam?.size?.let(::size)
-                avatarGenerateParam?.margin?.let(::margin)
-                avatarGenerateParam?.padding?.let(::padding)
-                if (avatarGenerateParam != null && !avatarGenerateParam.colors.isNullOrEmpty()) {
-                    color(decodeColor(avatarGenerateParam.colors!!.random()))
-                }
-                avatarGenerateParam?.background?.let { layers(ColorPaintBackgroundLayer(decodeColor(it))) }
-            }.build()
+            val avatar =
+                IdenticonAvatar
+                    .newAvatarBuilder()
+                    .apply {
+                        avatarGenerateParam?.size?.let(::size)
+                        avatarGenerateParam?.margin?.let(::margin)
+                        avatarGenerateParam?.padding?.let(::padding)
+                        if (avatarGenerateParam != null && !avatarGenerateParam.colors.isNullOrEmpty()) {
+                            color(decodeColor(avatarGenerateParam.colors!!.random()))
+                        }
+                        avatarGenerateParam?.background?.let { layers(ColorPaintBackgroundLayer(decodeColor(it))) }
+                    }.build()
 
             return avatar.createAsPngBytes(avatarGenerateParam?.seed ?: getRandomLong())
         }
 
-        fun identiconBase64(avatarGenerateParam: AvatarGenerateParam?) =
-            Base64.encode(identicon(avatarGenerateParam))
+        fun identiconBase64(avatarGenerateParam: AvatarGenerateParam?) = Base64.encode(identicon(avatarGenerateParam))
 
         fun github(avatarGenerateParam: AvatarGenerateParam?, elementSize: Int = 400, precision: Int = 5): ByteArray {
-            val avatar = (avatarGenerateParam?.let { GitHubAvatar.newAvatarBuilder(elementSize, precision) }
-                ?: let { GitHubAvatar.newAvatarBuilder(400, 5) }).apply {
-                avatarGenerateParam?.size?.let(::size)
-                avatarGenerateParam?.margin?.let(::margin)
-                avatarGenerateParam?.padding?.let(::padding)
-                if (avatarGenerateParam != null && !avatarGenerateParam.colors.isNullOrEmpty()) {
-                    color(decodeColor(avatarGenerateParam.colors!!.random()))
-                }
-                avatarGenerateParam?.background?.let { layers(ColorPaintBackgroundLayer(decodeColor(it))) }
-            }.build()
+            val avatar =
+                (
+                    avatarGenerateParam?.let { GitHubAvatar.newAvatarBuilder(elementSize, precision) }
+                        ?: let { GitHubAvatar.newAvatarBuilder(400, 5) }
+                    ).apply {
+                    avatarGenerateParam?.size?.let(::size)
+                    avatarGenerateParam?.margin?.let(::margin)
+                    avatarGenerateParam?.padding?.let(::padding)
+                    if (avatarGenerateParam != null && !avatarGenerateParam.colors.isNullOrEmpty()) {
+                        color(decodeColor(avatarGenerateParam.colors!!.random()))
+                    }
+                    avatarGenerateParam?.background?.let { layers(ColorPaintBackgroundLayer(decodeColor(it))) }
+                }.build()
 
             return avatar.createAsPngBytes(avatarGenerateParam?.seed ?: getRandomLong())
         }
 
-        fun githubBase64(avatarGenerateParam: AvatarGenerateParam?) =
-            Base64.encode(github(avatarGenerateParam))
+        fun githubBase64(avatarGenerateParam: AvatarGenerateParam?) = Base64.encode(github(avatarGenerateParam))
 
-        private fun decodeColor(nm: String): Color {
-            return if (Regex("^#[0-9a-fA-F]{6}$").matches(nm)) {
-                Color.decode(nm)
-            } else if (Regex("^#[0-9a-fA-F]{8}$").matches(nm)) {
-                val intVal = Integer.decode(nm.substring(1..6).prependIndent("#"))
-                val alpha = Integer.decode(nm.substring(7).prependIndent("#"))
-                Color(intVal shr 16 and 0xFF, intVal shr 8 and 0XFF, intVal and 0xFF, alpha and 0xFF)
-            } else {
-                Color.WHITE
-            }
+        private fun decodeColor(nm: String): Color = if (Regex("^#[0-9a-fA-F]{6}$").matches(nm)) {
+            Color.decode(nm)
+        } else if (Regex("^#[0-9a-fA-F]{8}$").matches(nm)) {
+            val intVal = Integer.decode(nm.substring(1..6).prependIndent("#"))
+            val alpha = Integer.decode(nm.substring(7).prependIndent("#"))
+            Color(intVal shr 16 and 0xFF, intVal shr 8 and 0XFF, intVal and 0xFF, alpha and 0xFF)
+        } else {
+            Color.WHITE
         }
     }
 }

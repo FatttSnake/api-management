@@ -21,7 +21,6 @@ data class UserChangePasswordParam(
     @field:Schema(description = "原密码", required = true)
     @field:NotBlank(message = "Original password can not be blank")
     val originalPassword: String?,
-
     /**
      * New password
      *
@@ -31,5 +30,5 @@ data class UserChangePasswordParam(
     @field:Schema(description = "原密码", required = true)
     @field:NotBlank(message = "New password can not be blank")
     @field:Pattern(regexp = "^[a-fA-F0-9]{128}$", message = "New password must be encrypted by SHA512")
-    val newPassword: String?
+    val newPassword: String?,
 )

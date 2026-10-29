@@ -24,7 +24,7 @@ import top.fatweb.apimanagement.vo.api.ApiTransactionVo
 @BaseController(path = ["/user/api/account"], name = "我的 API 账户", description = "用户自助 API 账户接口")
 class UserApiAccountController(
     private val apiAccountService: IApiAccountService,
-    private val apiTransactionService: IApiTransactionService
+    private val apiTransactionService: IApiTransactionService,
 ) {
     /**
      * Get my API account
@@ -49,9 +49,8 @@ class UserApiAccountController(
     @Operation(summary = "获取我的 API 流水")
     @GetMapping("/transactions")
     fun getTransactions(
-        @ProcessParam @Valid apiTransactionGetParam: ApiTransactionGetParam?
-    ): ResponseResult<PageVo<ApiTransactionVo>> =
-        ResponseResult.databaseSuccess(
-            data = apiTransactionService.getPage(false, apiTransactionGetParam)
-        )
+        @ProcessParam @Valid apiTransactionGetParam: ApiTransactionGetParam?,
+    ): ResponseResult<PageVo<ApiTransactionVo>> = ResponseResult.databaseSuccess(
+        data = apiTransactionService.getPage(false, apiTransactionGetParam),
+    )
 }

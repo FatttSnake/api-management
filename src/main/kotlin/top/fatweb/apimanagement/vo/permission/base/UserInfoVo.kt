@@ -21,7 +21,6 @@ data class UserInfoVo(
      */
     @field:JsonSerialize(using = ToStringSerializer::class)
     val id: Long?,
-
     /**
      * User ID
      *
@@ -31,7 +30,6 @@ data class UserInfoVo(
     @field:Schema(description = "用户ID")
     @field:JsonSerialize(using = ToStringSerializer::class)
     val userId: Long?,
-
     /**
      * Nickname
      *
@@ -40,7 +38,6 @@ data class UserInfoVo(
      */
     @field:Schema(description = "昵称", example = "User")
     val nickname: String?,
-
     /**
      * Avatar base64
      *
@@ -49,7 +46,6 @@ data class UserInfoVo(
      */
     @field:Schema(description = "头像")
     val avatar: String?,
-
     /**
      * Email
      *
@@ -58,7 +54,6 @@ data class UserInfoVo(
      */
     @field:Schema(description = "邮箱", example = "user@mail.com")
     val email: String?,
-
     /**
      * Create time
      *
@@ -67,7 +62,6 @@ data class UserInfoVo(
      */
     @field:Schema(description = "创建时间", example = "1900-01-01T00:00:00.000Z")
     val createTime: LocalDateTime?,
-
     /**
      * Update time
      *
@@ -75,5 +69,5 @@ data class UserInfoVo(
      * @since 1.0.0
      */
     @field:Schema(description = "修改时间", example = "1900-01-01T00:00:00.000Z")
-    val updateTime: LocalDateTime?
+    val updateTime: LocalDateTime?,
 )

@@ -43,11 +43,12 @@ class PluginRuntimeLoaderTests {
             jarOf(
                 FixtureApiPlugin::class,
                 PingHandler::class,
-                entries = mapOf(
+                entries =
+                mapOf(
                     PluginRuntimeLoader.DESCRIPTOR_ENTRY to descriptorJson().toByteArray(),
-                    PluginRuntimeLoader.LOCK_ENTRY to """{"format":1,"modules":[]}""".toByteArray()
-                )
-            )
+                    PluginRuntimeLoader.LOCK_ENTRY to """{"format":1,"modules":[]}""".toByteArray(),
+                ),
+            ),
         )
 
         val loaded = loader.load(pluginJar, testServices())
@@ -85,11 +86,12 @@ class PluginRuntimeLoaderTests {
             jarOf(
                 FixtureApiPlugin::class,
                 PingHandler::class,
-                entries = mapOf(
+                entries =
+                mapOf(
                     PluginRuntimeLoader.DESCRIPTOR_ENTRY to descriptorJson().toByteArray(),
-                    PluginRuntimeLoader.LOCK_ENTRY to """{"format":1,"modules":[]}""".toByteArray()
-                )
-            )
+                    PluginRuntimeLoader.LOCK_ENTRY to """{"format":1,"modules":[]}""".toByteArray(),
+                ),
+            ),
         )
         val loaded = loader.load(pluginJar, testServices())
         val routes = PluginRouteRegistry()
@@ -115,12 +117,13 @@ class PluginRuntimeLoaderTests {
             jarOf(
                 FixtureApiPlugin::class,
                 PingHandler::class,
-                entries = mapOf(
+                entries =
+                mapOf(
                     PluginRuntimeLoader.DESCRIPTOR_ENTRY to
                         descriptorJson("""{"fixture:a":"1.0.0"}""").toByteArray(),
-                    PluginRuntimeLoader.LOCK_ENTRY to """{"format":1,"modules":[]}""".toByteArray()
-                )
-            )
+                    PluginRuntimeLoader.LOCK_ENTRY to """{"format":1,"modules":[]}""".toByteArray(),
+                ),
+            ),
         )
 
         assertFailsWith<PluginLoadException> {
@@ -151,6 +154,5 @@ class PluginRuntimeLoaderTests {
         }
         """.trimIndent()
 
-    private fun jsonMapper(): JsonMapper =
-        JsonMapper.builder().addModules(KotlinModule.Builder().build()).build()
+    private fun jsonMapper(): JsonMapper = JsonMapper.builder().addModules(KotlinModule.Builder().build()).build()
 }

@@ -4,12 +4,23 @@ import io.swagger.v3.oas.annotations.Operation
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import jakarta.validation.Valid
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.CookieValue
+import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
 import top.fatweb.apimanagement.annotation.BaseController
 import top.fatweb.apimanagement.annotation.ProcessParam
 import top.fatweb.apimanagement.entity.common.ResponseCode
 import top.fatweb.apimanagement.entity.common.ResponseResult
-import top.fatweb.apimanagement.param.permission.*
+import top.fatweb.apimanagement.param.permission.ForgetParam
+import top.fatweb.apimanagement.param.permission.LoginParam
+import top.fatweb.apimanagement.param.permission.RegisterParam
+import top.fatweb.apimanagement.param.permission.RetrieveParam
+import top.fatweb.apimanagement.param.permission.TwoFactorRemoveParam
+import top.fatweb.apimanagement.param.permission.TwoFactorValidateParam
+import top.fatweb.apimanagement.param.permission.VerifyParam
 import top.fatweb.apimanagement.service.permission.IAuthenticationService
 import top.fatweb.apimanagement.vo.permission.LoginVo
 import top.fatweb.apimanagement.vo.permission.RegisterVo
@@ -23,9 +34,7 @@ import top.fatweb.apimanagement.vo.permission.TwoFactorVo
  * @since 1.0.0
  */
 @BaseController(name = "身份认证", description = "身份认证相关接口")
-class AuthenticationController(
-    private val authenticationService: IAuthenticationService
-) {
+class AuthenticationController(private val authenticationService: IAuthenticationService) {
     /**
      * Register
      *
@@ -39,16 +48,16 @@ class AuthenticationController(
     fun register(
         request: HttpServletRequest,
         response: HttpServletResponse,
-        @Valid @RequestBody registerParam: RegisterParam
+        @Valid @RequestBody registerParam: RegisterParam,
     ): ResponseResult<RegisterVo> = ResponseResult.success(
         code = ResponseCode.PERMISSION_REGISTER_SUCCESS,
-        data = authenticationService.register(
+        data =
+        authenticationService.register(
             request = request,
             response = response,
-            registerParam = registerParam
-        )
+            registerParam = registerParam,
+        ),
     )
-
 
     /**
      * Send verify email
@@ -95,7 +104,7 @@ class AuthenticationController(
     fun forget(request: HttpServletRequest, @Valid @RequestBody forgetParam: ForgetParam): ResponseResult<Unit> {
         authenticationService.forget(
             request = request,
-            forgetParam = forgetParam
+            forgetParam = forgetParam,
         )
 
         return ResponseResult.success(ResponseCode.PERMISSION_FORGET_SUCCESS)
@@ -112,13 +121,10 @@ class AuthenticationController(
      */
     @Operation(summary = "找回密码")
     @PostMapping("/retrieve")
-    fun retrieve(
-        request: HttpServletRequest,
-        @Valid @RequestBody retrieveParam: RetrieveParam
-    ): ResponseResult<Unit> {
+    fun retrieve(request: HttpServletRequest, @Valid @RequestBody retrieveParam: RetrieveParam): ResponseResult<Unit> {
         authenticationService.retrieve(
             request = request,
-            retrieveParam = retrieveParam
+            retrieveParam = retrieveParam,
         )
 
         return ResponseResult.success(ResponseCode.PERMISSION_RETRIEVE_SUCCESS)
@@ -139,17 +145,17 @@ class AuthenticationController(
     fun login(
         request: HttpServletRequest,
         response: HttpServletResponse,
-        @ProcessParam @Valid @RequestBody loginParam: LoginParam
-    ): ResponseResult<LoginVo> =
-        ResponseResult.success(
-            code = ResponseCode.PERMISSION_LOGIN_SUCCESS,
-            msg = "Login success",
-            data = authenticationService.login(
-                request = request,
-                response = response,
-                loginParam = loginParam
-            )
-        )
+        @ProcessParam @Valid @RequestBody loginParam: LoginParam,
+    ): ResponseResult<LoginVo> = ResponseResult.success(
+        code = ResponseCode.PERMISSION_LOGIN_SUCCESS,
+        msg = "Login success",
+        data =
+        authenticationService.login(
+            request = request,
+            response = response,
+            loginParam = loginParam,
+        ),
+    )
 
     /**
      * Create two-factor
@@ -174,8 +180,11 @@ class AuthenticationController(
     @Operation(summary = "验证双因素")
     @PostMapping("/two-factor")
     fun validateTwoFactor(@RequestBody @Valid twoFactorValidateParam: TwoFactorValidateParam): ResponseResult<Unit> =
-        if (authenticationService.validateTwoFactor(twoFactorValidateParam)) ResponseResult.success()
-        else ResponseResult.fail()
+        if (authenticationService.validateTwoFactor(twoFactorValidateParam)) {
+            ResponseResult.success()
+        } else {
+            ResponseResult.fail()
+        }
 
     /**
      * Remove two-factor
@@ -188,9 +197,11 @@ class AuthenticationController(
     @Operation(summary = "移除双因素")
     @DeleteMapping("/two-factor")
     fun removeTwoFactor(@RequestBody @Valid twoFactorRemoveParam: TwoFactorRemoveParam): ResponseResult<Unit> =
-        if (authenticationService.removeTwoFactor(twoFactorRemoveParam)) ResponseResult.success()
-        else ResponseResult.fail()
-
+        if (authenticationService.removeTwoFactor(twoFactorRemoveParam)) {
+            ResponseResult.success()
+        } else {
+            ResponseResult.fail()
+        }
 
     /**
      * Logout
@@ -205,17 +216,19 @@ class AuthenticationController(
     @PostMapping("/logout")
     fun logout(request: HttpServletRequest, response: HttpServletResponse): ResponseResult<Unit> =
         when (authenticationService.logout(request = request, response = response)) {
-            true -> ResponseResult.success(
-                code = ResponseCode.PERMISSION_LOGOUT_SUCCESS,
-                msg = "Logout success",
-                data = null
-            )
+            true ->
+                ResponseResult.success(
+                    code = ResponseCode.PERMISSION_LOGOUT_SUCCESS,
+                    msg = "Logout success",
+                    data = null,
+                )
 
-            false -> ResponseResult.fail(
-                code = ResponseCode.PERMISSION_LOGOUT_FAILED,
-                msg = "Logout failed",
-                data = null
-            )
+            false ->
+                ResponseResult.fail(
+                    code = ResponseCode.PERMISSION_LOGOUT_FAILED,
+                    msg = "Logout failed",
+                    data = null,
+                )
         }
 
     /**
@@ -238,14 +251,15 @@ class AuthenticationController(
         response: HttpServletResponse,
         @CookieValue("refresh_token") cookieRefreshToken: String?,
         @RequestBody bodyRefreshToken: String?,
-        @RequestHeader("X-CSRF-TOKEN", required = false) csrfToken: String?
+        @RequestHeader("X-CSRF-TOKEN", required = false) csrfToken: String?,
     ): ResponseResult<TokenVo> = ResponseResult.success(
         code = ResponseCode.PERMISSION_TOKEN_REFRESH_SUCCESS,
         msg = "Token refresh success",
-        data = authenticationService.refreshToken(
+        data =
+        authenticationService.refreshToken(
             response = response,
             refreshToken = cookieRefreshToken ?: bodyRefreshToken,
-            csrfToken = csrfToken
-        )
+            csrfToken = csrfToken,
+        ),
     )
 }

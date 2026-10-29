@@ -20,7 +20,7 @@ import java.time.Instant
 class FileSystemPluginModuleStore(
     private val root: Path,
     private val maxModuleBytes: Long = DEFAULT_MAX_MODULE_BYTES,
-    private val maxModules: Int = DEFAULT_MAX_MODULES
+    private val maxModules: Int = DEFAULT_MAX_MODULES,
 ) : PluginModuleStore {
     init {
         Files.createDirectories(root)
@@ -63,13 +63,13 @@ class FileSystemPluginModuleStore(
         requireDigest(expectedSha256)
         if (bytes.size.toLong() > maxModuleBytes) {
             throw PluginModuleStoreException(
-                "Module is ${bytes.size} bytes, limit is $maxModuleBytes"
+                "Module is ${bytes.size} bytes, limit is $maxModuleBytes",
             )
         }
         val actual = sha256(bytes)
         if (actual != expectedSha256) {
             throw PluginModuleStoreException(
-                "Module digest mismatch: expected $expectedSha256, got $actual"
+                "Module digest mismatch: expected $expectedSha256, got $actual",
             )
         }
 
@@ -226,8 +226,7 @@ class FileSystemPluginModuleStore(
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
          */
-        fun sha256(bytes: ByteArray): String =
-            MessageDigest.getInstance("SHA-256").digest(bytes).toHex()
+        fun sha256(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes).toHex()
 
         private fun ByteArray.toHex(): String = joinToString(separator = "") { byte -> "%02x".format(byte) }
     }

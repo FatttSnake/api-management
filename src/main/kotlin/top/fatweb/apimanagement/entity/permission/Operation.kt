@@ -49,7 +49,5 @@ class Operation : Serializable {
     @TableField("scope_id")
     var scopeId: Long? = null
 
-    override fun toString(): String {
-        return "Operation(id=$id, name=$name, code=$code, scopeId=$scopeId)"
-    }
+    override fun toString(): String = "Operation(id=$id, name=$name, code=$code, scopeId=$scopeId)"
 }

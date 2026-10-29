@@ -18,7 +18,7 @@ fun ApiPluginTrustKey.toVo() = ApiPluginTrustKeyVo(
     keyId = this.keyId,
     alias = this.alias,
     enable = this.enable?.let { it == 1 },
-    createTime = this.createTime
+    createTime = this.createTime,
 )
 
 /**
@@ -34,5 +34,5 @@ fun IPage<ApiPluginTrustKey>.toVoPage() = PageVo(
     pages = this.pages,
     size = this.size,
     current = this.current,
-    records = this.records.map(ApiPluginTrustKey::toVo)
+    records = this.records.map(ApiPluginTrustKey::toVo),
 )

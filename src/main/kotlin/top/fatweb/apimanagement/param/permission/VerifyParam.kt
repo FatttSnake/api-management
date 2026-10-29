@@ -23,7 +23,6 @@ data class VerifyParam(
     @field:Schema(description = "验证码", required = true)
     @field:NotBlank(message = "Code can not be blank")
     val code: String?,
-
     /**
      * Nickname
      *
@@ -33,7 +32,6 @@ data class VerifyParam(
     @field:Schema(description = "昵称", example = "QwQ")
     @field:Size(min = 3, max = 20, message = "Nickname must be 3-20 characters")
     var nickname: String?,
-
     /**
      * Avatar
      *
@@ -41,5 +39,5 @@ data class VerifyParam(
      * @since 1.0.0
      */
     @field:Schema(description = "头像")
-    val avatar: String?
+    val avatar: String?,
 )

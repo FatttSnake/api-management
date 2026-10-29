@@ -15,5 +15,5 @@ fun Operation.toVo() = OperationVo(
     id = this.id,
     name = this.name,
     code = this.code,
-    scopeId = this.scopeId
+    scopeId = this.scopeId,
 )

@@ -19,73 +19,75 @@ import top.fatweb.apimanagement.vo.api.ApiPluginConfigOptionVo
  */
 fun PluginConfigSchema.toGroupVo(
     values: Map<String, String>,
-    unreadable: Set<String> = emptySet()
-): List<ApiPluginConfigGroupVo> =
-    groups.map { group ->
-        val groupKeys = group.fields.map { it.key }.toSet()
+    unreadable: Set<String> = emptySet(),
+): List<ApiPluginConfigGroupVo> = groups.map { group ->
+    val groupKeys = group.fields.map { it.key }.toSet()
 
-        // A datasource belongs to the group every one of its slots is a field of, and to
-        // only that one: the gateway refuses a declaration whose slots are spread over
-        // several groups and a group that would describe two, so this finds one whole or
-        // not at all - and the empty slot map of a SQLITE datasource matches nothing
-        val described = datasources
+    // A datasource belongs to the group every one of its slots is a field of, and to
+    // only that one: the gateway refuses a declaration whose slots are spread over
+    // several groups and a group that would describe two, so this finds one whole or
+    // not at all - and the empty slot map of a SQLITE datasource matches nothing
+    val described =
+        datasources
             .firstOrNull { it.slots.isNotEmpty() && it.slots.values.all { key -> key in groupKeys } }
             ?.name
 
-        ApiPluginConfigGroupVo(
-            key = group.key,
-            title = group.title,
-            description = group.description,
-            fields = group.fields.map { field ->
-                val secret = field.type == PluginConfigFieldType.SECRET
-                val stored = values.containsKey(field.key)
+    ApiPluginConfigGroupVo(
+        key = group.key,
+        title = group.title,
+        description = group.description,
+        fields =
+        group.fields.map { field ->
+            val secret = field.type == PluginConfigFieldType.SECRET
+            val stored = values.containsKey(field.key)
 
-                ApiPluginConfigFieldVo(
-                    key = field.key,
-                    type = field.type.name,
-                    title = field.title,
-                    description = field.description,
-                    value = when {
-                        // A secret is never handed back, however it is stored: leaving the key
-                        // out of a submission is what keeps it, and `hasValue` is what says
-                        // whether there is one to keep
-                        secret -> null
+            ApiPluginConfigFieldVo(
+                key = field.key,
+                type = field.type.name,
+                title = field.title,
+                description = field.description,
+                value =
+                when {
+                    // A secret is never handed back, however it is stored: leaving the key
+                    // out of a submission is what keeps it, and `hasValue` is what says
+                    // whether there is one to keep
+                    secret -> null
 
-                        // A value of the administrator's own, blank or not
-                        stored -> values[field.key]
+                    // A value of the administrator's own, blank or not
+                    stored -> values[field.key]
 
-                        // Nothing is stored, so the declared default is what the plugin reads,
-                        // and every type but a number reports it as its value rather than as a
-                        // default. A text field, where a blank is a value it can hold, so an
-                        // empty box would be saying something else. A boolean and an
-                        // enumeration, which are drawn as a control that always shows one of
-                        // its states - a switch, a picker - so there is no empty box to draw,
-                        // and the state the field would read is the only honest one to show
-                        field.type != PluginConfigFieldType.NUMBER -> field.default
+                    // Nothing is stored, so the declared default is what the plugin reads,
+                    // and every type but a number reports it as its value rather than as a
+                    // default. A text field, where a blank is a value it can hold, so an
+                    // empty box would be saying something else. A boolean and an
+                    // enumeration, which are drawn as a control that always shows one of
+                    // its states - a switch, a picker - so there is no empty box to draw,
+                    // and the state the field would read is the only honest one to show
+                    field.type != PluginConfigFieldType.NUMBER -> field.default
 
-                        // A number is the one type with a blank to draw and to submit: an
-                        // empty box says nothing is set as plainly as anything, and a blank
-                        // is what clears one back to its default
-                        else -> null
-                    },
-                    default = field.default,
-                    hasValue = stored,
-                    required = field.required,
-                    secret = secret,
-                    unreadable = field.key in unreadable,
-                    placeholder = field.placeholder,
-                    minimum = field.minimum,
-                    maximum = field.maximum,
-                    integer = field.integer,
-                    minLength = field.minLength,
-                    maxLength = field.maxLength,
-                    pattern = field.pattern,
-                    options = field.options.orEmpty().map { ApiPluginConfigOptionVo(it.value, it.label) }
-                )
-            },
-            datasource = described
-        )
-    }
+                    // A number is the one type with a blank to draw and to submit: an
+                    // empty box says nothing is set as plainly as anything, and a blank
+                    // is what clears one back to its default
+                    else -> null
+                },
+                default = field.default,
+                hasValue = stored,
+                required = field.required,
+                secret = secret,
+                unreadable = field.key in unreadable,
+                placeholder = field.placeholder,
+                minimum = field.minimum,
+                maximum = field.maximum,
+                integer = field.integer,
+                minLength = field.minLength,
+                maxLength = field.maxLength,
+                pattern = field.pattern,
+                options = field.options.orEmpty().map { ApiPluginConfigOptionVo(it.value, it.label) },
+            )
+        },
+        datasource = described,
+    )
+}
 
 /**
  * Convert to ApiPluginConfigDatasourceVo object
@@ -101,5 +103,5 @@ fun PluginDatasourceSchema.toVo(configured: Boolean) = ApiPluginConfigDatasource
     required = this.required,
     dbType = this.dbType.name,
     configured = configured,
-    keys = slots.values.toList()
+    keys = slots.values.toList(),
 )

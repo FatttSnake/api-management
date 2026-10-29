@@ -68,15 +68,17 @@ class PluginInFlightTrackerTests {
         assertNotNull(handle)
 
         val exit = CountDownLatch(1)
-        val releaser = thread {
-            exit.await()
-            tracker.exit(handle)
-        }
+        val releaser =
+            thread {
+                exit.await()
+                tracker.exit(handle)
+            }
         val drained = CountDownLatch(1)
-        val waiter = thread {
-            drained.countDown()
-            assertTrue(tracker.awaitDrain(PLUGIN_ID, TimeUnit.SECONDS.toMillis(5)))
-        }
+        val waiter =
+            thread {
+                drained.countDown()
+                assertTrue(tracker.awaitDrain(PLUGIN_ID, TimeUnit.SECONDS.toMillis(5)))
+            }
 
         drained.await()
         assertFalse(tracker.awaitDrain(PLUGIN_ID, NO_WAIT_MILLIS))

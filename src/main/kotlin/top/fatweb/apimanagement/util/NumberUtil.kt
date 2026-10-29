@@ -9,9 +9,7 @@ package top.fatweb.apimanagement.util
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-fun getRandomInt(start: Int = Int.MIN_VALUE, end: Int = Int.MAX_VALUE): Int {
-    return (start..end).random()
-}
+fun getRandomInt(start: Int = Int.MIN_VALUE, end: Int = Int.MAX_VALUE): Int = (start..end).random()
 
 /**
  * Get random long value
@@ -22,6 +20,4 @@ fun getRandomInt(start: Int = Int.MIN_VALUE, end: Int = Int.MAX_VALUE): Int {
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-fun getRandomLong(start: Long = Long.MIN_VALUE, end: Long = Long.MAX_VALUE): Long {
-    return (start..end).random()
-}
+fun getRandomLong(start: Long = Long.MIN_VALUE, end: Long = Long.MAX_VALUE): Long = (start..end).random()

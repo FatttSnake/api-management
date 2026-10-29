@@ -25,7 +25,7 @@ fun ApiPlugin.toDocVo(interfaces: List<ApiInterfaceVo>, openapi: JsonNode?) = Ap
     versionCode = this.versionCode,
     enable = this.enable?.let { it == 1 },
     interfaces = interfaces,
-    openapi = openapi
+    openapi = openapi,
 )
 
 /**
@@ -42,7 +42,8 @@ fun IPage<ApiPlugin>.toDocVoPage(resolveInterfaces: ((ApiPlugin) -> List<ApiInte
     pages = this.pages,
     size = this.size,
     current = this.current,
-    records = this.records.map { plugin ->
+    records =
+    this.records.map { plugin ->
         plugin.toDocVo(interfaces = resolveInterfaces.invoke(plugin), openapi = null)
-    }
+    },
 )

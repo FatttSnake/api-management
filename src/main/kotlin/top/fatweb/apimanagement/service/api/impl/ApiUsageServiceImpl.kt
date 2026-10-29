@@ -6,12 +6,12 @@ import com.baomidou.mybatisplus.extension.kotlin.KtQueryWrapper
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl
 import org.springframework.stereotype.Service
+import top.fatweb.apimanagement.component.plugin.PluginRegistryCache
 import top.fatweb.apimanagement.converter.api.toVoPage
 import top.fatweb.apimanagement.entity.api.ApiUsage
 import top.fatweb.apimanagement.exception.ApiUsageIdNotGeneratedException
 import top.fatweb.apimanagement.mapper.api.ApiUsageMapper
 import top.fatweb.apimanagement.param.system.apiUsage.ApiUsageGetParam
-import top.fatweb.apimanagement.component.plugin.PluginRegistryCache
 import top.fatweb.apimanagement.service.api.IApiKeyService
 import top.fatweb.apimanagement.service.api.IApiUsageService
 import top.fatweb.apimanagement.util.getLoginUserIdOrThrow
@@ -30,22 +30,24 @@ import top.fatweb.apimanagement.vo.api.ApiUsageVo
 @DS("master")
 class ApiUsageServiceImpl(
     private val apiKeyService: IApiKeyService,
-    private val pluginRegistryCache: PluginRegistryCache
-) : ServiceImpl<ApiUsageMapper, ApiUsage>(), IApiUsageService {
+    private val pluginRegistryCache: PluginRegistryCache,
+) : ServiceImpl<ApiUsageMapper, ApiUsage>(),
+    IApiUsageService {
     override fun getPage(managed: Boolean, apiUsageGetParam: ApiUsageGetParam?): PageVo<ApiUsageVo> {
         val page = Page<ApiUsage>(apiUsageGetParam?.currentPage ?: 1, apiUsageGetParam?.pageSize ?: 20)
         setPageSort(apiUsageGetParam, page, OrderItem.desc("create_time"))
 
         val loginUserId = getLoginUserIdOrThrow()
         val targetUserId = if (managed) apiUsageGetParam?.userId ?: loginUserId else loginUserId
-        val wrapper = KtQueryWrapper(ApiUsage()).apply {
-            eq(ApiUsage::userId, targetUserId)
-            apiUsageGetParam?.apiKeyId?.let { eq(ApiUsage::apiKeyId, it) }
-            apiUsageGetParam?.apiCode?.let { like(ApiUsage::apiCode, it) }
-            apiUsageGetParam?.success?.let { eq(ApiUsage::success, if (it) 1 else 0) }
-            apiUsageGetParam?.startTime?.let { ge(ApiUsage::createTime, it) }
-            apiUsageGetParam?.endTime?.let { le(ApiUsage::createTime, it) }
-        }
+        val wrapper =
+            KtQueryWrapper(ApiUsage()).apply {
+                eq(ApiUsage::userId, targetUserId)
+                apiUsageGetParam?.apiKeyId?.let { eq(ApiUsage::apiKeyId, it) }
+                apiUsageGetParam?.apiCode?.let { like(ApiUsage::apiCode, it) }
+                apiUsageGetParam?.success?.let { eq(ApiUsage::success, if (it) 1 else 0) }
+                apiUsageGetParam?.startTime?.let { ge(ApiUsage::createTime, it) }
+                apiUsageGetParam?.endTime?.let { le(ApiUsage::createTime, it) }
+            }
 
         return page(page, wrapper).toVoPage { pluginRegistryCache.getByCode(it) }
     }

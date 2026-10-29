@@ -3,13 +3,26 @@ package top.fatweb.apimanagement.controller.permission
 import io.swagger.v3.oas.annotations.Operation
 import jakarta.validation.Valid
 import org.springframework.security.access.prepost.PreAuthorize
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PatchMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
+import org.springframework.web.bind.annotation.RequestBody
 import top.fatweb.apimanagement.annotation.BaseController
 import top.fatweb.apimanagement.annotation.ParamProcessor
 import top.fatweb.apimanagement.annotation.ProcessParam
 import top.fatweb.apimanagement.entity.common.ResponseCode
 import top.fatweb.apimanagement.entity.common.ResponseResult
-import top.fatweb.apimanagement.param.permission.user.*
+import top.fatweb.apimanagement.param.permission.user.AvatarGenerateParam
+import top.fatweb.apimanagement.param.permission.user.UserAddParam
+import top.fatweb.apimanagement.param.permission.user.UserChangePasswordParam
+import top.fatweb.apimanagement.param.permission.user.UserDeleteParam
+import top.fatweb.apimanagement.param.permission.user.UserGetParam
+import top.fatweb.apimanagement.param.permission.user.UserInfoUpdateParam
+import top.fatweb.apimanagement.param.permission.user.UserUpdateParam
+import top.fatweb.apimanagement.param.permission.user.UserUpdatePasswordParam
 import top.fatweb.apimanagement.service.permission.IUserService
 import top.fatweb.apimanagement.vo.PageVo
 import top.fatweb.apimanagement.vo.permission.UserWithInfoVo
@@ -23,9 +36,7 @@ import top.fatweb.apimanagement.vo.permission.UserWithRoleInfoVo
  * @since 1.0.0
  */
 @BaseController(path = ["/system/user"], name = "用户管理", description = "用户管理相关接口")
-class UserController(
-    private val userService: IUserService
-) {
+class UserController(private val userService: IUserService) {
     @Operation(summary = "生成头像")
     @GetMapping("/avatar/generate")
     fun generateAvatar(@Valid avatarGenerateParam: AvatarGenerateParam?): ResponseResult<String> =
@@ -40,8 +51,7 @@ class UserController(
      */
     @Operation(summary = "获取当前用户信息")
     @GetMapping("/info")
-    fun getInfo(): ResponseResult<UserWithPowerInfoVo> =
-        ResponseResult.databaseSuccess(data = userService.getInfo())
+    fun getInfo(): ResponseResult<UserWithPowerInfoVo> = ResponseResult.databaseSuccess(data = userService.getInfo())
 
     /**
      * Get basic user information
@@ -128,7 +138,7 @@ class UserController(
     @PreAuthorize("hasAnyAuthority('system:user:all:query')")
     fun get(@ProcessParam @Valid userGetParam: UserGetParam?): ResponseResult<PageVo<UserWithRoleInfoVo>> =
         ResponseResult.databaseSuccess(
-            data = userService.getPage(userGetParam)
+            data = userService.getPage(userGetParam),
         )
 
     /**
@@ -144,7 +154,8 @@ class UserController(
     @PreAuthorize("hasAnyAuthority('system:user:one:add')")
     fun add(@ProcessParam @Valid @RequestBody userAddParam: UserAddParam): ResponseResult<UserWithRoleInfoVo> =
         ResponseResult.databaseSuccess(
-            ResponseCode.DATABASE_INSERT_SUCCESS, data = userService.add(userAddParam)
+            ResponseCode.DATABASE_INSERT_SUCCESS,
+            data = userService.add(userAddParam),
         )
 
     /**

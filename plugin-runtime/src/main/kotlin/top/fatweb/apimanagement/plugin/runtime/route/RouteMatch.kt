@@ -9,8 +9,4 @@ package top.fatweb.apimanagement.plugin.runtime.route
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-data class RouteMatch(
-    val route: RegisteredRoute,
-    val requestedVersion: Int,
-    val pathParameters: Map<String, String>
-)
+data class RouteMatch(val route: RegisteredRoute, val requestedVersion: Int, val pathParameters: Map<String, String>)

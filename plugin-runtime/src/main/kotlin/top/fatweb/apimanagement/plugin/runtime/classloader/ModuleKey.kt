@@ -9,11 +9,7 @@ package top.fatweb.apimanagement.plugin.runtime.classloader
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-data class ModuleKey(
-    val coordinate: String,
-    val sha256: String,
-    val dependencies: List<String> = emptyList()
-) {
+data class ModuleKey(val coordinate: String, val sha256: String, val dependencies: List<String> = emptyList()) {
     /**
      * Stable fingerprint used in dependency lists.
      *

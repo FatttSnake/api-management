@@ -27,7 +27,7 @@ interface GroupMapper : BaseMapper<Group> {
     fun selectPage(
         page: IPage<Long>,
         @Param("searchName") searchName: String?,
-        @Param("searchRegex") searchRegex: Boolean
+        @Param("searchRegex") searchRegex: Boolean,
     ): IPage<Long>
 
     /**

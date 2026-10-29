@@ -1,6 +1,16 @@
 package top.fatweb.apimanagement.util
 
+import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
+import java.security.SecureRandom
+
+private val UPPER_CASE_LETTER = Regex("[A-Z]")
+
+private val UNDERSCORE_LOWER_LETTER = Regex("_[a-z]")
+
+private const val PASSWORD_CHARACTERS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+private val SECURE_RANDOM = SecureRandom()
 
 /**
  * Convert CamelCase string to underscore-delimited string
@@ -13,7 +23,7 @@ import java.security.MessageDigest
 fun upperToUnderLetter(str: String?): String {
     str ?: return ""
 
-    return Regex("[A-Z]").replace(str) { matchResult -> "_${matchResult.value.lowercase()}" }
+    return UPPER_CASE_LETTER.replace(str) { matchResult -> "_${matchResult.value.lowercase()}" }
 }
 
 /**
@@ -27,26 +37,25 @@ fun upperToUnderLetter(str: String?): String {
 fun underToUpperLetter(str: String?): String {
     str ?: return ""
 
-    return Regex("_[a-z]").replace(str) { matchResult -> matchResult.value.removePrefix("_").uppercase() }
+    return UNDERSCORE_LOWER_LETTER.replace(str) { matchResult ->
+        matchResult.value.removePrefix("_").uppercase()
+    }
 }
 
 /**
  * Generate random password
+ *
+ * Drawn from [SecureRandom], so the value is safe to use as a secret.
  *
  * @param length Length of password
  * @return Random password
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-fun generateRandomPassword(length: Int): String {
-    val characterSet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    val password = StringBuilder()
-
-    (0 until length).forEach { _ ->
-        password.append(characterSet.random())
+fun generateRandomPassword(length: Int): String = buildString(length) {
+    repeat(length) {
+        append(PASSWORD_CHARACTERS[SECURE_RANDOM.nextInt(PASSWORD_CHARACTERS.length)])
     }
-
-    return password.toString()
 }
 
 /**
@@ -57,18 +66,9 @@ fun generateRandomPassword(length: Int): String {
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-fun md5(content: String): String {
-    val hash = MessageDigest.getInstance("MD5").digest(content.toByteArray())
-    val hex = StringBuilder(hash.size * 2)
-    for (b in hash) {
-        var str = Integer.toHexString(b.toInt())
-        if (b < 0x10) {
-            str = "0$str"
-        }
-        hex.append(str.substring(str.length - 2))
-    }
-    return hex.toString()
-}
+fun md5(content: String): String = MessageDigest.getInstance("MD5")
+    .digest(content.toByteArray(StandardCharsets.UTF_8))
+    .toHexString()
 
 /**
  * Get SHA-256 of a string
@@ -78,15 +78,6 @@ fun md5(content: String): String {
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-fun sha256(content: String): String {
-    val hash = MessageDigest.getInstance("SHA-256").digest(content.toByteArray())
-    val hex = StringBuilder(hash.size * 2)
-    for (b in hash) {
-        var str = Integer.toHexString(b.toInt())
-        if (b < 0x10) {
-            str = "0$str"
-        }
-        hex.append(str.substring(str.length - 2))
-    }
-    return hex.toString()
-}
+fun sha256(content: String): String = MessageDigest.getInstance("SHA-256")
+    .digest(content.toByteArray(StandardCharsets.UTF_8))
+    .toHexString()

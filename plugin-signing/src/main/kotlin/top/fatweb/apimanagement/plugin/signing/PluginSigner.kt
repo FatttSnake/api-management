@@ -1,10 +1,12 @@
 package top.fatweb.apimanagement.plugin.signing
 
+import java.io.IOException
 import java.io.InputStream
 import java.math.BigInteger
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.security.GeneralSecurityException
 import java.security.KeyFactory
 import java.security.KeyPair
 import java.security.KeyPairGenerator
@@ -112,8 +114,7 @@ object PluginSigner {
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun verify(jar: Path): Boolean =
-        readPublicKey(jar)?.let { verify(jar, it) } ?: false
+    fun verify(jar: Path): Boolean = readPublicKey(jar)?.let { verify(jar, it) } ?: false
 
     /**
      * Verify a jar's signature against an embedded public key and the signature entry
@@ -132,7 +133,11 @@ object PluginSigner {
             signature.initVerify(parsePublicKey(publicKeyPem))
             signature.update(manifest)
             signature.verify(signatureBytes)
-        } catch (_: Exception) {
+        } catch (ex: IOException) {
+            // An unreadable jar is an installation problem, not a bad signature: callers must
+            // be able to tell the two apart
+            throw IllegalStateException("Cannot read plugin jar for verification: ${jar.fileName}", ex)
+        } catch (_: GeneralSecurityException) {
             false
         }
     }
@@ -150,7 +155,6 @@ object PluginSigner {
     @JvmStatic
     fun signAndEmbed(jar: Path, privateKeyPem: String) {
         addJarEntry(jar, SIGNATURE_ENTRY, sign(jar, privateKeyPem))
-        println("Signed ${jar.fileName}")
     }
 
     /**
@@ -161,8 +165,7 @@ object PluginSigner {
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun readPublicKey(jar: Path): String? =
-        readEntryBytes(jar, PUBLIC_KEY_ENTRY)?.toString(Charsets.UTF_8)
+    fun readPublicKey(jar: Path): String? = readEntryBytes(jar, PUBLIC_KEY_ENTRY)?.toString(Charsets.UTF_8)
 
     /**
      * Compute the stable key id of a public key (SHA-256 of the SPKI bytes, hex),
@@ -173,25 +176,36 @@ object PluginSigner {
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun spkiFingerprint(publicKeyPem: String): String =
-        sha256Hex(parsePublicKey(publicKeyPem).encoded)
+    fun spkiFingerprint(publicKeyPem: String): String = sha256Hex(parsePublicKey(publicKeyPem).encoded)
 
     private fun addJarEntry(jarPath: Path, name: String, bytes: ByteArray) {
-        val temp = Files.createTempFile("plugin", ".jar")
-        JarOutputStream(Files.newOutputStream(temp)).use { out ->
-            JarFile(jarPath.toFile()).use { source ->
-                source.entries().asSequence().forEach { entry ->
-                    if (entry.name == name) return@forEach
-                    out.putNextEntry(JarEntry(entry.name))
-                    source.getInputStream(entry).use { it.copyTo(out) }
-                    out.closeEntry()
+        val directory = jarPath.toAbsolutePath().parent
+        val temp = Files.createTempFile(directory, "plugin-", ".jar")
+        try {
+            JarOutputStream(Files.newOutputStream(temp)).use { out ->
+                JarFile(jarPath.toFile()).use { source ->
+                    source.entries().asSequence().forEach { entry ->
+                        if (entry.name == name) return@forEach
+                        out.putNextEntry(JarEntry(entry.name))
+                        source.getInputStream(entry).use { it.copyTo(out) }
+                        out.closeEntry()
+                    }
                 }
+                out.putNextEntry(JarEntry(name))
+                out.write(bytes)
+                out.closeEntry()
             }
-            out.putNextEntry(JarEntry(name))
-            out.write(bytes)
-            out.closeEntry()
+            // Replace only once the rewritten jar is complete, so a crash cannot leave a
+            // truncated artifact behind
+            Files.move(
+                temp,
+                jarPath,
+                StandardCopyOption.REPLACE_EXISTING,
+                StandardCopyOption.ATOMIC_MOVE,
+            )
+        } finally {
+            Files.deleteIfExists(temp)
         }
-        Files.move(temp, jarPath, StandardCopyOption.REPLACE_EXISTING)
     }
 
     private fun buildManifest(jar: Path): ByteArray {
@@ -205,31 +219,39 @@ object PluginSigner {
         }
         val publicKey = readEntryBytes(jar, PUBLIC_KEY_ENTRY)?.toString(Charsets.UTF_8) ?: ""
         val builder = StringBuilder()
-        entries.forEach { (name, hash) -> builder.append(name).append(':').append(hash).append('\n') }
+        entries.forEach { (name, hash) ->
+            builder
+                .append(name)
+                .append(':')
+                .append(hash)
+                .append('\n')
+        }
         builder.append("PUBLIC_KEY:\n").append(publicKey)
         return builder.toString().toByteArray(Charsets.UTF_8)
     }
 
-    private fun readEntryBytes(jar: Path, name: String): ByteArray? =
-        JarFile(jar.toFile()).use { jarFile ->
-            jarFile.getJarEntry(name)?.let { entry ->
-                jarFile.getInputStream(entry).use { it.readBytes() }
-            }
+    private fun readEntryBytes(jar: Path, name: String): ByteArray? = JarFile(jar.toFile()).use { jarFile ->
+        jarFile.getJarEntry(name)?.let { entry ->
+            jarFile.getInputStream(entry).use { it.readBytes() }
         }
+    }
 
-    private fun parsePublicKey(pem: String): PublicKey =
-        KeyFactory.getInstance("Ed25519")
-            .generatePublic(X509EncodedKeySpec(decodePem(pem, "PUBLIC KEY")))
+    private fun parsePublicKey(pem: String): PublicKey = KeyFactory
+        .getInstance("Ed25519")
+        .generatePublic(X509EncodedKeySpec(decodePem(pem, "PUBLIC KEY")))
 
-    private fun parsePrivateKey(pem: String): PrivateKey =
-        KeyFactory.getInstance("Ed25519")
-            .generatePrivate(PKCS8EncodedKeySpec(decodePem(pem, "PRIVATE KEY")))
+    private fun parsePrivateKey(pem: String): PrivateKey = KeyFactory
+        .getInstance("Ed25519")
+        .generatePrivate(PKCS8EncodedKeySpec(decodePem(pem, "PRIVATE KEY")))
 
     private fun ed25519Seed(privateKeyPem: String): ByteArray {
-        val key = KeyFactory.getInstance("Ed25519")
-            .generatePrivate(PKCS8EncodedKeySpec(decodePem(privateKeyPem, "PRIVATE KEY")))
-        val edKey = key as? EdECPrivateKey
-            ?: error("Unsupported Ed25519 private key: ${key.javaClass.name}")
+        val key =
+            KeyFactory
+                .getInstance("Ed25519")
+                .generatePrivate(PKCS8EncodedKeySpec(decodePem(privateKeyPem, "PRIVATE KEY")))
+        val edKey =
+            key as? EdECPrivateKey
+                ?: error("Unsupported Ed25519 private key: ${key.javaClass.name}")
         return edKey.bytes.orElse(null)
             ?: error("Ed25519 private key does not expose its seed")
     }
@@ -242,9 +264,14 @@ object PluginSigner {
             if (scalar.testBit(bit)) point = ed25519Add(point, ED25519_BASE_POINT)
         }
 
-        val encoded = ByteArray(32) { index ->
-            point.y.shiftRight(index * 8).and(BYTE_MASK).toInt().toByte()
-        }
+        val encoded =
+            ByteArray(32) { index ->
+                point.y
+                    .shiftRight(index * 8)
+                    .and(BYTE_MASK)
+                    .toInt()
+                    .toByte()
+            }
         if (point.x.testBit(0)) encoded[31] = (encoded[31].toInt() or 0x80).toByte()
         return ED25519_SPKI_PREFIX + encoded
     }
@@ -259,11 +286,35 @@ object PluginSigner {
     private data class Point(val x: BigInteger, val y: BigInteger)
 
     private fun ed25519Add(p: Point, q: Point): Point {
-        val k = ED25519_D.multiply(p.x).multiply(q.x).multiply(p.y).multiply(q.y).mod(ED25519_P)
-        val x = p.x.multiply(q.y).add(q.x.multiply(p.y)).mod(ED25519_P)
-            .multiply(BigInteger.ONE.add(k).mod(ED25519_P).modInverse(ED25519_P)).mod(ED25519_P)
-        val y = p.y.multiply(q.y).add(p.x.multiply(q.x)).mod(ED25519_P)
-            .multiply(BigInteger.ONE.subtract(k).mod(ED25519_P).modInverse(ED25519_P)).mod(ED25519_P)
+        val k =
+            ED25519_D
+                .multiply(p.x)
+                .multiply(q.x)
+                .multiply(p.y)
+                .multiply(q.y)
+                .mod(ED25519_P)
+        val x =
+            p.x
+                .multiply(q.y)
+                .add(q.x.multiply(p.y))
+                .mod(ED25519_P)
+                .multiply(
+                    BigInteger.ONE
+                        .add(k)
+                        .mod(ED25519_P)
+                        .modInverse(ED25519_P),
+                ).mod(ED25519_P)
+        val y =
+            p.y
+                .multiply(q.y)
+                .add(p.x.multiply(q.x))
+                .mod(ED25519_P)
+                .multiply(
+                    BigInteger.ONE
+                        .subtract(k)
+                        .mod(ED25519_P)
+                        .modInverse(ED25519_P),
+                ).mod(ED25519_P)
         return Point(x, y)
     }
 
@@ -271,25 +322,40 @@ object PluginSigner {
 
     private val ED25519_P: BigInteger = BigInteger.TWO.pow(255).subtract(BigInteger.valueOf(19))
 
-    private val ED25519_D: BigInteger = BigInteger.valueOf(-121665)
-        .multiply(BigInteger.valueOf(121666).modInverse(ED25519_P))
-        .mod(ED25519_P)
+    private val ED25519_D: BigInteger =
+        BigInteger
+            .valueOf(-121665)
+            .multiply(BigInteger.valueOf(121666).modInverse(ED25519_P))
+            .mod(ED25519_P)
 
     private val ED25519_BASE_POINT: Point =
         Point(
             BigInteger("15112221349535400772501151409588531511454012693041857206046113283949847762202"),
-            BigInteger("46316835694926478169428394003475163141307993866256225615783033603165251855960")
+            BigInteger("46316835694926478169428394003475163141307993866256225615783033603165251855960"),
         )
 
-    private val ED25519_SPKI_PREFIX: ByteArray = byteArrayOf(
-        0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00
-    )
+    private val ED25519_SPKI_PREFIX: ByteArray =
+        byteArrayOf(
+            0x30,
+            0x2a,
+            0x30,
+            0x05,
+            0x06,
+            0x03,
+            0x2b,
+            0x65,
+            0x70,
+            0x03,
+            0x21,
+            0x00,
+        )
 
     private fun decodePem(pem: String, type: String): ByteArray {
-        val body = pem
-            .replace("-----BEGIN $type-----", "")
-            .replace("-----END $type-----", "")
-            .filter { !it.isWhitespace() }
+        val body =
+            pem
+                .replace("-----BEGIN $type-----", "")
+                .replace("-----END $type-----", "")
+                .filter { !it.isWhitespace() }
         return Base64.getDecoder().decode(body)
     }
 

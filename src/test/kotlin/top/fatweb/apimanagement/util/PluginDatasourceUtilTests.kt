@@ -1,16 +1,16 @@
 package top.fatweb.apimanagement.util
 
+import top.fatweb.apimanagement.component.plugin.PluginDatasourceSchema
+import top.fatweb.apimanagement.component.plugin.PluginDatasourceSlot
+import top.fatweb.apimanagement.component.plugin.PluginDatasourceType
+import top.fatweb.apimanagement.exception.PluginDatasourceException
+import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import top.fatweb.apimanagement.component.plugin.PluginDatasourceSchema
-import top.fatweb.apimanagement.component.plugin.PluginDatasourceSlot
-import top.fatweb.apimanagement.component.plugin.PluginDatasourceType
-import top.fatweb.apimanagement.exception.PluginDatasourceException
-import java.nio.file.Path
 
 /**
  * Plugin datasource util tests
@@ -27,11 +27,11 @@ class PluginDatasourceUtilTests {
     fun `a mysql url is composed from its parts`() {
         assertEquals(
             "jdbc:mysql://10.0.0.240:3306/filebox",
-            PluginDatasourceUtil.mysqlUrl("10.0.0.240", 3306, "filebox")
+            PluginDatasourceUtil.mysqlUrl("10.0.0.240", 3306, "filebox"),
         )
         assertEquals(
             "jdbc:mysql://db.internal:3307/other",
-            PluginDatasourceUtil.mysqlUrl("db.internal", 3307, "other")
+            PluginDatasourceUtil.mysqlUrl("db.internal", 3307, "other"),
         )
     }
 
@@ -49,7 +49,7 @@ class PluginDatasourceUtilTests {
         assertEquals("jdbc:mysql://[::1]:3306/filebox", PluginDatasourceUtil.mysqlUrl("::1", 3306, "filebox"))
         assertEquals(
             "jdbc:mysql://[2001:db8::1]/filebox",
-            PluginDatasourceUtil.mysqlUrl("2001:db8::1", null, "filebox")
+            PluginDatasourceUtil.mysqlUrl("2001:db8::1", null, "filebox"),
         )
     }
 
@@ -66,7 +66,7 @@ class PluginDatasourceUtilTests {
         assertTrue(
             PluginDatasourceUtil.isConfigured(mysqlSchema()) {
                 mapOf("db.host" to "10.0.0.240", "db.name" to "filebox")[it]
-            }
+            },
         )
     }
 
@@ -80,12 +80,12 @@ class PluginDatasourceUtilTests {
         assertNull(mysql(database = "   "))
 
         assertFalse(
-            PluginDatasourceUtil.isConfigured(mysqlSchema()) { mapOf("db.host" to "10.0.0.240")[it] }
+            PluginDatasourceUtil.isConfigured(mysqlSchema()) { mapOf("db.host" to "10.0.0.240")[it] },
         )
         assertTrue(
             PluginDatasourceUtil.isConfigured(mysqlSchema()) {
                 mapOf("db.host" to "10.0.0.240", "db.name" to "filebox")[it]
-            }
+            },
         )
     }
 
@@ -160,7 +160,7 @@ class PluginDatasourceUtilTests {
         }
 
         assertEquals("filebox", mysql(database = "filebox")?.database)
-        assertEquals("plugin_db\$1", mysql(database = "plugin_db\$1")?.database)
+        assertEquals($$"plugin_db$1", mysql(database = $$"plugin_db$1")?.database)
     }
 
     @Test
@@ -169,7 +169,7 @@ class PluginDatasourceUtilTests {
 
         assertEquals("false", params.getProperty("useSSL"))
         assertEquals("UTC", params.getProperty("serverTimezone"))
-        assertTrue(PluginDatasourceUtil.parseParams(null).isEmpty())
+        assertTrue(PluginDatasourceUtil.parseParams(null).isEmpty)
     }
 
     @Test
@@ -188,8 +188,8 @@ class PluginDatasourceUtilTests {
             }
         }
 
-        assertNull(mysql(params = null)?.params?.takeIf { !it.isEmpty() })
-        assertNull(mysql(params = "  ")?.params?.takeIf { !it.isEmpty() })
+        assertNull(mysql(params = null)?.params?.takeIf { !it.isEmpty })
+        assertNull(mysql(params = "  ")?.params?.takeIf { !it.isEmpty })
     }
 
     @Test
@@ -211,7 +211,7 @@ class PluginDatasourceUtilTests {
             "socketFactory=com.example.Factory",
             "socketFactoryArg=x",
             "propertiesTransform=com.example.Transform",
-            "useConfigs=evil"
+            "useConfigs=evil",
         ).forEach {
             assertFailsWith<PluginDatasourceException>("'$it' should have been refused") {
                 mysql(params = it)
@@ -230,7 +230,7 @@ class PluginDatasourceUtilTests {
         assertEquals("data/db/plugin/filebox/cache.db", file.toString().replace('\\', '/'))
         assertEquals(
             "jdbc:sqlite:data/db/plugin/filebox/cache.db",
-            PluginDatasourceUtil.sqliteUrl("data/db/plugin", "filebox", "cache")
+            PluginDatasourceUtil.sqliteUrl("data/db/plugin", "filebox", "cache"),
         )
     }
 
@@ -258,16 +258,27 @@ class PluginDatasourceUtilTests {
 
     @Test
     fun `a sqlite datasource needs no configuration at all`() {
-        val resolved = PluginDatasourceUtil.resolve(
-            PluginDatasourceSchema("cache", required = false, dbType = PluginDatasourceType.SQLITE, slots = emptyMap())
-        ) { null }
+        val resolved =
+            PluginDatasourceUtil.resolve(
+                PluginDatasourceSchema(
+                    "cache",
+                    required = false,
+                    dbType = PluginDatasourceType.SQLITE,
+                    slots = emptyMap(),
+                ),
+            ) { null }
 
         assertEquals("cache", resolved?.name)
         assertEquals(PluginDatasourceType.SQLITE, resolved?.dbType)
         assertTrue(
             PluginDatasourceUtil.isConfigured(
-                PluginDatasourceSchema("cache", required = false, dbType = PluginDatasourceType.SQLITE, slots = emptyMap())
-            ) { null }
+                PluginDatasourceSchema(
+                    "cache",
+                    required = false,
+                    dbType = PluginDatasourceType.SQLITE,
+                    slots = emptyMap(),
+                ),
+            ) { null },
         )
     }
 
@@ -283,16 +294,17 @@ class PluginDatasourceUtilTests {
         database: String? = "filebox",
         username: String? = null,
         password: String? = null,
-        params: String? = null
+        params: String? = null,
     ): ResolvedDatasource.Mysql? {
-        val values = mapOf(
-            "db.host" to host,
-            "db.port" to port,
-            "db.name" to database,
-            "db.user" to username,
-            "db.password" to password,
-            "db.params" to params
-        )
+        val values =
+            mapOf(
+                "db.host" to host,
+                "db.port" to port,
+                "db.name" to database,
+                "db.user" to username,
+                "db.password" to password,
+                "db.params" to params,
+            )
 
         return PluginDatasourceUtil.resolve(mysqlSchema()) { values[it] } as? ResolvedDatasource.Mysql
     }
@@ -307,13 +319,14 @@ class PluginDatasourceUtilTests {
         name = "main",
         required = true,
         dbType = PluginDatasourceType.MYSQL,
-        slots = mapOf(
+        slots =
+        mapOf(
             PluginDatasourceSlot.HOST to "db.host",
             PluginDatasourceSlot.PORT to "db.port",
             PluginDatasourceSlot.DATABASE to "db.name",
             PluginDatasourceSlot.USERNAME to "db.user",
             PluginDatasourceSlot.PASSWORD to "db.password",
-            PluginDatasourceSlot.PARAMS to "db.params"
-        )
+            PluginDatasourceSlot.PARAMS to "db.params",
+        ),
     )
 }

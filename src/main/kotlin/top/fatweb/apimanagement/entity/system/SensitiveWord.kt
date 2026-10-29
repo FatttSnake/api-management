@@ -17,7 +17,8 @@ import java.io.Serializable
 @TableName("t_s_sensitive_word", autoResultMap = true)
 class SensitiveWord : Serializable {
     enum class Use(@field:EnumValue @field:JsonValue val code: String) {
-        USERNAME("USERNAME"), TITLE("TITLE");
+        USERNAME("USERNAME"),
+        TITLE("TITLE"),
     }
 
     /**
@@ -57,7 +58,5 @@ class SensitiveWord : Serializable {
     @TableField("enable")
     var enable: Int? = null
 
-    override fun toString(): String {
-        return "SensitiveWord(id=$id, word=$word, useFor=$useFor, enable=$enable)"
-    }
+    override fun toString(): String = "SensitiveWord(id=$id, word=$word, useFor=$useFor, enable=$enable)"
 }

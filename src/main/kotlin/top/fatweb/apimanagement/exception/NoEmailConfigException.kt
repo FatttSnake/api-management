@@ -7,6 +7,5 @@ package top.fatweb.apimanagement.exception
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-class NoEmailConfigException(
-    vararg configs: String
-) : RuntimeException("Email settings not configured: ${configs.joinToString(", ")}")
+class NoEmailConfigException(vararg configs: String) :
+    RuntimeException("Email settings not configured: ${configs.joinToString(", ")}")

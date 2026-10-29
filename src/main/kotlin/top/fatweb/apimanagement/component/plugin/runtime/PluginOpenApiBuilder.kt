@@ -14,9 +14,7 @@ import top.fatweb.apimanagement.plugin.runtime.route.RegisteredRoute
  * @since 1.0.0
  */
 @Component
-class PluginOpenApiBuilder(
-    private val jsonMapper: JsonMapper
-) {
+class PluginOpenApiBuilder(private val jsonMapper: JsonMapper) {
     /**
      * Builds an OpenAPI 3.1 document from plugin routes.
      *
@@ -31,23 +29,27 @@ class PluginOpenApiBuilder(
         routes.forEach { route ->
             val definition = route.definition
             val path = "/api/$pluginId/v${definition.apiVersion}${definition.path}"
-            val operation = linkedMapOf<String, Any>(
-                "operationId" to definition.operation.operationId,
-                "summary" to definition.operation.summary,
-                "description" to definition.operation.description,
-                "responses" to responsesOf(definition.operation.responses)
-            )
+            val operation =
+                linkedMapOf(
+                    "operationId" to definition.operation.operationId,
+                    "summary" to definition.operation.summary,
+                    "description" to definition.operation.description,
+                    "responses" to responsesOf(definition.operation.responses),
+                )
             if (definition.operation.parameters.isNotEmpty()) {
                 operation["parameters"] = parametersOf(definition.operation.parameters)
             }
             definition.operation.requestBodySchema?.let { schema ->
-                operation["requestBody"] = mapOf(
-                    "content" to mapOf(
-                        "application/json" to mapOf(
-                            "schema" to schemaOf(schema)
-                        )
+                operation["requestBody"] =
+                    mapOf(
+                        "content" to
+                            mapOf(
+                                "application/json" to
+                                    mapOf(
+                                        "schema" to schemaOf(schema),
+                                    ),
+                            ),
                     )
-                )
             }
             if (definition.operation.tags.isNotEmpty()) {
                 operation["tags"] = definition.operation.tags
@@ -55,33 +57,34 @@ class PluginOpenApiBuilder(
             paths.getOrPut(path) { linkedMapOf() }[definition.method.lowercase()] = operation
         }
 
-        val document = linkedMapOf<String, Any>(
-            "openapi" to "3.1.0",
-            "paths" to paths
-        )
+        val document =
+            linkedMapOf<String, Any>(
+                "openapi" to "3.1.0",
+                "paths" to paths,
+            )
         return jsonMapper.writeValueAsString(document)
     }
 
-    private fun parametersOf(parameters: List<ParameterSpec>): List<Map<String, Any>> =
-        parameters.map { parameter ->
-            val schema = linkedMapOf<String, Any>("type" to parameter.type)
-            parameter.format?.takeIf { it.isNotBlank() }?.let { schema["format"] = it }
-            if (parameter.enumValues.isNotEmpty()) {
-                schema["enum"] = parameter.enumValues
-            }
+    private fun parametersOf(parameters: List<ParameterSpec>): List<Map<String, Any>> = parameters.map { parameter ->
+        val schema = linkedMapOf<String, Any>("type" to parameter.type)
+        parameter.format?.takeIf { it.isNotBlank() }?.let { schema["format"] = it }
+        if (parameter.enumValues.isNotEmpty()) {
+            schema["enum"] = parameter.enumValues
+        }
 
-            val node = linkedMapOf<String, Any>(
+        val node =
+            linkedMapOf<String, Any>(
                 "name" to parameter.name,
                 "in" to parameter.location.name.lowercase(),
                 "required" to parameter.required,
-                "schema" to schema
+                "schema" to schema,
             )
-            if (parameter.description.isNotBlank()) {
-                node["description"] = parameter.description
-            }
-            parameter.example?.let { node["example"] = it }
-            node
+        if (parameter.description.isNotBlank()) {
+            node["description"] = parameter.description
         }
+        parameter.example?.let { node["example"] = it }
+        node
+    }
 
     private fun responsesOf(responses: Map<String, ResponseSpec>): Map<String, Any> {
         if (responses.isEmpty()) {
@@ -101,9 +104,10 @@ class PluginOpenApiBuilder(
     }
 
     private fun schemaOf(spec: SchemaSpec): Map<String, Any> {
-        val node = linkedMapOf<String, Any>(
-            "type" to if (spec.nullable) listOf(spec.type, "null") else spec.type
-        )
+        val node =
+            linkedMapOf(
+                "type" to if (spec.nullable) listOf(spec.type, "null") else spec.type,
+            )
         if (spec.description.isNotBlank()) {
             node["description"] = spec.description
         }

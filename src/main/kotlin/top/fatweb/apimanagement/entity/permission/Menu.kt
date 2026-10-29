@@ -67,7 +67,6 @@ class Menu : Serializable {
     @TableField("plugin_id")
     var pluginId: String? = null
 
-    override fun toString(): String {
-        return "Menu(id=$id, name=$name, url=$url, parentId=$parentId, moduleId=$moduleId, pluginId=$pluginId)"
-    }
+    override fun toString(): String =
+        "Menu(id=$id, name=$name, url=$url, parentId=$parentId, moduleId=$moduleId, pluginId=$pluginId)"
 }

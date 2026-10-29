@@ -23,7 +23,6 @@ data class BaseSettingsParam(
     @field:Schema(description = "系统名称")
     @field:NotBlank(message = "System name can not be blank")
     var systemName: String?,
-
     /**
      * Token expiry buffer time(ms)
      *
@@ -33,7 +32,6 @@ data class BaseSettingsParam(
     @field:Schema(description = "Token 失效缓冲时间（毫秒）")
     @field:NotNull(message = "Token expiry buffer (ms) can not be null")
     var tokenExpiryBufferMs: Long?,
-
     /**
      * Token expiry check interval time(ms)
      *
@@ -43,7 +41,6 @@ data class BaseSettingsParam(
     @field:Schema(description = "Token 失效检查周期（毫秒）")
     @field:NotNull(message = "Token expiry check interval (ms) can not be null")
     var tokenExpiryCheckIntervalMs: Long?,
-
     /**
      * Turnstile site key
      *
@@ -52,7 +49,6 @@ data class BaseSettingsParam(
      */
     @field:Schema(description = "Turnstile 站点标识")
     var turnstileSiteKey: String?,
-
     /**
      * Turnstile secret key
      *
@@ -61,7 +57,6 @@ data class BaseSettingsParam(
      */
     @field:Schema(description = "Turnstile 密钥")
     var turnstileSecretKey: String?,
-
     /**
      * Home URL
      *
@@ -70,5 +65,5 @@ data class BaseSettingsParam(
      */
     @field:Schema(description = "主页 URL")
     @field:NotBlank(message = "Home URL can not be blank")
-    var homeUrl: String?
+    var homeUrl: String?,
 )

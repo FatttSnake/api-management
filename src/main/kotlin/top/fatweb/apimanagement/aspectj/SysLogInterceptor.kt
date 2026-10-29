@@ -16,6 +16,7 @@ import top.fatweb.apimanagement.component.security.JwtProvider
 import top.fatweb.apimanagement.entity.common.ResponseCode
 import top.fatweb.apimanagement.entity.common.ResponseResult
 import top.fatweb.apimanagement.entity.system.SysLog
+import top.fatweb.apimanagement.properties.ServerProperties
 import top.fatweb.apimanagement.service.system.ISysLogService
 import top.fatweb.apimanagement.util.TraceIdUtil
 import top.fatweb.apimanagement.util.getApiKeyPrincipal
@@ -27,7 +28,7 @@ import java.net.URI
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
-import java.util.*
+import java.util.StringJoiner
 import java.util.concurrent.Executor
 
 /**
@@ -41,25 +42,28 @@ import java.util.concurrent.Executor
 @ControllerAdvice
 class SysLogInterceptor(
     @param:Qualifier("applicationTaskExecutor") private val customThreadPoolTaskExecutor: Executor,
+    private val serverProperties: ServerProperties,
     private val jwtProvider: JwtProvider,
-    private val sysLogService: ISysLogService
-) : HandlerInterceptor, ResponseBodyAdvice<Any> {
+    private val sysLogService: ISysLogService,
+) : HandlerInterceptor,
+    ResponseBodyAdvice<Any> {
     private val sysLogThreadLocal = ThreadLocal<SysLog>()
     private val resultThreadLocal = ThreadLocal<Any>()
 
     override fun preHandle(request: HttpServletRequest, response: HttpServletResponse, handler: Any): Boolean {
-        val sysLog = SysLog().apply {
-            traceId = TraceIdUtil.get()
-            operateUserId = getLoginUserId() ?: getApiKeyPrincipal()?.userId ?: -1
-            apiKeyId = getApiKeyPrincipal()?.keyId
-            startTime = LocalDateTime.now(ZoneOffset.UTC)
-            requestUri = URI(request.requestURI).path
-            requestParams = formatParams(request.parameterMap)
-            requestMethod = request.method
-            requestIp = getRequestIp(request)
-            requestServerAddress = "${request.scheme}://${request.serverName}:${request.serverPort}"
-            userAgent = request.getHeader("User-Agent")
-        }
+        val sysLog =
+            SysLog().apply {
+                traceId = TraceIdUtil.get()
+                operateUserId = getLoginUserId() ?: getApiKeyPrincipal()?.userId ?: -1
+                apiKeyId = getApiKeyPrincipal()?.keyId
+                startTime = LocalDateTime.now(ZoneOffset.UTC)
+                requestUri = URI(request.requestURI).path
+                requestParams = formatParams(request.parameterMap)
+                requestMethod = request.method
+                requestIp = getRequestIp(request, serverProperties.security.trustProxyHeaders)
+                requestServerAddress = "${request.scheme}://${request.serverName}:${request.serverPort}"
+                userAgent = request.getHeader("User-Agent")
+            }
 
         sysLogThreadLocal.set(sysLog)
 
@@ -70,7 +74,7 @@ class SysLogInterceptor(
         request: HttpServletRequest,
         response: HttpServletResponse,
         handler: Any,
-        ex: Exception?
+        ex: Exception?,
     ) {
         val sysLog = sysLogThreadLocal.get()
         val result = resultThreadLocal.get()
@@ -108,7 +112,10 @@ class SysLogInterceptor(
                 }
             }
 
-            customThreadPoolTaskExecutor.execute(SaveLogThread(sysLog, sysLogService))
+            customThreadPoolTaskExecutor.execute {
+                sysLog.operateTime = LocalDateTime.now(ZoneOffset.UTC)
+                sysLogService.save(sysLog)
+            }
         }
         sysLogThreadLocal.remove()
         resultThreadLocal.remove()
@@ -117,19 +124,20 @@ class SysLogInterceptor(
     private fun formatParams(parameterMap: Map<String, Array<String>>): String {
         val params = StringJoiner("&")
 
-        parameterMap.forEach {
-            params.add("${it.key}=${if (it.key.endsWith("password", true)) "*" else it.value.joinToString(",")}")
+        parameterMap.forEach { (key, values) ->
+            val value =
+                if (isSensitive(key)) {
+                    "*"
+                } else {
+                    values.joinToString(",").take(MAX_PARAM_VALUE_LENGTH)
+                }
+            params.add("$key=$value")
         }
 
         return params.toString()
     }
 
-    private class SaveLogThread(val sysLog: SysLog, val sysLogService: ISysLogService) : Thread() {
-        override fun run() {
-            sysLog.operateTime = LocalDateTime.now(ZoneOffset.UTC)
-            sysLogService.save(sysLog)
-        }
-    }
+    private fun isSensitive(key: String): Boolean = SENSITIVE_KEYWORDS.any { key.contains(it, ignoreCase = true) }
 
     override fun supports(returnType: MethodParameter, converterType: Class<out HttpMessageConverter<*>>): Boolean =
         true
@@ -140,7 +148,7 @@ class SysLogInterceptor(
         selectedContentType: MediaType,
         selectedConverterType: Class<out HttpMessageConverter<*>>,
         request: ServerHttpRequest,
-        response: ServerHttpResponse
+        response: ServerHttpResponse,
     ): Any? {
         resultThreadLocal.set(body)
 
@@ -149,5 +157,21 @@ class SysLogInterceptor(
         }
 
         return body
+    }
+
+    private companion object {
+        const val MAX_PARAM_VALUE_LENGTH = 512
+
+        val SENSITIVE_KEYWORDS =
+            listOf(
+                "password",
+                "passcode",
+                "secret",
+                "token",
+                "credential",
+                "authorization",
+                "captcha",
+                "verification",
+            )
     }
 }

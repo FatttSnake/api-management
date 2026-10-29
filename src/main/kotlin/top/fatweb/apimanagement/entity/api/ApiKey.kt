@@ -1,6 +1,11 @@
 package top.fatweb.apimanagement.entity.api
 
-import com.baomidou.mybatisplus.annotation.*
+import com.baomidou.mybatisplus.annotation.FieldFill
+import com.baomidou.mybatisplus.annotation.TableField
+import com.baomidou.mybatisplus.annotation.TableId
+import com.baomidou.mybatisplus.annotation.TableLogic
+import com.baomidou.mybatisplus.annotation.TableName
+import com.baomidou.mybatisplus.annotation.Version
 import java.io.Serializable
 import java.time.LocalDateTime
 
@@ -176,7 +181,6 @@ class ApiKey : Serializable {
     @Version
     var version: Int? = null
 
-    override fun toString(): String {
-        return "ApiKey(id=$id, userId=$userId, accessKey=$accessKey, secretKeyHash=$secretKeyHash, name=$name, permissions=$permissions, enable=$enable, expireTime=$expireTime, ipWhitelist=$ipWhitelist, rateLimit=$rateLimit, quota=$quota, quotaPeriod=$quotaPeriod, lastUsedTime=$lastUsedTime, remark=$remark, createTime=$createTime, updateTime=$updateTime, deleted=$deleted, version=$version)"
-    }
+    override fun toString(): String =
+        "ApiKey(id=$id, userId=$userId, accessKey=$accessKey, secretKeyHash=$secretKeyHash, name=$name, permissions=$permissions, enable=$enable, expireTime=$expireTime, ipWhitelist=$ipWhitelist, rateLimit=$rateLimit, quota=$quota, quotaPeriod=$quotaPeriod, lastUsedTime=$lastUsedTime, remark=$remark, createTime=$createTime, updateTime=$updateTime, deleted=$deleted, version=$version)"
 }

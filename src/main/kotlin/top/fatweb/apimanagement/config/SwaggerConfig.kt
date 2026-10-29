@@ -16,17 +16,18 @@ import top.fatweb.apimanagement.properties.ServerProperties
  * @see ServerProperties
  */
 @Configuration
-class SwaggerConfig(
-    private val buildProperties: BuildProperties
-) {
+class SwaggerConfig(private val buildProperties: BuildProperties) {
     @Bean
     fun customOpenAPI(): OpenAPI {
         val contact = Contact().name("FatttSnake").url("https://fatweb.top").email("fatttsnake@gmail.com")
         return OpenAPI().info(
-            Info().title("API Management 文档").description("API Management 后端 API 文档，包含各个 Controller 调用信息")
-                .contact(contact).version(
-                    buildProperties.version
-                )
+            Info()
+                .title("API Management 文档")
+                .description("API Management 后端 API 文档，包含各个 Controller 调用信息")
+                .contact(contact)
+                .version(
+                    buildProperties.version,
+                ),
         )
     }
 }

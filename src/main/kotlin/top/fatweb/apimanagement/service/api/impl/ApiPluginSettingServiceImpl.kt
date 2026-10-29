@@ -21,13 +21,14 @@ import java.time.ZoneOffset
  */
 @Service
 @DS("master")
-class ApiPluginSettingServiceImpl : ServiceImpl<ApiPluginSettingMapper, ApiPluginSetting>(), IApiPluginSettingService {
-    override fun get(pluginId: String, key: String): String? =
-        getOne(
-            KtQueryWrapper(ApiPluginSetting())
-                .eq(ApiPluginSetting::pluginId, pluginId)
-                .eq(ApiPluginSetting::settingKey, key)
-        )?.settingValue
+class ApiPluginSettingServiceImpl :
+    ServiceImpl<ApiPluginSettingMapper, ApiPluginSetting>(),
+    IApiPluginSettingService {
+    override fun get(pluginId: String, key: String): String? = getOne(
+        KtQueryWrapper(ApiPluginSetting())
+            .eq(ApiPluginSetting::pluginId, pluginId)
+            .eq(ApiPluginSetting::settingKey, key),
+    )?.settingValue
 
     override fun listByPlugin(pluginId: String): Map<String, String> =
         list(KtQueryWrapper(ApiPluginSetting()).eq(ApiPluginSetting::pluginId, pluginId))
@@ -36,23 +37,25 @@ class ApiPluginSettingServiceImpl : ServiceImpl<ApiPluginSettingMapper, ApiPlugi
                 val value = setting.settingValue
 
                 if (key == null || value == null) null else key to value
-            }
-            .toMap()
+            }.toMap()
 
     @Transactional
     override fun set(pluginId: String, key: String, value: String) {
-        val existing = getOne(
-            KtQueryWrapper(ApiPluginSetting())
-                .eq(ApiPluginSetting::pluginId, pluginId)
-                .eq(ApiPluginSetting::settingKey, key)
-        )
+        val existing =
+            getOne(
+                KtQueryWrapper(ApiPluginSetting())
+                    .eq(ApiPluginSetting::pluginId, pluginId)
+                    .eq(ApiPluginSetting::settingKey, key),
+            )
         if (existing == null) {
             saveOrThrowException {
-                save(ApiPluginSetting().apply {
-                    this.pluginId = pluginId
-                    this.settingKey = key
-                    this.settingValue = value
-                })
+                save(
+                    ApiPluginSetting().apply {
+                        this.pluginId = pluginId
+                        this.settingKey = key
+                        this.settingValue = value
+                    },
+                )
             }
         } else {
             existing.settingValue = value
@@ -66,7 +69,7 @@ class ApiPluginSettingServiceImpl : ServiceImpl<ApiPluginSettingMapper, ApiPlugi
         remove(
             KtQueryWrapper(ApiPluginSetting())
                 .eq(ApiPluginSetting::pluginId, pluginId)
-                .eq(ApiPluginSetting::settingKey, key)
+                .eq(ApiPluginSetting::settingKey, key),
         )
     }
 

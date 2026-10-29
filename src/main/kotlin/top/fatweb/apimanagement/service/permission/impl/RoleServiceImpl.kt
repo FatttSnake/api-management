@@ -12,10 +12,22 @@ import top.fatweb.apimanagement.converter.permission.toVoWithPower
 import top.fatweb.apimanagement.entity.permission.RPowerRole
 import top.fatweb.apimanagement.entity.permission.Role
 import top.fatweb.apimanagement.mapper.permission.RoleMapper
-import top.fatweb.apimanagement.param.permission.role.*
+import top.fatweb.apimanagement.param.permission.role.RoleAddParam
+import top.fatweb.apimanagement.param.permission.role.RoleDeleteParam
+import top.fatweb.apimanagement.param.permission.role.RoleGetParam
+import top.fatweb.apimanagement.param.permission.role.RoleUpdateParam
+import top.fatweb.apimanagement.param.permission.role.RoleUpdateStatusParam
 import top.fatweb.apimanagement.properties.ServerProperties
-import top.fatweb.apimanagement.service.permission.*
-import top.fatweb.apimanagement.util.*
+import top.fatweb.apimanagement.service.permission.IMenuService
+import top.fatweb.apimanagement.service.permission.IRPowerRoleService
+import top.fatweb.apimanagement.service.permission.IRoleService
+import top.fatweb.apimanagement.service.permission.IScopeService
+import top.fatweb.apimanagement.service.permission.IUserService
+import top.fatweb.apimanagement.util.offlineUser
+import top.fatweb.apimanagement.util.queryOrThrowException
+import top.fatweb.apimanagement.util.saveOrThrowException
+import top.fatweb.apimanagement.util.setPageSort
+import top.fatweb.apimanagement.util.updateOrThrowException
 import top.fatweb.apimanagement.vo.PageVo
 import top.fatweb.apimanagement.vo.permission.RoleWithPowerVo
 import top.fatweb.apimanagement.vo.permission.base.RoleVo
@@ -33,8 +45,9 @@ class RoleServiceImpl(
     private val redisProvider: RedisProvider,
     private val rPowerRoleService: IRPowerRoleService,
     private val menuService: IMenuService,
-    private val userService: IUserService
-) : ServiceImpl<RoleMapper, Role>(), IRoleService {
+    private val userService: IUserService,
+) : ServiceImpl<RoleMapper, Role>(),
+    IRoleService {
     override fun getPage(roleGetParam: RoleGetParam?): PageVo<RoleWithPowerVo> {
         val roleIdsPage = Page<Long>(roleGetParam?.currentPage ?: 1, roleGetParam?.pageSize ?: 20)
 
@@ -48,12 +61,12 @@ class RoleServiceImpl(
             rolePage.records = baseMapper.selectListWithPowerByIds(roleIdsIPage.records)
         }
 
-
         return rolePage.toVoWithPower()
     }
 
-    override fun getOne(id: Long): RoleWithPowerVo =
-        queryOrThrowException { baseMapper.selectOneById(id) }.let(Role::toVoWithPower)
+    override fun getOne(id: Long): RoleWithPowerVo = queryOrThrowException {
+        baseMapper.selectOneById(id)
+    }.let(Role::toVoWithPower)
 
     override fun getList(): List<RoleVo> = list().map(Role::toVo)
 
@@ -69,12 +82,14 @@ class RoleServiceImpl(
         }
 
         saveOrThrowException {
-            rPowerRoleService.saveBatch(fullPowerIds.map {
-                RPowerRole().apply {
-                    roleId = role.id
-                    powerId = it
-                }
-            })
+            rPowerRoleService.saveBatch(
+                fullPowerIds.map {
+                    RPowerRole().apply {
+                        roleId = role.id
+                        powerId = it
+                    }
+                },
+            )
         }
         return role.toVo()
     }
@@ -87,9 +102,11 @@ class RoleServiceImpl(
 
         updateOrThrowException { updateById(role) }
 
-        val oldPowerList = rPowerRoleService.list(
-            KtQueryWrapper(RPowerRole()).select(RPowerRole::powerId).eq(RPowerRole::roleId, roleUpdateParam.id)
-        ).map(RPowerRole::powerId)
+        val oldPowerList =
+            rPowerRoleService
+                .list(
+                    KtQueryWrapper(RPowerRole()).select(RPowerRole::powerId).eq(RPowerRole::roleId, roleUpdateParam.id),
+                ).map(RPowerRole::powerId)
         val addPowerIds = HashSet<Long>()
         val removePowerIds = HashSet<Long>()
         fullPowerIds?.forEach(addPowerIds::add)
@@ -101,18 +118,22 @@ class RoleServiceImpl(
 
         removePowerIds.forEach {
             rPowerRoleService.remove(
-                KtQueryWrapper(RPowerRole()).eq(
-                    RPowerRole::roleId, roleUpdateParam.id
-                ).eq(RPowerRole::powerId, it)
+                KtQueryWrapper(RPowerRole())
+                    .eq(
+                        RPowerRole::roleId,
+                        roleUpdateParam.id,
+                    ).eq(RPowerRole::powerId, it),
             )
         }
 
         addPowerIds.forEach {
             saveOrThrowException {
-                rPowerRoleService.save(RPowerRole().apply {
-                    roleId = roleUpdateParam.id
-                    powerId = it
-                })
+                rPowerRoleService.save(
+                    RPowerRole().apply {
+                        roleId = roleUpdateParam.id
+                        powerId = it
+                    },
+                )
             }
         }
 

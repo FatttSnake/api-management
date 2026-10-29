@@ -43,13 +43,16 @@ import java.time.LocalDateTime
 class PluginModuleServiceImpl(
     serverProperties: ServerProperties,
     private val pluginModuleEdgeService: IPluginModuleEdgeService,
-    private val pluginModuleRefService: IPluginModuleRefService
-) : ServiceImpl<PluginModuleMapper, PluginModule>(), IPluginModuleService {
-    private val moduleStore: PluginModuleStore = FileSystemPluginModuleStore(
-        root = Path.of(serverProperties.storage.pluginModuleDir),
-        maxModuleBytes = serverProperties.storage.pluginModuleMaxBytes,
-        maxModules = serverProperties.storage.pluginModuleMaxCount
-    )
+    private val pluginModuleRefService: IPluginModuleRefService,
+) : ServiceImpl<PluginModuleMapper, PluginModule>(),
+    IPluginModuleService {
+    private val maxModules: Int = serverProperties.storage.pluginModuleMaxCount
+    private val moduleStore: PluginModuleStore =
+        FileSystemPluginModuleStore(
+            root = Path.of(serverProperties.storage.pluginModuleDir),
+            maxModuleBytes = serverProperties.storage.pluginModuleMaxBytes,
+            maxModules = maxModules,
+        )
 
     /**
      * Installs every module in a lock and references them from a plugin.
@@ -61,24 +64,26 @@ class PluginModuleServiceImpl(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
+    @Synchronized
     @Transactional
     override fun installForPlugin(
         pluginId: String,
         lock: PluginModuleLock,
-        bytesOf: (LockedModule) -> ByteArray?
+        bytesOf: (LockedModule) -> ByteArray?,
     ): List<PluginModule> {
         requirePluginId(pluginId)
-        lock.validate()
+        lock.validate(maxModules)
 
         val ordered = topologicalOrder(lock)
         val installed = LinkedHashMap<LockedModule, PluginModule>()
         ordered.forEach { module ->
-            val bytes = bytesOf(module)
-                ?: throw PluginInstallException("Missing dependency module: ${module.coordinate}")
+            val bytes =
+                bytesOf(module)
+                    ?: throw PluginInstallException("Missing dependency module: ${module.coordinate}")
             val path = moduleStore.install(module.sha256, bytes)
             if (module.size > 0 && Files.size(path) != module.size) {
                 throw PluginInstallException(
-                    "Module ${module.coordinate} is ${Files.size(path)} bytes, lock says ${module.size}"
+                    "Module ${module.coordinate} is ${Files.size(path)} bytes, lock says ${module.size}",
                 )
             }
             installed[module] = upsert(module)
@@ -88,18 +93,19 @@ class PluginModuleServiceImpl(
             val entity = installed.getValue(module)
             val moduleId = entity.id ?: throw PluginInstallException("Module has no ID: ${module.coordinate}")
             pluginModuleEdgeService.remove(
-                KtQueryWrapper(PluginModuleEdge()).eq(PluginModuleEdge::moduleId, moduleId)
+                KtQueryWrapper(PluginModuleEdge()).eq(PluginModuleEdge::moduleId, moduleId),
             )
             module.dependencies.forEach { digest ->
                 val dependency = ordered.first { it.sha256 == digest }
-                val dependencyId = installed.getValue(dependency).id
-                    ?: throw PluginInstallException("Dependency has no ID: ${dependency.coordinate}")
+                val dependencyId =
+                    installed.getValue(dependency).id
+                        ?: throw PluginInstallException("Dependency has no ID: ${dependency.coordinate}")
                 saveOrThrowException {
                     pluginModuleEdgeService.save(
                         PluginModuleEdge().apply {
                             this.moduleId = moduleId
                             this.dependencyModuleId = dependencyId
-                        }
+                        },
                     )
                 }
             }
@@ -130,47 +136,30 @@ class PluginModuleServiceImpl(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
+    @Synchronized
     @Transactional
     override fun delete(sha256: String) {
         val module = getOne(KtQueryWrapper(PluginModule()).eq(PluginModule::sha256, sha256))
         if (module != null) {
-            val moduleId = module.id
-                ?: throw PluginInstallException("Module has no ID: ${module.coordinate}")
-            val references = pluginModuleRefService.list(
-                KtQueryWrapper(PluginModuleRef()).eq(PluginModuleRef::moduleId, moduleId)
-            )
+            val moduleId =
+                module.id
+                    ?: throw PluginInstallException("Module has no ID: ${module.coordinate}")
+            val references =
+                pluginModuleRefService.list(
+                    KtQueryWrapper(PluginModuleRef()).eq(PluginModuleRef::moduleId, moduleId),
+                )
             if (references.isNotEmpty()) {
                 throw PluginInstallException("Module ${module.coordinate} is still referenced by a plugin")
             }
             pluginModuleEdgeService.remove(
-                KtQueryWrapper(PluginModuleEdge()).eq(PluginModuleEdge::moduleId, moduleId)
+                KtQueryWrapper(PluginModuleEdge()).eq(PluginModuleEdge::moduleId, moduleId),
             )
             pluginModuleEdgeService.remove(
-                KtQueryWrapper(PluginModuleEdge()).eq(PluginModuleEdge::dependencyModuleId, moduleId)
+                KtQueryWrapper(PluginModuleEdge()).eq(PluginModuleEdge::dependencyModuleId, moduleId),
             )
             removeById(moduleId)
         }
         moduleStore.delete(sha256)
-    }
-
-    /**
-     * Points a plugin at the modules of a lock that are already installed.
-     *
-     * @param pluginId plugin ID
-     * @param lock dependency lock
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    @Transactional
-    override fun reference(pluginId: String, lock: PluginModuleLock) {
-        requirePluginId(pluginId)
-        lock.validate()
-        val modules = lock.modules.map { module ->
-            get(module.group, module.name, module.version)
-                ?.takeIf { it.sha256 == module.sha256 }
-                ?: throw PluginInstallException("Dependency module is not installed: ${module.coordinate}")
-        }
-        replaceReferences(pluginId, modules)
     }
 
     /**
@@ -180,10 +169,11 @@ class PluginModuleServiceImpl(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
+    @Synchronized
     @Transactional
     override fun release(pluginId: String) {
         pluginModuleRefService.remove(
-            KtQueryWrapper(PluginModuleRef()).eq(PluginModuleRef::pluginId, pluginId)
+            KtQueryWrapper(PluginModuleRef()).eq(PluginModuleRef::pluginId, pluginId),
         )
     }
 
@@ -198,11 +188,12 @@ class PluginModuleServiceImpl(
     override fun getPage(param: PluginModuleGetParam?): PageVo<PluginModuleVo> {
         val page = Page<PluginModule>(param?.currentPage ?: 1, param?.pageSize ?: 20)
         setPageSort(param, page, OrderItem.asc("create_time"))
-        val wrapper = KtQueryWrapper(PluginModule()).apply {
-            param?.searchGroup?.let { like(PluginModule::groupId, it) }
-            param?.searchArtifact?.let { like(PluginModule::artifactId, it) }
-            param?.searchVersion?.let { like(PluginModule::moduleVersion, it) }
-        }
+        val wrapper =
+            KtQueryWrapper(PluginModule()).apply {
+                param?.searchGroup?.let { like(PluginModule::groupId, it) }
+                param?.searchArtifact?.let { like(PluginModule::artifactId, it) }
+                param?.searchVersion?.let { like(PluginModule::moduleVersion, it) }
+            }
         return page(page, wrapper).toVoPage()
     }
 
@@ -216,13 +207,12 @@ class PluginModuleServiceImpl(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    override fun get(groupId: String, artifactId: String, version: String): PluginModule? =
-        getOne(
-            KtQueryWrapper(PluginModule())
-                .eq(PluginModule::groupId, groupId)
-                .eq(PluginModule::artifactId, artifactId)
-                .eq(PluginModule::moduleVersion, version)
-        )
+    override fun get(groupId: String, artifactId: String, version: String): PluginModule? = getOne(
+        KtQueryWrapper(PluginModule())
+            .eq(PluginModule::groupId, groupId)
+            .eq(PluginModule::artifactId, artifactId)
+            .eq(PluginModule::moduleVersion, version),
+    )
 
     /**
      * Returns digests still referenced by a plugin.
@@ -247,21 +237,23 @@ class PluginModuleServiceImpl(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
+    @Synchronized
     @Transactional
     override fun gc(grace: Duration): Int {
         val referenced = referencedDigests()
         val deleted = moduleStore.gc(referenced, grace)
-        val stale = list().filter { module ->
-            val digest = module.sha256
-            digest != null && digest !in referenced && !moduleStore.contains(digest)
-        }
+        val stale =
+            list().filter { module ->
+                val digest = module.sha256
+                digest != null && digest !in referenced && !moduleStore.contains(digest)
+            }
         stale.forEach { module ->
             val moduleId = module.id ?: return@forEach
             pluginModuleEdgeService.remove(
-                KtQueryWrapper(PluginModuleEdge()).eq(PluginModuleEdge::moduleId, moduleId)
+                KtQueryWrapper(PluginModuleEdge()).eq(PluginModuleEdge::moduleId, moduleId),
             )
             pluginModuleEdgeService.remove(
-                KtQueryWrapper(PluginModuleEdge()).eq(PluginModuleEdge::dependencyModuleId, moduleId)
+                KtQueryWrapper(PluginModuleEdge()).eq(PluginModuleEdge::dependencyModuleId, moduleId),
             )
             removeById(moduleId)
         }
@@ -282,21 +274,22 @@ class PluginModuleServiceImpl(
         if (existing != null) {
             if (existing.sha256 != module.sha256) {
                 throw PluginInstallException(
-                    "Module ${module.coordinate} is already installed with digest ${existing.sha256}"
+                    "Module ${module.coordinate} is already installed with digest ${existing.sha256}",
                 )
             }
             return existing
         }
 
-        val entity = PluginModule().apply {
-            groupId = module.group
-            artifactId = module.name
-            moduleVersion = module.version
-            sha256 = module.sha256
-            size = module.size
-            source = module.source
-            installTime = LocalDateTime.now()
-        }
+        val entity =
+            PluginModule().apply {
+                groupId = module.group
+                artifactId = module.name
+                moduleVersion = module.version
+                sha256 = module.sha256
+                size = module.size
+                source = module.source
+                installTime = LocalDateTime.now()
+            }
         saveOrThrowException(PluginInstallException("Cannot install module ${module.coordinate}")) {
             save(entity)
         }
@@ -305,7 +298,7 @@ class PluginModuleServiceImpl(
 
     private fun replaceReferences(pluginId: String, modules: List<PluginModule>) {
         pluginModuleRefService.remove(
-            KtQueryWrapper(PluginModuleRef()).eq(PluginModuleRef::pluginId, pluginId)
+            KtQueryWrapper(PluginModuleRef()).eq(PluginModuleRef::pluginId, pluginId),
         )
         modules.forEach { module ->
             val moduleId = module.id ?: throw PluginInstallException("Module has no ID: ${module.coordinate}")
@@ -314,7 +307,7 @@ class PluginModuleServiceImpl(
                     PluginModuleRef().apply {
                         this.pluginId = pluginId
                         this.moduleId = moduleId
-                    }
+                    },
                 )
             }
         }

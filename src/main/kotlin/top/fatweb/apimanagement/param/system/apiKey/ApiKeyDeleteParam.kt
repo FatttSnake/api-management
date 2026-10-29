@@ -19,5 +19,5 @@ data class ApiKeyDeleteParam(
      */
     @field:Schema(description = "Key ID 列表", required = true)
     @field:NotEmpty(message = "IDs can not be empty")
-    var ids: List<Long>?
+    var ids: List<Long>?,
 )

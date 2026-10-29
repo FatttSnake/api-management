@@ -19,12 +19,11 @@ data class TwoFactorSettings(
      * @since 1.0.0
      */
     var issuer: String? = null,
-
     /**
      * Length of secret key
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    var secretKeyLength: Int? = null
+    var secretKeyLength: Int? = null,
 )

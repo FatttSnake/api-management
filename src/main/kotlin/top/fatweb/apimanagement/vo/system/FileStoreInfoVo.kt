@@ -18,7 +18,6 @@ data class FileStoreInfoVo(
      */
     @field:Schema(description = "挂载点")
     val mount: String,
-
     /**
      * Total space/capacity of the drive.
      *
@@ -27,7 +26,6 @@ data class FileStoreInfoVo(
      */
     @field:Schema(description = "总容量")
     val total: Long,
-
     /**
      * Free space on the drive.
      *
@@ -35,5 +33,5 @@ data class FileStoreInfoVo(
      * @since 1.0.0
      */
     @field:Schema(description = "空闲容量")
-    val free: Long
+    val free: Long,
 )

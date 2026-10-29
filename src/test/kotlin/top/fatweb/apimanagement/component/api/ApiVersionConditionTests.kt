@@ -45,7 +45,7 @@ class ApiVersionConditionTests {
         val condition = ApiVersionCondition("echo", 1)
 
         assertNotNull(
-            condition.getMatchingCondition(request("/gateway/api/echo/v1/ping", contextPath = "/gateway"))
+            condition.getMatchingCondition(request("/gateway/api/echo/v1/ping", contextPath = "/gateway")),
         )
     }
 

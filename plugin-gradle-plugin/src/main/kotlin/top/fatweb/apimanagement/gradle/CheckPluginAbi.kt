@@ -6,6 +6,7 @@ import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.UntrackedTask
 import tools.jackson.module.kotlin.jacksonObjectMapper
 import tools.jackson.module.kotlin.readValue
 import java.io.ByteArrayInputStream
@@ -22,6 +23,7 @@ import java.util.jar.JarFile
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
+@UntrackedTask(because = "Checks plugin bytecode and produces no output")
 abstract class CheckPluginAbi : DefaultTask() {
     /**
      * Plugin class output directories.
@@ -45,13 +47,16 @@ abstract class CheckPluginAbi : DefaultTask() {
 
     @TaskAction
     fun run() {
-        val jar = abiJar.files.singleOrNull { it.isFile }
-            ?: throw GradleException("Cannot locate the gateway API jar among ${abiJar.files}")
-        val abiText = JarFile(jar).use { file ->
-            val entry = file.getJarEntry(ABI_ENTRY)
-                ?: throw GradleException("${jar.name} does not carry $ABI_ENTRY")
-            file.getInputStream(entry).use { it.readBytes().toString(Charsets.UTF_8) }
-        }
+        val jar =
+            abiJar.files.singleOrNull { it.isFile }
+                ?: throw GradleException("Cannot locate the gateway API jar among ${abiJar.files}")
+        val abiText =
+            JarFile(jar).use { file ->
+                val entry =
+                    file.getJarEntry(ABI_ENTRY)
+                        ?: throw GradleException("${jar.name} does not carry $ABI_ENTRY")
+                file.getInputStream(entry).use { it.readBytes().toString(Charsets.UTF_8) }
+            }
         val abi = jacksonObjectMapper().readValue<AbiFile>(abiText)
         val classes = abi.classes.associateBy { it.name }
         val errors = mutableListOf<String>()
@@ -77,7 +82,8 @@ abstract class CheckPluginAbi : DefaultTask() {
                         val owner = classes[ref.owner]
                         val signature = "${ref.name}|${ref.descriptor}"
                         if (owner != null && signature !in owner.methodSignatures) {
-                            errors += "$relative references missing API method ${ref.owner}.${ref.name}${ref.descriptor}"
+                            errors +=
+                                "$relative references missing API method ${ref.owner}.${ref.name}${ref.descriptor}"
                         }
                     }
                 refs.fields
@@ -86,7 +92,8 @@ abstract class CheckPluginAbi : DefaultTask() {
                         val owner = classes[ref.owner]
                         val signature = "${ref.name}|${ref.descriptor}"
                         if (owner != null && signature !in owner.fieldSignatures) {
-                            errors += "$relative references missing API field ${ref.owner}.${ref.name}:${ref.descriptor}"
+                            errors +=
+                                "$relative references missing API field ${ref.owner}.${ref.name}:${ref.descriptor}"
                         }
                     }
             }
@@ -95,7 +102,7 @@ abstract class CheckPluginAbi : DefaultTask() {
             throw GradleException(
                 "Plugin does not match the gateway API ABI:\n" +
                     errors.take(25).joinToString("\n") { "  $it" } +
-                    if (errors.size > 25) "\n  ... and ${errors.size - 25} more" else ""
+                    if (errors.size > 25) "\n  ... and ${errors.size - 25} more" else "",
             )
         }
         logger.lifecycle("Plugin API ABI is compatible with {}", jar.name)
@@ -107,30 +114,25 @@ abstract class CheckPluginAbi : DefaultTask() {
         val name: String = "",
         val constructors: List<String> = emptyList(),
         val methods: List<AbiMember> = emptyList(),
-        val fields: List<AbiMember> = emptyList()
+        val fields: List<AbiMember> = emptyList(),
     ) {
-        val methodSignatures: Set<String> = buildSet {
-            constructors.forEach { add("<init>|$it") }
-            this@AbiClass.methods.forEach { add("${it.name}|${it.descriptor}") }
-        }
-        val fieldSignatures: Set<String> = this@AbiClass.fields
-            .map { "${it.name}|${it.descriptor}" }
-            .toSet()
+        val methodSignatures: Set<String> =
+            buildSet {
+                constructors.forEach { add("<init>|$it") }
+                this@AbiClass.methods.forEach { add("${it.name}|${it.descriptor}") }
+            }
+        val fieldSignatures: Set<String> =
+            this@AbiClass
+                .fields
+                .map { "${it.name}|${it.descriptor}" }
+                .toSet()
     }
 
     private data class AbiMember(val name: String = "", val descriptor: String = "")
 
-    private data class MemberRef(
-        val owner: String,
-        val name: String,
-        val descriptor: String
-    )
+    private data class MemberRef(val owner: String, val name: String, val descriptor: String)
 
-    private class ClassRefs(
-        val classes: Set<String>,
-        val methods: List<MemberRef>,
-        val fields: List<MemberRef>
-    ) {
+    private class ClassRefs(val classes: Set<String>, val methods: List<MemberRef>, val fields: List<MemberRef>) {
         companion object {
             fun read(bytes: ByteArray): ClassRefs {
                 val input = DataInputStream(ByteArrayInputStream(bytes))
@@ -185,11 +187,12 @@ abstract class CheckPluginAbi : DefaultTask() {
                     index++
                 }
 
-                val classes = classNames
-                    .filter { it >= 0 }
-                    .mapNotNull { utf8[it]?.replace('/', '.') }
-                    .filter { it.startsWith(API_PREFIX) }
-                    .toSet()
+                val classes =
+                    classNames
+                        .filter { it >= 0 }
+                        .mapNotNull { utf8[it]?.replace('/', '.') }
+                        .filter { it.startsWith(API_PREFIX) }
+                        .toSet()
 
                 val methods = mutableListOf<MemberRef>()
                 val fields = mutableListOf<MemberRef>()

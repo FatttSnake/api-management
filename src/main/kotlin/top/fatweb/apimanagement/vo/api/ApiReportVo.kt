@@ -22,7 +22,6 @@ data class ApiReportVo(
      */
     @field:JsonSerialize(using = ToStringSerializer::class)
     val apiKeyId: Long?,
-
     /**
      * Date (day)
      *
@@ -31,7 +30,6 @@ data class ApiReportVo(
      */
     @field:Schema(description = "日期", example = "2026-08-25")
     val date: String?,
-
     /**
      * API scoping code
      *
@@ -40,7 +38,6 @@ data class ApiReportVo(
      */
     @field:Schema(description = "API 编码")
     val apiCode: String?,
-
     /**
      * Request count
      *
@@ -49,7 +46,6 @@ data class ApiReportVo(
      */
     @field:Schema(description = "调用次数")
     val count: Long?,
-
     /**
      * Billed cost
      *
@@ -59,7 +55,6 @@ data class ApiReportVo(
     @field:Schema(description = "费用")
     @field:JsonSerialize(using = ToStringSerializer::class)
     val cost: BigDecimal?,
-
     /**
      * API key information
      *
@@ -68,7 +63,6 @@ data class ApiReportVo(
      */
     @field:Schema(description = "API Key 信息")
     val keyVo: ApiKeyVo?,
-
     /**
      * API key owner user information
      *
@@ -77,7 +71,6 @@ data class ApiReportVo(
      */
     @field:Schema(description = "Key 所属用户信息")
     val userVo: UserWithInfoVo?,
-
     /**
      * API plugin information
      *
@@ -86,7 +79,6 @@ data class ApiReportVo(
      */
     @field:Schema(description = "API 插件信息")
     val pluginVo: ApiPluginVo?,
-
     /**
      * API interface information
      *
@@ -94,5 +86,5 @@ data class ApiReportVo(
      * @since 1.0.0
      */
     @field:Schema(description = "API 接口信息")
-    val interfaceVo: ApiInterfaceVo?
+    val interfaceVo: ApiInterfaceVo?,
 )

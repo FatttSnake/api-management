@@ -5,7 +5,8 @@ import com.auth0.jwt.algorithms.Algorithm
 import com.auth0.jwt.interfaces.DecodedJWT
 import org.springframework.stereotype.Component
 import top.fatweb.apimanagement.properties.ServerProperties
-import java.util.*
+import java.util.Date
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 /**
@@ -15,9 +16,7 @@ import java.util.concurrent.TimeUnit
  * @since 1.0.0
  */
 @Component
-class JwtProvider(
-    private val serverProperties: ServerProperties
-) {
+class JwtProvider(private val serverProperties: ServerProperties) {
     private fun getUUID() = UUID.randomUUID().toString().replace("-", "")
 
     private fun algorithm(): Algorithm = Algorithm.HMAC256(serverProperties.security.tokenSecret)
@@ -30,12 +29,10 @@ class JwtProvider(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun generateAccessToken(
-        subject: String
-    ) = generateJwt(
+    fun generateAccessToken(subject: String) = generateJwt(
         subject = subject,
         ttl = serverProperties.security.accessTokenTtl,
-        ttlUnit = serverProperties.security.accessTokenTtlUnit
+        ttlUnit = serverProperties.security.accessTokenTtlUnit,
     )
 
     /**
@@ -46,12 +43,10 @@ class JwtProvider(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun generateRefreshToken(
-        subject: String
-    ) = generateJwt(
+    fun generateRefreshToken(subject: String) = generateJwt(
         subject = subject,
         ttl = serverProperties.security.refreshTokenTtl,
-        ttlUnit = serverProperties.security.refreshTokenTtlUnit
+        ttlUnit = serverProperties.security.refreshTokenTtlUnit,
     )
 
     /**
@@ -65,17 +60,18 @@ class JwtProvider(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    private fun generateJwt(
-        subject: String,
-        ttl: Long,
-        ttlUnit: TimeUnit,
-        uuid: String = getUUID()
-    ): String? {
+    private fun generateJwt(subject: String, ttl: Long, ttlUnit: TimeUnit, uuid: String = getUUID()): String? {
         val nowMillis = System.currentTimeMillis()
         val expMillis = nowMillis + ttlUnit.toMillis(ttl)
 
-        return JWT.create().withJWTId(uuid).withSubject(subject).withIssuer(serverProperties.security.tokenIssuer)
-            .withIssuedAt(Date(nowMillis)).withExpiresAt(Date(expMillis)).sign(algorithm())
+        return JWT
+            .create()
+            .withJWTId(uuid)
+            .withSubject(subject)
+            .withIssuer(serverProperties.security.tokenIssuer)
+            .withIssuedAt(Date(nowMillis))
+            .withExpiresAt(Date(expMillis))
+            .sign(algorithm())
     }
 
     /**

@@ -49,7 +49,7 @@ class PluginRegistryCacheTests {
     fun `a replaced snapshot drops what it no longer holds`() {
         cache.replaceAll(
             mapOf("api:echo:v1:ping" to interfaceOf("api:echo:v1:ping", "echo")),
-            mapOf("echo" to pluginOf("echo"))
+            mapOf("echo" to pluginOf("echo")),
         )
 
         cache.replaceAll(emptyMap(), emptyMap())
@@ -65,7 +65,8 @@ class PluginRegistryCacheTests {
         // interleaves with, the code has to resolve - and to a plugin that is in the same
         // snapshot it read the interface from
         val first = mapOf(code to interfaceOf(code, "echo")) to mapOf("echo" to pluginOf("echo"))
-        val second = mapOf(code to interfaceOf(code, "echo")) to
+        val second =
+            mapOf(code to interfaceOf(code, "echo")) to
                 mapOf("echo" to pluginOf("echo"), "other" to pluginOf("other"))
         val snapshots = listOf(first, second)
 
@@ -77,36 +78,38 @@ class PluginRegistryCacheTests {
         // visible as an absence, not what an empty cache answers
         cache.replaceAll(first.first, first.second)
 
-        val writer = thread {
-            start.await()
-            repeat(iterations) { index ->
-                val next = snapshots[index % snapshots.size]
-                cache.replaceAll(next.first, next.second)
-            }
-        }
-        val readers = List(4) {
+        val writer =
             thread {
                 start.await()
-                repeat(iterations) {
-                    val resolved = cache.getByCode(code)
-                    if (resolved == null) {
-                        failure.compareAndSet(
-                            null,
-                            AssertionError("getByCode returned null for a code present in every snapshot")
-                        )
-                        return@thread
-                    }
+                repeat(iterations) { index ->
+                    val next = snapshots[index % snapshots.size]
+                    cache.replaceAll(next.first, next.second)
+                }
+            }
+        val readers =
+            List(4) {
+                thread {
+                    start.await()
+                    repeat(iterations) {
+                        val resolved = cache.getByCode(code)
+                        if (resolved == null) {
+                            failure.compareAndSet(
+                                null,
+                                AssertionError("getByCode returned null for a code present in every snapshot"),
+                            )
+                            return@thread
+                        }
 
-                    if (cache.getByPluginId(resolved.pluginId!!) == null) {
-                        failure.compareAndSet(
-                            null,
-                            AssertionError("An interface resolved to a plugin missing from its own snapshot")
-                        )
-                        return@thread
+                        if (cache.getByPluginId(resolved.pluginId!!) == null) {
+                            failure.compareAndSet(
+                                null,
+                                AssertionError("An interface resolved to a plugin missing from its own snapshot"),
+                            )
+                            return@thread
+                        }
                     }
                 }
             }
-        }
 
         start.countDown()
         writer.join(TimeUnit.SECONDS.toMillis(30))

@@ -17,8 +17,6 @@ class JwtAccessDeniedHandler : AccessDeniedHandler {
     override fun handle(
         request: HttpServletRequest,
         response: HttpServletResponse,
-        accessDeniedException: AccessDeniedException
-    ) {
-        throw accessDeniedException
-    }
+        accessDeniedException: AccessDeniedException,
+    ): Unit = throw accessDeniedException
 }

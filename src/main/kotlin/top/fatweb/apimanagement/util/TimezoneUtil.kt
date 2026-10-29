@@ -35,13 +35,12 @@ object TimezoneUtil {
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun offsetMinutes(): Int =
-        (RequestContextHolder.getRequestAttributes() as? ServletRequestAttributes)
-            ?.request
-            ?.getHeader(TIMEZONE_OFFSET_HEADER)
-            ?.toIntOrNull()
-            ?.coerceIn(MIN_OFFSET_MINUTES, MAX_OFFSET_MINUTES)
-            ?: 0
+    fun offsetMinutes(): Int = (RequestContextHolder.getRequestAttributes() as? ServletRequestAttributes)
+        ?.request
+        ?.getHeader(TIMEZONE_OFFSET_HEADER)
+        ?.toIntOrNull()
+        ?.coerceIn(MIN_OFFSET_MINUTES, MAX_OFFSET_MINUTES)
+        ?: 0
 
     /**
      * Get current time of the client currently calling api
@@ -64,7 +63,8 @@ object TimezoneUtil {
     fun startOfLocalDayUtc(offsetDays: Long = 0): LocalDateTime {
         val offset = offsetMinutes().toLong()
 
-        return LocalDateTime.now(ZoneOffset.UTC)
+        return LocalDateTime
+            .now(ZoneOffset.UTC)
             .plusMinutes(offset)
             .toLocalDate()
             .minusDays(offsetDays)

@@ -20,7 +20,7 @@ data class LockedModule(
     val sha256: String,
     val size: Long = 0,
     val source: String? = null,
-    val dependencies: List<String> = emptyList()
+    val dependencies: List<String> = emptyList(),
 ) {
     /**
      * Maven coordinate.
@@ -44,7 +44,7 @@ data class LockedModule(
 data class PluginModuleLock(
     val format: Int = 1,
     val constraints: Map<String, String> = emptyMap(),
-    val modules: List<LockedModule> = emptyList()
+    val modules: List<LockedModule> = emptyList(),
 ) {
     /**
      * Validates the lock.
@@ -97,7 +97,7 @@ data class PluginModuleLock(
                 }
                 if (dependency !in byDigest) {
                     throw PluginModuleLockException(
-                        "${module.coordinate} depends on missing module digest $dependency"
+                        "${module.coordinate} depends on missing module digest $dependency",
                     )
                 }
             }

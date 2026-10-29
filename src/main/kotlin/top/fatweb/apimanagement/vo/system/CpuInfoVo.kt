@@ -20,7 +20,6 @@ data class CpuInfoVo(
      */
     @field:Schema(description = "user")
     val user: Long,
-
     /**
      * Percentage of CPU utilization at the user level with nice priority.
      *
@@ -29,7 +28,6 @@ data class CpuInfoVo(
      */
     @field:Schema(description = "nice")
     val nice: Long,
-
     /**
      * Percentage of CPU utilization at the system level (kernel).
      *
@@ -38,7 +36,6 @@ data class CpuInfoVo(
      */
     @field:Schema(description = "system")
     val system: Long,
-
     /**
      * Percentage of time the CPU was idle without an outstanding disk I/O request.
      *
@@ -47,7 +44,6 @@ data class CpuInfoVo(
      */
     @field:Schema(description = "idle")
     val idle: Long,
-
     /**
      * Percentage of time the CPU was idle with an outstanding disk I/O request.
      *
@@ -56,7 +52,6 @@ data class CpuInfoVo(
      */
     @field:Schema(description = "iowait")
     val iowait: Long,
-
     /**
      * Percentage of time spent servicing hardware interrupts.
      *
@@ -65,7 +60,6 @@ data class CpuInfoVo(
      */
     @field:Schema(description = "irq")
     val irq: Long,
-
     /**
      * Percentage of time spent servicing software interrupts.
      *
@@ -74,7 +68,6 @@ data class CpuInfoVo(
      */
     @field:Schema(description = "softirq")
     val softirq: Long,
-
     /**
      * Percentage of time spent in involuntary wait by a virtual CPU while the hypervisor was
      * servicing another virtual processor.
@@ -84,7 +77,6 @@ data class CpuInfoVo(
      */
     @field:Schema(description = "steal")
     val steal: Long,
-
     /**
      * total = user + nice + system + idle + iowait + irq + softirq + steal
      *
@@ -93,7 +85,6 @@ data class CpuInfoVo(
      */
     @field:Schema(description = "total")
     val total: Long,
-
     /**
      * List of CPU processors information
      *
@@ -101,5 +92,5 @@ data class CpuInfoVo(
      * @since 1.0.0
      */
     @field:Schema(description = "处理器列表")
-    val processors: List<CpuInfoVo>? = null
+    val processors: List<CpuInfoVo>? = null,
 )

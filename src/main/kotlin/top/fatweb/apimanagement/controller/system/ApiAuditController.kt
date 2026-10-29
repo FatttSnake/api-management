@@ -19,9 +19,7 @@ import top.fatweb.apimanagement.vo.api.ApiAuditVo
  * @since 1.0.0
  */
 @BaseController(path = ["/system/api/audit"], name = "API 审计", description = "API 审计查询相关接口")
-class ApiAuditController(
-    private val apiAuditService: IApiAuditService
-) {
+class ApiAuditController(private val apiAuditService: IApiAuditService) {
     /**
      * Get API audit paging information
      *

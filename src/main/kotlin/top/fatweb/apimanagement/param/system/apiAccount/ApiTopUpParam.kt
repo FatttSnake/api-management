@@ -23,7 +23,6 @@ data class ApiTopUpParam(
      */
     @field:Schema(description = "充值目标用户 ID（管理员为指定用户充值）")
     var userId: Long?,
-
     /**
      * Amount to top up
      *
@@ -34,7 +33,6 @@ data class ApiTopUpParam(
     @field:NotNull(message = "Amount can not be null")
     @field:DecimalMin(value = "0.0001", message = "Amount must be greater than 0")
     var amount: BigDecimal?,
-
     /**
      * Top-up order number for idempotency
      *
@@ -43,7 +41,6 @@ data class ApiTopUpParam(
      */
     @field:Schema(description = "充值订单号（幂等）", example = "ORDER-20260825-001")
     var orderNo: String?,
-
     /**
      * Remark
      *
@@ -51,5 +48,5 @@ data class ApiTopUpParam(
      * @since 1.0.0
      */
     @field:Schema(description = "备注")
-    var remark: String?
+    var remark: String?,
 )

@@ -31,6 +31,6 @@ interface ApiInterfaceMapper : BaseMapper<ApiInterface> {
         @Param("pluginIds") pluginIds: Collection<String>?,
         @Param("codeIn") codeIn: Collection<String>?,
         @Param("unrestricted") unrestricted: Boolean,
-        @Param("codes") codes: Collection<String>?
+        @Param("codes") codes: Collection<String>?,
     ): List<ApiInterface>
 }

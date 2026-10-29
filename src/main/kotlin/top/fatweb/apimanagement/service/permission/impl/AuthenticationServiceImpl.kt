@@ -27,9 +27,28 @@ import top.fatweb.apimanagement.entity.permission.LoginUser
 import top.fatweb.apimanagement.entity.permission.User
 import top.fatweb.apimanagement.entity.permission.UserInfo
 import top.fatweb.apimanagement.entity.system.EventLog
-import top.fatweb.apimanagement.exception.*
+import top.fatweb.apimanagement.exception.AccountNeedInitException
+import top.fatweb.apimanagement.exception.AlreadyHasTwoFactorException
+import top.fatweb.apimanagement.exception.InvalidCaptchaCodeException
+import top.fatweb.apimanagement.exception.LoginFailedException
+import top.fatweb.apimanagement.exception.NeedTwoFactorException
+import top.fatweb.apimanagement.exception.NoTwoFactorFoundException
+import top.fatweb.apimanagement.exception.NoVerificationRequiredException
+import top.fatweb.apimanagement.exception.RequestTooFrequentException
+import top.fatweb.apimanagement.exception.RetrieveCodeErrorOrExpiredException
+import top.fatweb.apimanagement.exception.TokenHasExpiredException
+import top.fatweb.apimanagement.exception.TokenRefreshErrorException
+import top.fatweb.apimanagement.exception.TwoFactorVerificationCodeErrorException
+import top.fatweb.apimanagement.exception.UserNotFoundException
+import top.fatweb.apimanagement.exception.VerificationCodeErrorOrExpiredException
 import top.fatweb.apimanagement.http.TurnstileApi
-import top.fatweb.apimanagement.param.permission.*
+import top.fatweb.apimanagement.param.permission.ForgetParam
+import top.fatweb.apimanagement.param.permission.LoginParam
+import top.fatweb.apimanagement.param.permission.RegisterParam
+import top.fatweb.apimanagement.param.permission.RetrieveParam
+import top.fatweb.apimanagement.param.permission.TwoFactorRemoveParam
+import top.fatweb.apimanagement.param.permission.TwoFactorValidateParam
+import top.fatweb.apimanagement.param.permission.VerifyParam
 import top.fatweb.apimanagement.properties.ServerProperties
 import top.fatweb.apimanagement.service.permission.IAuthenticationService
 import top.fatweb.apimanagement.service.permission.IUserInfoService
@@ -38,7 +57,16 @@ import top.fatweb.apimanagement.service.system.ISensitiveWordService
 import top.fatweb.apimanagement.settings.BaseSettings
 import top.fatweb.apimanagement.settings.SettingsOperator
 import top.fatweb.apimanagement.settings.TwoFactorSettings
-import top.fatweb.apimanagement.util.*
+import top.fatweb.apimanagement.util.MailUtil
+import top.fatweb.apimanagement.util.TOTPUtil
+import top.fatweb.apimanagement.util.getLoginUser
+import top.fatweb.apimanagement.util.getLoginUserId
+import top.fatweb.apimanagement.util.getRequestIp
+import top.fatweb.apimanagement.util.getToken
+import top.fatweb.apimanagement.util.offlineUser
+import top.fatweb.apimanagement.util.queryOrThrowException
+import top.fatweb.apimanagement.util.saveOrThrowException
+import top.fatweb.apimanagement.util.updateOrThrowException
 import top.fatweb.apimanagement.vo.permission.LoginVo
 import top.fatweb.apimanagement.vo.permission.RegisterVo
 import top.fatweb.apimanagement.vo.permission.TokenVo
@@ -46,7 +74,8 @@ import top.fatweb.apimanagement.vo.permission.TwoFactorVo
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
-import java.util.*
+import java.util.Locale
+import java.util.UUID
 
 /**
  * Authentication service implement
@@ -66,7 +95,7 @@ class AuthenticationServiceImpl(
     private val turnstileApi: TurnstileApi,
     private val userService: IUserService,
     private val userInfoService: IUserInfoService,
-    private val sensitiveWordService: ISensitiveWordService
+    private val sensitiveWordService: ISensitiveWordService,
 ) : IAuthenticationService {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
@@ -75,46 +104,50 @@ class AuthenticationServiceImpl(
     override fun register(
         request: HttpServletRequest,
         response: HttpServletResponse,
-        registerParam: RegisterParam
+        registerParam: RegisterParam,
     ): RegisterVo {
         verifyCaptcha(registerParam.captchaCode, "register")
         sensitiveWordService.checkSensitiveWord(registerParam.username!!)
 
-        val user = User().apply {
-            username = registerParam.username
-            password = passwordEncoder.encode(registerParam.password)
-            verify =
-                "${
-                    LocalDateTime.now(ZoneOffset.UTC).toInstant(ZoneOffset.UTC).toEpochMilli()
-                }-${UUID.randomUUID()}-${UUID.randomUUID()}-${UUID.randomUUID()}"
-            locking = 0
-            enable = 1
-        }
+        val user =
+            User().apply {
+                username = registerParam.username
+                password = passwordEncoder.encode(registerParam.password)
+                verify =
+                    "${
+                        LocalDateTime.now(ZoneOffset.UTC).toInstant(ZoneOffset.UTC).toEpochMilli()
+                    }-${UUID.randomUUID()}-${UUID.randomUUID()}-${UUID.randomUUID()}"
+                locking = 0
+                enable = 1
+            }
         saveOrThrowException { userService.save(user) }
 
         saveOrThrowException {
-            userInfoService.save(UserInfo().apply {
-                userId = user.id
-                nickname = registerParam.username
-                avatar = userService.generateAvatar(null)
-                email = registerParam.email
-            })
+            userInfoService.save(
+                UserInfo().apply {
+                    userId = user.id
+                    nickname = registerParam.username
+                    avatar = userService.generateAvatar(null)
+                    email = registerParam.email
+                },
+            )
         }
 
         sendVerifyMail(user.username!!, user.verify!!, registerParam.email!!)
 
-        val loginVo = login(
-            request = request,
-            response = response,
-            account = registerParam.username!!,
-            password = registerParam.password!!
-        )
+        val loginVo =
+            login(
+                request = request,
+                response = response,
+                account = registerParam.username!!,
+                password = registerParam.password!!,
+            )
 
         return RegisterVo(
             refreshToken = loginVo.refreshToken,
             accessToken = loginVo.accessToken,
             userId = loginVo.userId,
-            csrfToken = loginVo.csrfToken
+            csrfToken = loginVo.csrfToken,
         )
     }
 
@@ -124,19 +157,29 @@ class AuthenticationServiceImpl(
 
         user.verify ?: throw NoVerificationRequiredException()
 
-        if (LocalDateTime.ofInstant(Instant.ofEpochMilli(user.verify!!.split("-").first().toLong()), ZoneOffset.UTC)
-                .isAfter(LocalDateTime.now(ZoneOffset.UTC).minusMinutes(5))
+        if (LocalDateTime
+                .ofInstant(
+                    Instant.ofEpochMilli(
+                        user.verify!!
+                            .split("-")
+                            .first()
+                            .toLong(),
+                    ),
+                    ZoneOffset.UTC,
+                ).isAfter(LocalDateTime.now(ZoneOffset.UTC).minusMinutes(5))
         ) {
             throw RequestTooFrequentException()
         }
 
         updateOrThrowException {
-            userService.updateById(user.apply {
-                verify = "${
-                    LocalDateTime.now(ZoneOffset.UTC).toInstant(ZoneOffset.UTC).toEpochMilli()
-                }-${UUID.randomUUID()}-${UUID.randomUUID()}-${UUID.randomUUID()}"
-                updateTime = LocalDateTime.now(ZoneOffset.UTC)
-            })
+            userService.updateById(
+                user.apply {
+                    verify = "${
+                        LocalDateTime.now(ZoneOffset.UTC).toInstant(ZoneOffset.UTC).toEpochMilli()
+                    }-${UUID.randomUUID()}-${UUID.randomUUID()}-${UUID.randomUUID()}"
+                    updateTime = LocalDateTime.now(ZoneOffset.UTC)
+                },
+            )
         }
 
         getLoginUser()?.user?.userInfo?.email?.let {
@@ -149,8 +192,17 @@ class AuthenticationServiceImpl(
     override fun verify(verifyParam: VerifyParam) {
         val user = queryOrThrowException(UserNotFoundException()) { userService.getById(getLoginUserId()) }
         user.verify ?: throw NoVerificationRequiredException()
-        if (LocalDateTime.ofInstant(Instant.ofEpochMilli(user.verify!!.split("-").first().toLong()), ZoneOffset.UTC)
-                .isBefore(LocalDateTime.now(ZoneOffset.UTC).minusHours(2)) || user.verify != verifyParam.code
+        if (LocalDateTime
+                .ofInstant(
+                    Instant.ofEpochMilli(
+                        user.verify!!
+                            .split("-")
+                            .first()
+                            .toLong(),
+                    ),
+                    ZoneOffset.UTC,
+                ).isBefore(LocalDateTime.now(ZoneOffset.UTC).minusHours(2)) ||
+            user.verify != verifyParam.code
         ) {
             throw VerificationCodeErrorOrExpiredException()
         }
@@ -162,14 +214,18 @@ class AuthenticationServiceImpl(
 
         updateOrThrowException {
             userService.update(
-                KtUpdateWrapper(User()).eq(User::id, user.id).set(User::verify, null)
-                    .set(User::updateTime, LocalDateTime.now(ZoneOffset.UTC))
+                KtUpdateWrapper(User())
+                    .eq(User::id, user.id)
+                    .set(User::verify, null)
+                    .set(User::updateTime, LocalDateTime.now(ZoneOffset.UTC)),
             )
         }
         updateOrThrowException {
             userInfoService.update(
-                KtUpdateWrapper(UserInfo()).eq(UserInfo::userId, user.id).set(UserInfo::nickname, verifyParam.nickname)
-                    .set(UserInfo::avatar, verifyParam.avatar)
+                KtUpdateWrapper(UserInfo())
+                    .eq(UserInfo::userId, user.id)
+                    .set(UserInfo::nickname, verifyParam.nickname)
+                    .set(UserInfo::avatar, verifyParam.avatar),
             )
         }
     }
@@ -178,12 +234,14 @@ class AuthenticationServiceImpl(
     override fun forget(request: HttpServletRequest, forgetParam: ForgetParam) {
         verifyCaptcha(forgetParam.captchaCode, "forget")
 
-        val user = queryOrThrowException(UserNotFoundException()) {
-            userService.getUserWithPowerByAccount(forgetParam.email!!)
-        }
+        val user =
+            queryOrThrowException(UserNotFoundException()) {
+                userService.getUserWithPowerByAccount(forgetParam.email!!)
+            }
 
         user.forget?.let {
-            if (LocalDateTime.ofInstant(Instant.ofEpochMilli(it.split("-").first().toLong()), ZoneOffset.UTC)
+            if (LocalDateTime
+                    .ofInstant(Instant.ofEpochMilli(it.split("-").first().toLong()), ZoneOffset.UTC)
                     .isAfter(LocalDateTime.now(ZoneOffset.UTC).minusMinutes(5))
             ) {
                 throw RequestTooFrequentException()
@@ -197,11 +255,16 @@ class AuthenticationServiceImpl(
             userService.update(
                 KtUpdateWrapper(User())
                     .eq(User::id, user.id)
-                    .set(User::forget, code)
+                    .set(User::forget, code),
             )
         }
 
-        sendRetrieveMail(user.username!!, getRequestIp(request), code, forgetParam.email!!)
+        sendRetrieveMail(
+            user.username!!,
+            getRequestIp(request, serverProperties.security.trustProxyHeaders),
+            code,
+            forgetParam.email!!,
+        )
     }
 
     @Transactional
@@ -213,7 +276,8 @@ class AuthenticationServiceImpl(
             throw RetrieveCodeErrorOrExpiredException()
         }
         try {
-            if (LocalDateTime.ofInstant(Instant.ofEpochMilli(codeStrings.first().toLong()), ZoneOffset.UTC)
+            if (LocalDateTime
+                    .ofInstant(Instant.ofEpochMilli(codeStrings.first().toLong()), ZoneOffset.UTC)
                     .isBefore(LocalDateTime.now(ZoneOffset.UTC).minusHours(2))
             ) {
                 throw RetrieveCodeErrorOrExpiredException()
@@ -222,28 +286,36 @@ class AuthenticationServiceImpl(
             throw RetrieveCodeErrorOrExpiredException()
         }
 
-        val user = queryOrThrowException(RetrieveCodeErrorOrExpiredException()) {
-            userService.getOne(
-                KtQueryWrapper(User())
-                    .eq(User::forget, retrieveParam.code)
-            )
-        }
-        val userInfo = queryOrThrowException {
-            userInfoService.getOne(
-                KtQueryWrapper(UserInfo())
-                    .eq(UserInfo::userId, user.id)
-            )
-        }
+        val user =
+            queryOrThrowException(RetrieveCodeErrorOrExpiredException()) {
+                userService.getOne(
+                    KtQueryWrapper(User())
+                        .eq(User::forget, retrieveParam.code),
+                )
+            }
+        val userInfo =
+            queryOrThrowException {
+                userInfoService.getOne(
+                    KtQueryWrapper(UserInfo())
+                        .eq(UserInfo::userId, user.id),
+                )
+            }
         updateOrThrowException {
             userService.update(
-                KtUpdateWrapper(User()).eq(User::id, user.id).set(User::forget, null)
-                    .set(User::password, passwordEncoder.encode(retrieveParam.password!!))
+                KtUpdateWrapper(User())
+                    .eq(User::id, user.id)
+                    .set(User::forget, null)
+                    .set(User::password, passwordEncoder.encode(retrieveParam.password!!)),
             )
         }
 
         offlineUser(serverProperties = serverProperties, redisProvider = redisProvider, user.id!!)
 
-        sendPasswordChangedMail(user.username!!, getRequestIp(request), userInfo.email!!)
+        sendPasswordChangedMail(
+            user.username!!,
+            getRequestIp(request, serverProperties.security.trustProxyHeaders),
+            userInfo.email!!,
+        )
     }
 
     @EventLogRecord(EventLog.Event.LOGIN)
@@ -257,7 +329,7 @@ class AuthenticationServiceImpl(
             response = response,
             account = loginParam.account!!,
             password = loginParam.password!!,
-            twoFactorCode = loginParam.twoFactorCode
+            twoFactorCode = loginParam.twoFactorCode,
         )
     }
 
@@ -270,17 +342,18 @@ class AuthenticationServiceImpl(
 
         val secretKey =
             TOTPUtil.generateSecretKey(SettingsOperator.getValue(TwoFactorSettings::secretKeyLength, 16))
-        val qrCodeSVGBase64 = TOTPUtil.generateQRCodeSVGBase64(
-            SettingsOperator.getValue(TwoFactorSettings::issuer, "ApiManagement"),
-            user.username!!,
-            secretKey
-        )
+        val qrCodeSVGBase64 =
+            TOTPUtil.generateQRCodeSVGBase64(
+                SettingsOperator.getValue(TwoFactorSettings::issuer, "ApiManagement"),
+                user.username!!,
+                secretKey,
+            )
 
         updateOrThrowException {
             userService.update(
                 KtUpdateWrapper(User())
                     .eq(User::id, user.id)
-                    .set(User::twoFactor, "${secretKey}?")
+                    .set(User::twoFactor, "$secretKey?"),
             )
         }
 
@@ -302,7 +375,7 @@ class AuthenticationServiceImpl(
                 userService.update(
                     KtUpdateWrapper(User())
                         .eq(User::id, user.id)
-                        .set(User::twoFactor, secretKey)
+                        .set(User::twoFactor, secretKey),
                 )
             }
             return true
@@ -322,7 +395,7 @@ class AuthenticationServiceImpl(
                 userService.update(
                     KtUpdateWrapper(User())
                         .eq(User::id, user.id)
-                        .set(User::twoFactor, null)
+                        .set(User::twoFactor, null),
                 )
             }
             return true
@@ -335,7 +408,7 @@ class AuthenticationServiceImpl(
     override fun logout(request: HttpServletRequest, response: HttpServletResponse): Boolean {
         val token = getToken(serverProperties = serverProperties, request = request)
 
-        var redisKeyPattern = "${serverProperties.security.tokenIssuer}_access_*:${token}"
+        var redisKeyPattern = "${serverProperties.security.tokenIssuer}_access_*:$token"
         var redisKeys = redisProvider.keys(redisKeyPattern)
         if (redisKeys.isEmpty()) {
             return false
@@ -343,10 +416,12 @@ class AuthenticationServiceImpl(
         redisProvider.delObject(redisKeys)
 
         val refreshToken =
-            Regex("${serverProperties.security.tokenIssuer}_access_.*?_(.*):.*").matchEntire(redisKeys.first())?.groupValues?.getOrNull(
-                1
+            Regex(
+                "${serverProperties.security.tokenIssuer}_access_.*?_(.*):.*",
+            ).matchEntire(redisKeys.first())?.groupValues?.getOrNull(
+                1,
             )
-        redisKeyPattern = "${serverProperties.security.tokenIssuer}_token_*:${refreshToken}"
+        redisKeyPattern = "${serverProperties.security.tokenIssuer}_token_*:$refreshToken"
         redisKeys = redisProvider.keys(redisKeyPattern)
         if (redisKeys.isEmpty()) {
             return false
@@ -355,28 +430,25 @@ class AuthenticationServiceImpl(
 
         csrfTokenManager.removeToken(getLoginUserId()!!, refreshToken!!)
 
-        val cookie = Cookie("refresh_token", null).apply {
-            isHttpOnly = true
-            secure = serverProperties.security.refreshTokenCookieSecure
-            path = serverProperties.security.refreshTokenCookiePath
-            maxAge = 0
-            setAttribute("SameSite", serverProperties.security.refreshTokenCookieSameSite)
-        }
+        val cookie =
+            Cookie("refresh_token", null).apply {
+                isHttpOnly = true
+                secure = serverProperties.security.refreshTokenCookieSecure
+                path = serverProperties.security.refreshTokenCookiePath
+                maxAge = 0
+                setAttribute("SameSite", serverProperties.security.refreshTokenCookieSameSite)
+            }
 
         response.addCookie(cookie)
 
         return true
     }
 
-    override fun refreshToken(
-        response: HttpServletResponse,
-        refreshToken: String?,
-        csrfToken: String?
-    ): TokenVo {
+    override fun refreshToken(response: HttpServletResponse, refreshToken: String?, csrfToken: String?): TokenVo {
         refreshToken ?: throw TokenRefreshErrorException()
         jwtProvider.parseJwt(refreshToken)
 
-        var redisKeyPattern = "${serverProperties.security.tokenIssuer}_token_*:${refreshToken}"
+        var redisKeyPattern = "${serverProperties.security.tokenIssuer}_token_*:$refreshToken"
         var redisKeys = redisProvider.keys(redisKeyPattern)
         if (redisKeys.isEmpty()) {
             throw TokenHasExpiredException()
@@ -388,7 +460,7 @@ class AuthenticationServiceImpl(
         if (csrfToken.isNullOrBlank() || !csrfTokenManager.validateToken(userId, refreshToken, csrfToken)) {
             throw InvalidCsrfTokenException(
                 DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", csrfToken ?: ""),
-                "CSRF token validation failed"
+                "CSRF token validation failed",
             )
         }
 
@@ -396,33 +468,36 @@ class AuthenticationServiceImpl(
         val newRefreshToken = jwtProvider.generateRefreshToken(userIdStr) ?: throw TokenRefreshErrorException()
         val newAccessToken = jwtProvider.generateAccessToken(userIdStr) ?: throw TokenRefreshErrorException()
 
-        var redisKey = "${serverProperties.security.tokenIssuer}_token_${userIdStr}:${newRefreshToken}"
+        var redisKey = "${serverProperties.security.tokenIssuer}_token_$userIdStr:$newRefreshToken"
         redisProvider.setObject(
             key = redisKey,
             value = loginUser,
             timeout = serverProperties.security.refreshTokenTtl,
-            timeUnit = serverProperties.security.refreshTokenTtlUnit
+            timeUnit = serverProperties.security.refreshTokenTtlUnit,
         )
-        redisKey = "${serverProperties.security.tokenIssuer}_access_${userIdStr}_${newRefreshToken}:${newAccessToken}"
+        redisKey = "${serverProperties.security.tokenIssuer}_access_${userIdStr}_$newRefreshToken:$newAccessToken"
         redisProvider.setObject(
             key = redisKey,
             value = loginUser,
             timeout = serverProperties.security.accessTokenTtl,
-            timeUnit = serverProperties.security.accessTokenTtlUnit
+            timeUnit = serverProperties.security.accessTokenTtlUnit,
         )
 
-        val cookie = Cookie("refresh_token", newRefreshToken).apply {
-            isHttpOnly = true
-            secure = serverProperties.security.refreshTokenCookieSecure
-            path = serverProperties.security.refreshTokenCookiePath
-            maxAge = serverProperties.security.refreshTokenTtlUnit.toSeconds(serverProperties.security.refreshTokenTtl)
-                .toInt()
-            setAttribute("SameSite", serverProperties.security.refreshTokenCookieSameSite)
-        }
+        val cookie =
+            Cookie("refresh_token", newRefreshToken).apply {
+                isHttpOnly = true
+                secure = serverProperties.security.refreshTokenCookieSecure
+                path = serverProperties.security.refreshTokenCookiePath
+                maxAge =
+                    serverProperties.security.refreshTokenTtlUnit
+                        .toSeconds(serverProperties.security.refreshTokenTtl)
+                        .toInt()
+                setAttribute("SameSite", serverProperties.security.refreshTokenCookieSameSite)
+            }
         response.addCookie(cookie)
 
         redisProvider.delObject(redisKeys)
-        redisKeyPattern = "${serverProperties.security.tokenIssuer}_access_*_${refreshToken}:*"
+        redisKeyPattern = "${serverProperties.security.tokenIssuer}_access_*_$refreshToken:*"
         redisKeys = redisProvider.keys(redisKeyPattern)
         redisProvider.delObject(redisKeys)
 
@@ -432,71 +507,82 @@ class AuthenticationServiceImpl(
         return TokenVo(
             refreshToken = newRefreshToken,
             accessToken = newAccessToken,
-            csrfToken = newCsrfToken
+            csrfToken = newCsrfToken,
         )
     }
 
     private fun sendVerifyMail(username: String, code: String, email: String) {
-        val verifyUrl = UriComponentsBuilder
-            .fromUriString(SettingsOperator.getValue(BaseSettings::homeUrl, "http://localhost"))
-            .path("/verify")
-            .queryParam("code", code)
-            .build()
-            .toUriString()
-        val context = Context(
-            Locale.getDefault(),
-            mapOf(
-                "systemName" to SettingsOperator.getValue(BaseSettings::systemName, "API Management"),
-                "homeUrl" to SettingsOperator.getValue(BaseSettings::homeUrl, "http://localhost"),
-                "username" to username,
-                "verifyUrl" to verifyUrl
+        val verifyUrl =
+            UriComponentsBuilder
+                .fromUriString(SettingsOperator.getValue(BaseSettings::homeUrl, "http://localhost"))
+                .path("/verify")
+                .queryParam("code", code)
+                .build()
+                .toUriString()
+        val context =
+            Context(
+                Locale.getDefault(),
+                mapOf(
+                    "systemName" to SettingsOperator.getValue(BaseSettings::systemName, "API Management"),
+                    "homeUrl" to SettingsOperator.getValue(BaseSettings::homeUrl, "http://localhost"),
+                    "username" to username,
+                    "verifyUrl" to verifyUrl,
+                ),
             )
-        )
         val emailContent = templateEngine.process("email-verify-account-cn", context)
         MailUtil.sendSimpleMail(
-            "验证您的账号", emailContent, true,
-            email
+            "验证您的账号",
+            emailContent,
+            true,
+            email,
         )
     }
 
     private fun sendRetrieveMail(username: String, ip: String, code: String, email: String) {
-        val retrieveUrl = UriComponentsBuilder
-            .fromUriString(SettingsOperator.getValue(BaseSettings::homeUrl, "http://localhost"))
-            .path("/forget")
-            .queryParam("code", code)
-            .build()
-            .toUriString()
-        val context = Context(
-            Locale.getDefault(),
-            mapOf(
-                "systemName" to SettingsOperator.getValue(BaseSettings::systemName, "API Management"),
-                "homeUrl" to SettingsOperator.getValue(BaseSettings::homeUrl, "http://localhost"),
-                "username" to username,
-                "ipAddress" to ip,
-                "retrieveUrl" to retrieveUrl
+        val retrieveUrl =
+            UriComponentsBuilder
+                .fromUriString(SettingsOperator.getValue(BaseSettings::homeUrl, "http://localhost"))
+                .path("/forget")
+                .queryParam("code", code)
+                .build()
+                .toUriString()
+        val context =
+            Context(
+                Locale.getDefault(),
+                mapOf(
+                    "systemName" to SettingsOperator.getValue(BaseSettings::systemName, "API Management"),
+                    "homeUrl" to SettingsOperator.getValue(BaseSettings::homeUrl, "http://localhost"),
+                    "username" to username,
+                    "ipAddress" to ip,
+                    "retrieveUrl" to retrieveUrl,
+                ),
             )
-        )
         val emailContent = templateEngine.process("email-retrieve-password-cn", context)
         MailUtil.sendSimpleMail(
-            "找回您的密码", emailContent, true,
-            email
+            "找回您的密码",
+            emailContent,
+            true,
+            email,
         )
     }
 
     private fun sendPasswordChangedMail(username: String, ip: String, email: String) {
-        val context = Context(
-            Locale.getDefault(),
-            mapOf(
-                "systemName" to SettingsOperator.getValue(BaseSettings::systemName, "API Management"),
-                "homeUrl" to SettingsOperator.getValue(BaseSettings::homeUrl, "http://localhost"),
-                "username" to username,
-                "ipAddress" to ip
+        val context =
+            Context(
+                Locale.getDefault(),
+                mapOf(
+                    "systemName" to SettingsOperator.getValue(BaseSettings::systemName, "API Management"),
+                    "homeUrl" to SettingsOperator.getValue(BaseSettings::homeUrl, "http://localhost"),
+                    "username" to username,
+                    "ipAddress" to ip,
+                ),
             )
-        )
         val emailContent = templateEngine.process("email-password-changed-cn", context)
         MailUtil.sendSimpleMail(
-            "您的密码已更改", emailContent, true,
-            email
+            "您的密码已更改",
+            emailContent,
+            true,
+            email,
         )
     }
 
@@ -505,7 +591,7 @@ class AuthenticationServiceImpl(
         response: HttpServletResponse,
         account: String,
         password: String,
-        twoFactorCode: String? = null
+        twoFactorCode: String? = null,
     ): LoginVo {
         val usernamePasswordAuthenticationToken =
             UsernamePasswordAuthenticationToken(account, password)
@@ -524,17 +610,21 @@ class AuthenticationServiceImpl(
             }
         }
 
-        logger.info("用户登录 [用户名: '{}', IP: '{}']", loginUser.username, getRequestIp(request))
+        logger.info(
+            "用户登录 [用户名: '{}', IP: '{}']",
+            loginUser.username,
+            getRequestIp(request, serverProperties.security.trustProxyHeaders),
+        )
         updateOrThrowException {
             userService.update(
                 User().apply {
-                    currentLoginIp = getRequestIp(request)
+                    currentLoginIp = getRequestIp(request, serverProperties.security.trustProxyHeaders)
                     currentLoginTime = LocalDateTime.now(ZoneOffset.UTC)
                     lastLoginIp = loginUser.user.currentLoginIp
                     lastLoginTime = loginUser.user.currentLoginTime
                 },
                 KtUpdateWrapper(User())
-                    .eq(User::username, loginUser.username)
+                    .eq(User::username, loginUser.username),
             )
         }
 
@@ -542,29 +632,32 @@ class AuthenticationServiceImpl(
         val refreshToken = jwtProvider.generateRefreshToken(userId) ?: throw LoginFailedException()
         val accessToken = jwtProvider.generateAccessToken(userId) ?: throw LoginFailedException()
 
-        var redisKey = "${serverProperties.security.tokenIssuer}_token_${userId}:${refreshToken}"
+        var redisKey = "${serverProperties.security.tokenIssuer}_token_$userId:$refreshToken"
         redisProvider.setObject(
             key = redisKey,
             value = loginUser,
             timeout = serverProperties.security.refreshTokenTtl,
-            timeUnit = serverProperties.security.refreshTokenTtlUnit
+            timeUnit = serverProperties.security.refreshTokenTtlUnit,
         )
-        redisKey = "${serverProperties.security.tokenIssuer}_access_${userId}_${refreshToken}:${accessToken}"
+        redisKey = "${serverProperties.security.tokenIssuer}_access_${userId}_$refreshToken:$accessToken"
         redisProvider.setObject(
             key = redisKey,
             value = loginUser,
             timeout = serverProperties.security.accessTokenTtl,
-            timeUnit = serverProperties.security.accessTokenTtlUnit
+            timeUnit = serverProperties.security.accessTokenTtlUnit,
         )
 
-        val cookie = Cookie("refresh_token", refreshToken).apply {
-            isHttpOnly = true
-            secure = serverProperties.security.refreshTokenCookieSecure
-            path = serverProperties.security.refreshTokenCookiePath
-            maxAge = serverProperties.security.refreshTokenTtlUnit.toSeconds(serverProperties.security.refreshTokenTtl)
-                .toInt()
-            setAttribute("SameSite", serverProperties.security.refreshTokenCookieSameSite)
-        }
+        val cookie =
+            Cookie("refresh_token", refreshToken).apply {
+                isHttpOnly = true
+                secure = serverProperties.security.refreshTokenCookieSecure
+                path = serverProperties.security.refreshTokenCookiePath
+                maxAge =
+                    serverProperties.security.refreshTokenTtlUnit
+                        .toSeconds(serverProperties.security.refreshTokenTtl)
+                        .toInt()
+                setAttribute("SameSite", serverProperties.security.refreshTokenCookieSameSite)
+            }
         response.addCookie(cookie)
 
         val csrfToken = csrfTokenManager.generateToken(loginUser.user.id!!, refreshToken)
@@ -575,7 +668,7 @@ class AuthenticationServiceImpl(
             userId = loginUser.user.id,
             lastLoginTime = loginUser.user.currentLoginTime,
             lastLoginIp = loginUser.user.currentLoginIp,
-            csrfToken = csrfToken
+            csrfToken = csrfToken,
         )
     }
 
@@ -593,7 +686,7 @@ class AuthenticationServiceImpl(
                 runBlocking {
                     turnstileApi.siteverify(
                         captchaCode,
-                        SettingsOperator.getValue(BaseSettings::turnstileSecretKey) ?: ""
+                        SettingsOperator.getValue(BaseSettings::turnstileSecretKey) ?: "",
                     )
                 }
             if (!siteverifyResponse.success || siteverifyResponse.action != action) {

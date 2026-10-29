@@ -36,7 +36,7 @@ fun IPage<SysLog>.toVo() = PageVo(
             endTime = sysLog.endTime,
             executeTime = sysLog.executeTime,
             userAgent = sysLog.userAgent,
-            operateUsername = sysLog.operateUsername
+            operateUsername = sysLog.operateUsername,
         )
-    }
+    },
 )

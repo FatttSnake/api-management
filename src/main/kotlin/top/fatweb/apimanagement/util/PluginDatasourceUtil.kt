@@ -99,16 +99,17 @@ object PluginDatasourceUtil {
      *
      * @see parseParams
      */
-    private val PARAM_DENY_LIST = setOf(
-        "autodeserialize",
-        "allowloadlocalinfile",
-        "allowloadlocalinfileinpath",
-        "allowurlinlocalinfile",
-        "socketfactory",
-        "socketfactoryarg",
-        "propertiestransform",
-        "useconfigs"
-    )
+    private val PARAM_DENY_LIST =
+        setOf(
+            "autodeserialize",
+            "allowloadlocalinfile",
+            "allowloadlocalinfileinpath",
+            "allowurlinlocalinfile",
+            "socketfactory",
+            "socketfactoryarg",
+            "propertiestransform",
+            "useconfigs",
+        )
 
     /**
      * Compose the JDBC URL of a MySQL datasource
@@ -186,7 +187,7 @@ object PluginDatasourceUtil {
             database = requireDatabase(slotValue(PluginDatasourceSlot.DATABASE)),
             username = slotValue(PluginDatasourceSlot.USERNAME)?.trim()?.takeIf { it.isNotEmpty() },
             password = slotValue(PluginDatasourceSlot.PASSWORD)?.takeIf { it.isNotEmpty() },
-            params = parseParams(requireParams(slotValue(PluginDatasourceSlot.PARAMS)))
+            params = parseParams(requireParams(slotValue(PluginDatasourceSlot.PARAMS))),
         )
     }
 
@@ -228,13 +229,10 @@ object PluginDatasourceUtil {
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun resolve(
-        schema: PluginConfigSchema,
-        name: String,
-        valueOf: (String) -> String?
-    ): ResolvedDatasource? {
-        val datasource = schema.datasourceOf(name)
-            ?: throw PluginDatasourceException("Plugin does not declare a datasource named '$name'")
+    fun resolve(schema: PluginConfigSchema, name: String, valueOf: (String) -> String?): ResolvedDatasource? {
+        val datasource =
+            schema.datasourceOf(name)
+                ?: throw PluginDatasourceException("Plugin does not declare a datasource named '$name'")
 
         return resolve(datasource, valueOf)
     }
@@ -295,14 +293,16 @@ object PluginDatasourceUtil {
         val submitted = raw?.trim().orEmpty()
 
         val host = submitted.removeSurrounding("[", "]")
-        val accepted = if (host.contains(':')) {
-            IPV6_REGEX.matches(host) && runCatching { InetAddress.getByName(host) is Inet6Address }.getOrDefault(false)
-        } else {
-            HOST_REGEX.matches(host)
-        }
+        val accepted =
+            if (host.contains(':')) {
+                IPV6_REGEX.matches(host) &&
+                    runCatching { InetAddress.getByName(host) is Inet6Address }.getOrDefault(false)
+            } else {
+                HOST_REGEX.matches(host)
+            }
         if (!accepted) {
             throw PluginDatasourceException(
-                "Database host must be a name, an address or an IPv6 literal, got '$submitted'"
+                "Database host must be a name, an address or an IPv6 literal, got '$submitted'",
             )
         }
 
@@ -326,8 +326,9 @@ object PluginDatasourceUtil {
 
         // Read as a decimal rather than an int: a number field accepts a trailing zero, so
         // "3306.0" is a value an administrator can legitimately have stored
-        val number = submitted.toBigDecimalOrNull()?.takeIf { it.stripTrailingZeros().scale() <= 0 }
-            ?: throw PluginDatasourceException("Database port must be a whole number, got '$submitted'")
+        val number =
+            submitted.toBigDecimalOrNull()?.takeIf { it.stripTrailingZeros().scale() <= 0 }
+                ?: throw PluginDatasourceException("Database port must be a whole number, got '$submitted'")
         val port = number.toLong()
         if (port !in 1..MAX_PORT.toLong()) {
             throw PluginDatasourceException("Database port must be between 1 and $MAX_PORT, got '$submitted'")
@@ -374,21 +375,23 @@ object PluginDatasourceUtil {
         }
         if (params.length > MAX_PARAMS_LENGTH) {
             throw PluginDatasourceException(
-                "Database parameters are longer than $MAX_PARAMS_LENGTH characters (${params.length})"
+                "Database parameters are longer than $MAX_PARAMS_LENGTH characters (${params.length})",
             )
         }
         if (!PARAMS_REGEX.matches(params)) {
             throw PluginDatasourceException(
-                "Database parameters must be one or more 'key=value' pairs separated by '&', got '$params'"
+                "Database parameters must be one or more 'key=value' pairs separated by '&', got '$params'",
             )
         }
 
-        val refused = params.split('&')
-            .map { it.substringBefore('=').lowercase() }
-            .filter { it in PARAM_DENY_LIST }
+        val refused =
+            params
+                .split('&')
+                .map { it.substringBefore('=').lowercase() }
+                .filter { it in PARAM_DENY_LIST }
         if (refused.isNotEmpty()) {
             throw PluginDatasourceException(
-                "Database parameters name properties the gateway refuses: ${refused.joinToString()}"
+                "Database parameters name properties the gateway refuses: ${refused.joinToString()}",
             )
         }
 
@@ -444,7 +447,6 @@ sealed interface ResolvedDatasource {
          * @since 1.0.0
          */
         val host: String,
-
         /**
          * Port to connect to, or null to let the driver's own default apply
          *
@@ -452,7 +454,6 @@ sealed interface ResolvedDatasource {
          * @since 1.0.0
          */
         val port: Int?,
-
         /**
          * Database on that server
          *
@@ -460,7 +461,6 @@ sealed interface ResolvedDatasource {
          * @since 1.0.0
          */
         val database: String,
-
         /**
          * Credential username, or null when none was configured
          *
@@ -468,7 +468,6 @@ sealed interface ResolvedDatasource {
          * @since 1.0.0
          */
         val username: String?,
-
         /**
          * Credential password in plaintext, or null when none was configured
          *
@@ -476,14 +475,13 @@ sealed interface ResolvedDatasource {
          * @since 1.0.0
          */
         val password: String?,
-
         /**
          * Driver properties, never part of the URL
          *
          * @author FatttSnake, fatttsnake@gmail.com
          * @since 1.0.0
          */
-        val params: Properties
+        val params: Properties,
     ) : ResolvedDatasource {
         override val dbType: PluginDatasourceType get() = PluginDatasourceType.MYSQL
     }

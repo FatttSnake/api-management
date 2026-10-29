@@ -15,9 +15,7 @@ import top.fatweb.apimanagement.util.queryOrThrowException
  * @since 1.0.0
  */
 @Service
-class UserDetailsServiceImpl(
-    private val userService: IUserService
-) : UserDetailsService {
+class UserDetailsServiceImpl(private val userService: IUserService) : UserDetailsService {
     override fun loadUserByUsername(account: String): UserDetails {
         val user = queryOrThrowException(UserNotFoundException()) { userService.getUserWithPowerByAccount(account) }
 

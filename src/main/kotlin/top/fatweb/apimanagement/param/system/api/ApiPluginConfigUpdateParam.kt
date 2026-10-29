@@ -23,7 +23,6 @@ data class ApiPluginConfigUpdateParam(
     @field:Schema(description = "API 插件 ID", required = true, example = "filebox")
     @field:NotBlank(message = "Plugin ID can not be blank")
     var pluginId: String?,
-
     /**
      * Groups being saved, each with the values it was edited to
      *
@@ -32,7 +31,7 @@ data class ApiPluginConfigUpdateParam(
      */
     @field:Schema(description = "要保存的配置分组")
     @field:Valid
-    var groups: List<ApiPluginConfigGroupParam>?
+    var groups: List<ApiPluginConfigGroupParam>?,
 )
 
 /**
@@ -53,7 +52,6 @@ data class ApiPluginConfigGroupParam(
     @field:Schema(description = "分组键", required = true, example = "share")
     @field:NotBlank(message = "Group key can not be blank")
     var key: String?,
-
     /**
      * Values of this group to save
      *
@@ -62,7 +60,7 @@ data class ApiPluginConfigGroupParam(
      */
     @field:Schema(description = "配置项")
     @field:Valid
-    var values: List<ApiPluginConfigValueParam>?
+    var values: List<ApiPluginConfigValueParam>?,
 )
 
 /**
@@ -83,7 +81,6 @@ data class ApiPluginConfigValueParam(
     @field:Schema(description = "配置键", required = true, example = "defaultLinkTtlHours")
     @field:NotBlank(message = "Key can not be blank")
     var key: String?,
-
     /**
      * Config value
      *
@@ -91,5 +88,5 @@ data class ApiPluginConfigValueParam(
      * @since 1.0.0
      */
     @field:Schema(description = "配置值（缺省为保持原值，留空为清除）", example = "2")
-    var value: String?
+    var value: String?,
 )

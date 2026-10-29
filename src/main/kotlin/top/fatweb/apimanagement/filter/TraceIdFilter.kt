@@ -18,12 +18,14 @@ class TraceIdFilter : OncePerRequestFilter() {
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
-        filterChain: FilterChain
+        filterChain: FilterChain,
     ) {
         try {
-            val traceId = request.getHeader(TraceIdUtil.TRACE_ID_HEADER)
-                ?.takeIf { it.isNotBlank() }
-                ?: TraceIdUtil.generate()
+            val traceId =
+                request
+                    .getHeader(TraceIdUtil.TRACE_ID_HEADER)
+                    ?.takeIf { it.isNotBlank() }
+                    ?: TraceIdUtil.generate()
 
             TraceIdUtil.set(traceId)
             response.setHeader(TraceIdUtil.TRACE_ID_HEADER, traceId)

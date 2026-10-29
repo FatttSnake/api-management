@@ -23,7 +23,6 @@ data class RetrieveParam(
     @field:Schema(description = "验证码", required = true)
     @field:NotBlank(message = "Code can not be blank")
     val code: String?,
-
     /**
      * New password
      *
@@ -33,5 +32,5 @@ data class RetrieveParam(
     @field:Schema(description = "新密码")
     @field:NotBlank(message = "New password can not be blank")
     @field:Pattern(regexp = "^[a-fA-F0-9]{128}$", message = "New password must be encrypted by SHA512")
-    val password: String?
+    val password: String?,
 ) : CaptchaCodeParam()

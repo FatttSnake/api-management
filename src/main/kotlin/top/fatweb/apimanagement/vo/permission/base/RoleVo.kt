@@ -21,7 +21,6 @@ data class RoleVo(
      */
     @field:JsonSerialize(using = ToStringSerializer::class)
     val id: Long?,
-
     /**
      * Name
      *
@@ -30,7 +29,6 @@ data class RoleVo(
      */
     @field:Schema(description = "角色名", example = "Role")
     val name: String?,
-
     /**
      * Enable
      *
@@ -39,7 +37,6 @@ data class RoleVo(
      */
     @field:Schema(description = "启用", example = "true")
     val enable: Boolean?,
-
     /**
      * Create time
      *
@@ -48,7 +45,6 @@ data class RoleVo(
      */
     @field:Schema(description = "创建时间", example = "1900-01-01T00:00:00.000Z")
     val createTime: LocalDateTime?,
-
     /**
      * Update time
      *
@@ -56,5 +52,5 @@ data class RoleVo(
      * @since 1.0.0
      */
     @field:Schema(description = "修改时间", example = "1900-01-01T00:00:00.000Z")
-    val updateTime: LocalDateTime?
+    val updateTime: LocalDateTime?,
 )

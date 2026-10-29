@@ -1,0 +1,38 @@
+style:
+  ClassOrdering:
+    active: true
+  MagicNumber:
+    active: false
+  MaxLineLength:
+    active: false
+  ReturnCount:
+    active: false
+  ThrowsCount:
+    active: false
+  SerialVersionUIDInSerializableClass:
+    active: false
+
+complexity:
+  LongMethod:
+    active: true
+    allowedLines: 80
+  LongParameterList:
+    active: true
+    allowedFunctionParameters: 10
+    allowedConstructorParameters: 12
+  TooManyFunctions:
+    active: true
+    allowedFunctionsPerFile: 30
+    allowedFunctionsPerClass: 25
+    allowedFunctionsPerInterface: 15
+  NestedBlockDepth:
+    active: true
+    allowedDepth: 4
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: false
+  SwallowedException:
+    active: true
+  InstanceOfCheckForException:
+    active: true

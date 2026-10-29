@@ -23,11 +23,12 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 @Component
 class PluginScheduler : AutoCloseable {
-    private val executor: ScheduledExecutorService = Executors.newScheduledThreadPool(
-        Runtime.getRuntime().availableProcessors().coerceIn(1, 4)
-    ) { runnable ->
-        Thread(runnable, "plugin-scheduler").apply { isDaemon = true }
-    }
+    private val executor: ScheduledExecutorService =
+        Executors.newScheduledThreadPool(
+            Runtime.getRuntime().availableProcessors().coerceIn(1, 4),
+        ) { runnable ->
+            Thread(runnable, "plugin-scheduler").apply { isDaemon = true }
+        }
     private val tasks = ConcurrentHashMap<String, MutableSet<ScheduledFuture<*>>>()
 
     /**
@@ -45,14 +46,15 @@ class PluginScheduler : AutoCloseable {
         pluginId: String,
         initialDelay: Duration,
         delay: Duration,
-        task: Runnable
+        task: Runnable,
     ): Subscription {
-        val future = executor.scheduleWithFixedDelay(
-            { runCatching { task.run() } },
-            initialDelay.toMillis().coerceAtLeast(0),
-            delay.toMillis().coerceAtLeast(1),
-            TimeUnit.MILLISECONDS
-        )
+        val future =
+            executor.scheduleWithFixedDelay(
+                { runCatching { task.run() } },
+                initialDelay.toMillis().coerceAtLeast(0),
+                delay.toMillis().coerceAtLeast(1),
+                TimeUnit.MILLISECONDS,
+            )
         track(pluginId, future)
         return Subscription {
             future.cancel(false)
@@ -82,16 +84,17 @@ class PluginScheduler : AutoCloseable {
             val now = LocalDateTime.now()
             val next = cron.next(now) ?: return
             val delay = Duration.between(now, next).toMillis().coerceAtLeast(0)
-            val future = executor.schedule(
-                {
-                    if (!cancelled.get()) {
-                        runCatching { task.run() }
-                        scheduleNext()
-                    }
-                },
-                delay,
-                TimeUnit.MILLISECONDS
-            )
+            val future =
+                executor.schedule(
+                    {
+                        if (!cancelled.get()) {
+                            runCatching { task.run() }
+                            scheduleNext()
+                        }
+                    },
+                    delay,
+                    TimeUnit.MILLISECONDS,
+                )
             holder[0] = future
             track(pluginId, future)
         }
@@ -124,11 +127,8 @@ class PluginScheduler : AutoCloseable {
      * @since 1.0.0
      */
     fun scoped(pluginId: String): Scheduler = object : Scheduler {
-        override fun scheduleWithFixedDelay(
-            initialDelay: Duration,
-            delay: Duration,
-            task: Runnable
-        ): Subscription = this@PluginScheduler.scheduleWithFixedDelay(pluginId, initialDelay, delay, task)
+        override fun scheduleWithFixedDelay(initialDelay: Duration, delay: Duration, task: Runnable): Subscription =
+            this@PluginScheduler.scheduleWithFixedDelay(pluginId, initialDelay, delay, task)
 
         override fun scheduleCron(expression: String, task: Runnable): Subscription =
             this@PluginScheduler.scheduleCron(pluginId, expression, task)

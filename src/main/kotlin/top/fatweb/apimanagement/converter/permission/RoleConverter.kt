@@ -1,7 +1,12 @@
 package top.fatweb.apimanagement.converter.permission
 
 import com.baomidou.mybatisplus.core.metadata.IPage
-import top.fatweb.apimanagement.entity.permission.*
+import top.fatweb.apimanagement.entity.permission.Menu
+import top.fatweb.apimanagement.entity.permission.Module
+import top.fatweb.apimanagement.entity.permission.Operation
+import top.fatweb.apimanagement.entity.permission.Power
+import top.fatweb.apimanagement.entity.permission.Role
+import top.fatweb.apimanagement.entity.permission.Scope
 import top.fatweb.apimanagement.param.permission.role.RoleAddParam
 import top.fatweb.apimanagement.param.permission.role.RoleUpdateParam
 import top.fatweb.apimanagement.param.permission.role.RoleUpdateStatusParam
@@ -22,7 +27,7 @@ fun Role.toVo() = RoleVo(
     name = this.name,
     enable = this.enable?.let { it == 1 },
     createTime = this.createTime,
-    updateTime = this.updateTime
+    updateTime = this.updateTime,
 )
 
 /**
@@ -42,7 +47,7 @@ fun Role.toVoWithPower() = RoleWithPowerVo(
     modules = this.modules?.map(Module::toVo),
     menus = this.menus?.map(Menu::toVo),
     scopes = this.scopes?.map(Scope::toVo),
-    operations = this.operations?.map(Operation::toVo)
+    operations = this.operations?.map(Operation::toVo),
 )
 
 /**
@@ -58,7 +63,7 @@ fun IPage<Role>.toVoWithPower() = PageVo(
     pages = this.pages,
     size = this.size,
     current = this.current,
-    records = this.records.map(Role::toVoWithPower)
+    records = this.records.map(Role::toVoWithPower),
 )
 
 /**

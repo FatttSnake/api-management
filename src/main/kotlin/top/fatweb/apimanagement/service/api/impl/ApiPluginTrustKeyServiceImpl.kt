@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional
 import top.fatweb.apimanagement.converter.api.toVo
 import top.fatweb.apimanagement.converter.api.toVoPage
 import top.fatweb.apimanagement.entity.api.ApiPluginTrustKey
-import top.fatweb.apimanagement.exception.PluginInstallException
+import top.fatweb.apimanagement.exception.NoRecordFoundException
 import top.fatweb.apimanagement.mapper.api.ApiPluginTrustKeyMapper
 import top.fatweb.apimanagement.param.system.api.ApiPluginTrustKeyAddParam
 import top.fatweb.apimanagement.param.system.api.ApiPluginTrustKeyGetParam
@@ -32,44 +32,49 @@ import top.fatweb.apimanagement.vo.api.ApiPluginTrustKeyVo
  */
 @Service
 @DS("master")
-class ApiPluginTrustKeyServiceImpl : ServiceImpl<ApiPluginTrustKeyMapper, ApiPluginTrustKey>(),
+class ApiPluginTrustKeyServiceImpl :
+    ServiceImpl<ApiPluginTrustKeyMapper, ApiPluginTrustKey>(),
     IApiPluginTrustKeyService {
     override fun getByKeyId(keyId: String): ApiPluginTrustKey? =
         getOne(KtQueryWrapper(ApiPluginTrustKey()).eq(ApiPluginTrustKey::keyId, keyId))
 
     override fun get(apiPluginTrustKeyGetParam: ApiPluginTrustKeyGetParam?): PageVo<ApiPluginTrustKeyVo> {
-        val page = Page<ApiPluginTrustKey>(
-            apiPluginTrustKeyGetParam?.currentPage ?: 1,
-            apiPluginTrustKeyGetParam?.pageSize ?: 20
-        )
+        val page =
+            Page<ApiPluginTrustKey>(
+                apiPluginTrustKeyGetParam?.currentPage ?: 1,
+                apiPluginTrustKeyGetParam?.pageSize ?: 20,
+            )
         setPageSort(apiPluginTrustKeyGetParam, page, OrderItem.asc("create_time"))
 
-        val wrapper = KtQueryWrapper(ApiPluginTrustKey()).apply {
-            apiPluginTrustKeyGetParam?.searchAlias?.let { like(ApiPluginTrustKey::alias, it) }
-            apiPluginTrustKeyGetParam?.enable?.let { eq(ApiPluginTrustKey::enable, if (it) 1 else 0) }
-        }
+        val wrapper =
+            KtQueryWrapper(ApiPluginTrustKey()).apply {
+                apiPluginTrustKeyGetParam?.searchAlias?.let { like(ApiPluginTrustKey::alias, it) }
+                apiPluginTrustKeyGetParam?.enable?.let { eq(ApiPluginTrustKey::enable, if (it) 1 else 0) }
+            }
 
         return page(page, wrapper).toVoPage()
     }
 
     @Transactional
     override fun add(apiPluginTrustKeyAddParam: ApiPluginTrustKeyAddParam): ApiPluginTrustKeyVo {
-        val keyId = try {
-            PluginSigner.spkiFingerprint(apiPluginTrustKeyAddParam.publicKey)
-        } catch (e: Exception) {
-            throw PluginInstallException("Invalid public key PEM: ${e.message}")
-        }
+        val keyId =
+            try {
+                PluginSigner.spkiFingerprint(apiPluginTrustKeyAddParam.publicKey)
+            } catch (e: Exception) {
+                throw IllegalArgumentException("Invalid public key PEM: ${e.message}", e)
+            }
         if (getByKeyId(keyId) != null) {
-            throw PluginInstallException("Trust key already exists: $keyId")
+            throw IllegalArgumentException("Trust key already exists: $keyId")
         }
 
-        val entity = ApiPluginTrustKey().apply {
-            this.keyId = keyId
-            this.alias = apiPluginTrustKeyAddParam.alias
-            this.publicKey = apiPluginTrustKeyAddParam.publicKey
-            this.enable = 1
-            this.createdBy = getLoginUserIdOrThrow()
-        }
+        val entity =
+            ApiPluginTrustKey().apply {
+                this.keyId = keyId
+                this.alias = apiPluginTrustKeyAddParam.alias
+                this.publicKey = apiPluginTrustKeyAddParam.publicKey
+                this.enable = 1
+                this.createdBy = getLoginUserIdOrThrow()
+            }
         saveOrThrowException { save(entity) }
 
         return entity.toVo()
@@ -77,15 +82,14 @@ class ApiPluginTrustKeyServiceImpl : ServiceImpl<ApiPluginTrustKeyMapper, ApiPlu
 
     @Transactional
     override fun status(apiPluginTrustKeyUpdateStatusParam: ApiPluginTrustKeyUpdateStatusParam) {
-        val entity = getByKeyId(apiPluginTrustKeyUpdateStatusParam.keyId)
-            ?: throw PluginInstallException("Trust key not found: ${apiPluginTrustKeyUpdateStatusParam.keyId}")
+        val entity = getByKeyId(apiPluginTrustKeyUpdateStatusParam.keyId) ?: throw NoRecordFoundException()
         entity.enable = if (apiPluginTrustKeyUpdateStatusParam.enable) 1 else 0
         updateOrThrowException { updateById(entity) }
     }
 
     @Transactional
     override fun deleteByKeyId(keyId: String) {
-        val entity = getByKeyId(keyId) ?: throw PluginInstallException("Trust key not found: $keyId")
+        val entity = getByKeyId(keyId) ?: throw NoRecordFoundException()
         removeById(entity.id)
     }
 }

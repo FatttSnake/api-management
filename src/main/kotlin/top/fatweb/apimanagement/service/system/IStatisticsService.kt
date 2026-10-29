@@ -2,7 +2,12 @@ package top.fatweb.apimanagement.service.system
 
 import top.fatweb.apimanagement.param.system.ActiveInfoGetParam
 import top.fatweb.apimanagement.param.system.OnlineInfoGetParam
-import top.fatweb.apimanagement.vo.system.*
+import top.fatweb.apimanagement.vo.system.ActiveInfoVo
+import top.fatweb.apimanagement.vo.system.CpuInfoVo
+import top.fatweb.apimanagement.vo.system.HardwareInfoVo
+import top.fatweb.apimanagement.vo.system.OnlineInfoVo
+import top.fatweb.apimanagement.vo.system.SoftwareInfoVo
+import top.fatweb.apimanagement.vo.system.StorageInfoVo
 
 /**
  * Statistics service interface

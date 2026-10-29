@@ -29,5 +29,5 @@ enum class PrincipalType {
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    ACCESS_KEY
+    ACCESS_KEY,
 }

@@ -6,4 +6,4 @@ package top.fatweb.apimanagement.exception
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-class PluginInstallException(message: String) : RuntimeException(message)
+class PluginInstallException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)

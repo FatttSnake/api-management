@@ -27,7 +27,7 @@ import top.fatweb.apimanagement.vo.api.ApiTopVo
 @BaseController(path = ["/system/api/report"], name = "API 报表", description = "API 报表相关接口")
 class ApiReportController(
     private val apiReportService: IApiReportService,
-    private val storageBlobService: IStorageBlobService
+    private val storageBlobService: IStorageBlobService,
 ) {
     /**
      * Get API usage report
@@ -112,7 +112,8 @@ class ApiReportController(
     @PreAuthorize("hasAnyAuthority('system:operations:report:export')")
     fun download(@PathVariable fileHash: String): ResponseEntity<ByteArray> {
         val bytes = storageBlobService.loadFile(fileHash) ?: throw NoRecordFoundException()
-        return ResponseEntity.ok()
+        return ResponseEntity
+            .ok()
             .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=api-report.csv")
             .contentType(MediaType.parseMediaType("text/csv;charset=utf-8"))
             .body(bytes)

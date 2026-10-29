@@ -19,31 +19,34 @@ import javax.sql.DataSource
 class FlywayConfig(
     private val flywayProperties: FlywayProperties,
     private val dataSource: DataSource,
-    private val migrations: List<JavaMigration>
+    private val migrations: List<JavaMigration>,
 ) {
     @PostConstruct
     fun migrateOrder() {
         val ds = dataSource as DynamicRoutingDataSource
         ds.dataSources.forEach { (k: String, v: DataSource?) ->
-            val javaMigrations = migrations.filter {
-                val annotation = it::class.java.getAnnotation(TargetDataSource::class.java)
-                annotation?.value == k
-            }
+            val javaMigrations =
+                migrations.filter {
+                    val annotation = it::class.java.getAnnotation(TargetDataSource::class.java)
+                    annotation?.value == k
+                }
 
-            val flyway = Flyway.configure()
-                .dataSource(v)
-                .locations(*flywayProperties.locations.map { "$it/$k" }.toTypedArray())
-                .javaMigrations(*javaMigrations.toTypedArray())
-                .baselineOnMigrate(flywayProperties.baselineOnMigrate)
-                .table(flywayProperties.table)
-                .outOfOrder(flywayProperties.outOfOrder)
-                .validateOnMigrate(flywayProperties.validateOnMigrate)
-                .encoding(flywayProperties.encoding)
-                .sqlMigrationPrefix(flywayProperties.sqlMigrationPrefix)
-                .sqlMigrationSeparator(flywayProperties.sqlMigrationSeparator)
-                .sqlMigrationSuffixes(*flywayProperties.sqlMigrationSuffixes.toTypedArray())
-                .baselineVersion(flywayProperties.baselineVersion)
-                .load()
+            val flyway =
+                Flyway
+                    .configure()
+                    .dataSource(v)
+                    .locations(*flywayProperties.locations.map { "$it/$k" }.toTypedArray())
+                    .javaMigrations(*javaMigrations.toTypedArray())
+                    .baselineOnMigrate(flywayProperties.baselineOnMigrate)
+                    .table(flywayProperties.table)
+                    .outOfOrder(flywayProperties.outOfOrder)
+                    .validateOnMigrate(flywayProperties.validateOnMigrate)
+                    .encoding(flywayProperties.encoding)
+                    .sqlMigrationPrefix(flywayProperties.sqlMigrationPrefix)
+                    .sqlMigrationSeparator(flywayProperties.sqlMigrationSeparator)
+                    .sqlMigrationSuffixes(*flywayProperties.sqlMigrationSuffixes.toTypedArray())
+                    .baselineVersion(flywayProperties.baselineVersion)
+                    .load()
             flyway.migrate()
         }
     }

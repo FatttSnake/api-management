@@ -24,7 +24,7 @@ data class ApiAccountGetParam(
         description = "启用状态",
         allowableValues = ["true", "false"],
         defaultValue = "true",
-        example = "true"
+        example = "true",
     )
-    var enable: Boolean?
+    var enable: Boolean?,
 ) : PageSortParam()

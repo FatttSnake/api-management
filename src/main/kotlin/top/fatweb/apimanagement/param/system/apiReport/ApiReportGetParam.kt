@@ -23,7 +23,6 @@ data class ApiReportGetParam(
      */
     @field:Schema(description = "API Key ID")
     var apiKeyId: Long?,
-
     /**
      * Start time
      *
@@ -33,7 +32,6 @@ data class ApiReportGetParam(
     @field:Schema(description = "开始时间", example = "2026-01-01T00:00:00.000Z")
     @field:DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     var startTime: LocalDateTime?,
-
     /**
      * End time
      *
@@ -43,7 +41,6 @@ data class ApiReportGetParam(
     @field:Schema(description = "结束时间", example = "2026-12-31T00:00:00.000Z")
     @field:DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     var endTime: LocalDateTime?,
-
     /**
      * Limit of top list
      *
@@ -52,5 +49,5 @@ data class ApiReportGetParam(
      */
     @field:Schema(description = "Top 数量", defaultValue = "10", example = "10")
     @field:Min(value = 1, message = "Limit must be greater than or equal to 1")
-    var limit: Int? = 10
+    var limit: Int? = 10,
 )

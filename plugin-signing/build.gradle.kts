@@ -1,5 +1,7 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.ktlint)
+    alias(libs.plugins.detekt)
     `java-library`
     `maven-publish`
 }
@@ -21,6 +23,9 @@ repositories {
 
 dependencies {
     api(kotlin("stdlib"))
+
+    testImplementation(libs.kotlin.test.junit5)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 kotlin {

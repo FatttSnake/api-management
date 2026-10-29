@@ -16,5 +16,5 @@ data class UserInfo @JvmOverloads constructor(
     val username: String = "",
     val nickname: String = "",
     val email: String = "",
-    val enabled: Boolean = true
+    val enabled: Boolean = true,
 )

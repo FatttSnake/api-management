@@ -24,7 +24,7 @@ data class SchemaSpec @JvmOverloads constructor(
     val items: SchemaSpec? = null,
     val enumValues: List<Any> = emptyList(),
     val example: Any? = null,
-    val nullable: Boolean = false
+    val nullable: Boolean = false,
 ) {
     companion object {
         /**
@@ -44,7 +44,7 @@ data class SchemaSpec @JvmOverloads constructor(
             description: String = "",
             format: String? = null,
             example: Any? = null,
-            nullable: Boolean = false
+            nullable: Boolean = false,
         ): SchemaSpec = SchemaSpec("string", description, format, example = example, nullable = nullable)
 
         /**
@@ -64,7 +64,7 @@ data class SchemaSpec @JvmOverloads constructor(
             description: String = "",
             format: String? = null,
             example: Any? = null,
-            nullable: Boolean = false
+            nullable: Boolean = false,
         ): SchemaSpec = SchemaSpec("integer", description, format, example = example, nullable = nullable)
 
         /**
@@ -84,7 +84,7 @@ data class SchemaSpec @JvmOverloads constructor(
             description: String = "",
             format: String? = null,
             example: Any? = null,
-            nullable: Boolean = false
+            nullable: Boolean = false,
         ): SchemaSpec = SchemaSpec("number", description, format, example = example, nullable = nullable)
 
         /**
@@ -99,11 +99,8 @@ data class SchemaSpec @JvmOverloads constructor(
          */
         @JvmStatic
         @JvmOverloads
-        fun boolean(
-            description: String = "",
-            example: Any? = null,
-            nullable: Boolean = false
-        ): SchemaSpec = SchemaSpec("boolean", description, example = example, nullable = nullable)
+        fun boolean(description: String = "", example: Any? = null, nullable: Boolean = false): SchemaSpec =
+            SchemaSpec("boolean", description, example = example, nullable = nullable)
 
         /**
          * Builds an array schema.
@@ -117,11 +114,8 @@ data class SchemaSpec @JvmOverloads constructor(
          */
         @JvmStatic
         @JvmOverloads
-        fun array(
-            items: SchemaSpec,
-            description: String = "",
-            nullable: Boolean = false
-        ): SchemaSpec = SchemaSpec("array", description, items = items, nullable = nullable)
+        fun array(items: SchemaSpec, description: String = "", nullable: Boolean = false): SchemaSpec =
+            SchemaSpec("array", description, items = items, nullable = nullable)
 
         /**
          * Builds an object schema.
@@ -138,7 +132,7 @@ data class SchemaSpec @JvmOverloads constructor(
         fun objectOf(
             properties: Map<String, SchemaSpec>,
             required: List<String> = emptyList(),
-            description: String = ""
+            description: String = "",
         ): SchemaSpec = SchemaSpec("object", description, properties = properties, required = required)
     }
 }

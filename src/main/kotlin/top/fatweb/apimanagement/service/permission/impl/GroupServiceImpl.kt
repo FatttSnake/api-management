@@ -12,12 +12,20 @@ import top.fatweb.apimanagement.converter.permission.toVoWithRole
 import top.fatweb.apimanagement.entity.permission.Group
 import top.fatweb.apimanagement.entity.permission.RRoleGroup
 import top.fatweb.apimanagement.mapper.permission.GroupMapper
-import top.fatweb.apimanagement.param.permission.group.*
+import top.fatweb.apimanagement.param.permission.group.GroupAddParam
+import top.fatweb.apimanagement.param.permission.group.GroupDeleteParam
+import top.fatweb.apimanagement.param.permission.group.GroupGetParam
+import top.fatweb.apimanagement.param.permission.group.GroupUpdateParam
+import top.fatweb.apimanagement.param.permission.group.GroupUpdateStatusParam
 import top.fatweb.apimanagement.properties.ServerProperties
 import top.fatweb.apimanagement.service.permission.IGroupService
 import top.fatweb.apimanagement.service.permission.IRRoleGroupService
 import top.fatweb.apimanagement.service.permission.IUserService
-import top.fatweb.apimanagement.util.*
+import top.fatweb.apimanagement.util.offlineUser
+import top.fatweb.apimanagement.util.queryOrThrowException
+import top.fatweb.apimanagement.util.saveOrThrowException
+import top.fatweb.apimanagement.util.setPageSort
+import top.fatweb.apimanagement.util.updateOrThrowException
 import top.fatweb.apimanagement.vo.PageVo
 import top.fatweb.apimanagement.vo.permission.GroupWithRoleVo
 import top.fatweb.apimanagement.vo.permission.base.GroupVo
@@ -33,8 +41,9 @@ class GroupServiceImpl(
     private val serverProperties: ServerProperties,
     private val redisProvider: RedisProvider,
     private val rRoleGroupService: IRRoleGroupService,
-    private val userService: IUserService
-) : ServiceImpl<GroupMapper, Group>(), IGroupService {
+    private val userService: IUserService,
+) : ServiceImpl<GroupMapper, Group>(),
+    IGroupService {
     override fun getPage(groupGetParam: GroupGetParam?): PageVo<GroupWithRoleVo> {
         val groupIdsPage = Page<Long>(groupGetParam?.currentPage ?: 1, groupGetParam?.pageSize ?: 20)
 
@@ -50,8 +59,9 @@ class GroupServiceImpl(
         return groupPage.toVoWithRole()
     }
 
-    override fun getOne(id: Long): GroupWithRoleVo =
-        queryOrThrowException { baseMapper.selectOneById(id) }.let(Group::toVoWithRole)
+    override fun getOne(id: Long): GroupWithRoleVo = queryOrThrowException {
+        baseMapper.selectOneById(id)
+    }.let(Group::toVoWithRole)
 
     override fun getList(): List<GroupVo> = list().map(Group::toVo)
 
@@ -65,12 +75,14 @@ class GroupServiceImpl(
         }
 
         saveOrThrowException {
-            rRoleGroupService.saveBatch(group.roles!!.map {
-                RRoleGroup().apply {
-                    groupId = group.id
-                    roleId = it.id
-                }
-            })
+            rRoleGroupService.saveBatch(
+                group.roles!!.map {
+                    RRoleGroup().apply {
+                        groupId = group.id
+                        roleId = it.id
+                    }
+                },
+            )
         }
 
         return group.toVo()
@@ -82,9 +94,13 @@ class GroupServiceImpl(
 
         updateOrThrowException { updateById(group) }
 
-        val oldRoleList = rRoleGroupService.list(
-            KtQueryWrapper(RRoleGroup()).select(RRoleGroup::roleId).eq(RRoleGroup::groupId, groupUpdateParam.id)
-        ).map(RRoleGroup::roleId)
+        val oldRoleList =
+            rRoleGroupService
+                .list(
+                    KtQueryWrapper(
+                        RRoleGroup(),
+                    ).select(RRoleGroup::roleId).eq(RRoleGroup::groupId, groupUpdateParam.id),
+                ).map(RRoleGroup::roleId)
         val addRoleIds = HashSet<Long>()
         val removeRoleIds = HashSet<Long>()
         groupUpdateParam.roleIds?.forEach(addRoleIds::add)
@@ -96,18 +112,22 @@ class GroupServiceImpl(
 
         removeRoleIds.forEach {
             rRoleGroupService.remove(
-                KtQueryWrapper(RRoleGroup()).eq(
-                    RRoleGroup::groupId, groupUpdateParam.id
-                ).eq(RRoleGroup::roleId, it)
+                KtQueryWrapper(RRoleGroup())
+                    .eq(
+                        RRoleGroup::groupId,
+                        groupUpdateParam.id,
+                    ).eq(RRoleGroup::roleId, it),
             )
         }
 
         addRoleIds.forEach {
             saveOrThrowException {
-                rRoleGroupService.save(RRoleGroup().apply {
-                    groupId = groupUpdateParam.id
-                    roleId = it
-                })
+                rRoleGroupService.save(
+                    RRoleGroup().apply {
+                        groupId = groupUpdateParam.id
+                        roleId = it
+                    },
+                )
             }
         }
 

@@ -16,7 +16,7 @@ fun SensitiveWord.toVo() = SensitiveWordVo(
     id = this.id,
     word = this.word,
     useFor = this.useFor?.map(SensitiveWord.Use::valueOf)?.toSet(),
-    enable = this.enable?.let { it == 1 }
+    enable = this.enable?.let { it == 1 },
 )
 
 /**

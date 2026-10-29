@@ -17,31 +17,32 @@ import kotlin.test.assertTrue
  * @see StorageKeyUtil
  */
 class StorageKeyUtilTests {
-    private val escapeAttempts = listOf(
-        "../escape.txt",
-        "..\\..\\escape.txt",
-        "/etc/passwd",
-        "C:\\Windows\\win.ini",
-        "a//b",
-        "a/",
-        "/a",
-        ".",
-        "..",
-        "a/./b",
-        "a/../../b",
-        "CON",
-        "nul.txt",
-        "com1.bin",
-        "a".repeat(201),
-        "avatar/in valid.png",
-        "avatar/1.png "
-    )
+    private val escapeAttempts =
+        listOf(
+            "../escape.txt",
+            "..\\..\\escape.txt",
+            "/etc/passwd",
+            "C:\\Windows\\win.ini",
+            "a//b",
+            "a/",
+            "/a",
+            ".",
+            "..",
+            "a/./b",
+            "a/../../b",
+            "CON",
+            "nul.txt",
+            "com1.bin",
+            "a".repeat(201),
+            "avatar/in valid.png",
+            "avatar/1.png ",
+        )
 
     @Test
     fun `pluginKey composes the plugin namespace under plugin-data`() {
         assertEquals(
             "plugin-data/alpha/avatar/1.png",
-            StorageKeyUtil.pluginKey("alpha", "avatar/1.png")
+            StorageKeyUtil.pluginKey("alpha", "avatar/1.png"),
         )
         assertEquals("plugin-data/alpha", StorageKeyUtil.pluginBaseKey("alpha"))
     }
@@ -90,7 +91,7 @@ class StorageKeyUtilTests {
             // inside alpha's own prefix like any other path.
             "plugin-data/beta/avatar/1.png",
             "beta/avatar/1.png",
-            "objects/alpha.png"
+            "objects/alpha.png",
         ).forEach { path ->
             val key = StorageKeyUtil.pluginKey("alpha", path)
 

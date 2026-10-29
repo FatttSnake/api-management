@@ -1,6 +1,10 @@
 package top.fatweb.apimanagement.entity.permission
 
-import com.baomidou.mybatisplus.annotation.*
+import com.baomidou.mybatisplus.annotation.TableField
+import com.baomidou.mybatisplus.annotation.TableId
+import com.baomidou.mybatisplus.annotation.TableLogic
+import com.baomidou.mybatisplus.annotation.TableName
+import com.baomidou.mybatisplus.annotation.Version
 import java.io.Serializable
 import java.time.LocalDateTime
 
@@ -246,7 +250,6 @@ class User() : Serializable {
     @TableField(exist = false)
     var operations: List<Operation>? = null
 
-    override fun toString(): String {
-        return "User(id=$id, username=$username, password=$password, twoFactor=$twoFactor, verify=$verify, forget=$forget, locking=$locking, expiration=$expiration, credentialsExpiration=$credentialsExpiration, enable=$enable, currentLoginTime=$currentLoginTime, currentLoginIp=$currentLoginIp, lastLoginTime=$lastLoginTime, lastLoginIp=$lastLoginIp, createTime=$createTime, updateTime=$updateTime, deleted=$deleted, version=$version, userInfo=$userInfo, roles=$roles, groups=$groups, modules=$modules, menus=$menus, scopes=$scopes, operations=$operations)"
-    }
+    override fun toString(): String =
+        "User(id=$id, username=$username, password=$password, twoFactor=$twoFactor, verify=$verify, forget=$forget, locking=$locking, expiration=$expiration, credentialsExpiration=$credentialsExpiration, enable=$enable, currentLoginTime=$currentLoginTime, currentLoginIp=$currentLoginIp, lastLoginTime=$lastLoginTime, lastLoginIp=$lastLoginIp, createTime=$createTime, updateTime=$updateTime, deleted=$deleted, version=$version, userInfo=$userInfo, roles=$roles, groups=$groups, modules=$modules, menus=$menus, scopes=$scopes, operations=$operations)"
 }

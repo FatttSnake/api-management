@@ -29,45 +29,51 @@ class ApiMonitorServiceImpl(
     private val serverProperties: ServerProperties,
     private val redisProvider: RedisProvider,
     private val apiUsageMapper: ApiUsageMapper,
-    private val pluginRegistryCache: PluginRegistryCache
+    private val pluginRegistryCache: PluginRegistryCache,
 ) : IApiMonitorService {
     override fun dashboard(): ApiMonitorDashboardVo {
         val prefix = "${serverProperties.security.tokenIssuer}_apimetrics"
         val countKeys = redisProvider.keys("${prefix}_count:*")
-        val interfaces = countKeys
-            .map { it.removePrefix("${prefix}_count:") }
-            .toSet()
-            .associateWith { pluginRegistryCache.getByCode(it) }
-            .filterValues { it != null }
-            .mapValues { it.value!! }
-        val plugins = interfaces.values
-            .mapNotNull { it.pluginId }
-            .toSet()
-            .associateWith { pluginRegistryCache.getByPluginId(it) }
-            .filterValues { it != null }
-            .mapValues { it.value!! }
-        val live = countKeys.map { key ->
-            val apiCode = key.removePrefix("${prefix}_count:")
-            val apiInterface = interfaces[apiCode]
-            ApiMonitorDashboardVo.ApiMonitorItemVo(
-                apiCode = apiCode,
-                count = redisProvider.getObject<Number>(key)?.toLong() ?: 0L,
-                error = redisProvider.getObject<Number>("${prefix}_error:$apiCode")?.toLong() ?: 0L,
-                latencyMs = redisProvider.getObject<Number>("${prefix}_latency:$apiCode")?.toLong() ?: 0L,
-                pluginVo = apiInterface?.pluginId?.let { plugins[it]?.toVo() },
-                interfaceVo = apiInterface?.toVo()
-            )
-        }.sortedByDescending { it.count }
+        val interfaces =
+            countKeys
+                .map { it.removePrefix("${prefix}_count:") }
+                .toSet()
+                .associateWith { pluginRegistryCache.getByCode(it) }
+                .filterValues { it != null }
+                .mapValues { it.value!! }
+        val plugins =
+            interfaces.values
+                .mapNotNull { it.pluginId }
+                .toSet()
+                .associateWith { pluginRegistryCache.getByPluginId(it) }
+                .filterValues { it != null }
+                .mapValues { it.value!! }
+        val live =
+            countKeys
+                .map { key ->
+                    val apiCode = key.removePrefix("${prefix}_count:")
+                    val apiInterface = interfaces[apiCode]
+                    ApiMonitorDashboardVo.ApiMonitorItemVo(
+                        apiCode = apiCode,
+                        count = redisProvider.getObject<Number>(key)?.toLong() ?: 0L,
+                        error = redisProvider.getObject<Number>("${prefix}_error:$apiCode")?.toLong() ?: 0L,
+                        latencyMs = redisProvider.getObject<Number>("${prefix}_latency:$apiCode")?.toLong() ?: 0L,
+                        pluginVo = apiInterface?.pluginId?.let { plugins[it]?.toVo() },
+                        interfaceVo = apiInterface?.toVo(),
+                    )
+                }.sortedByDescending { it.count }
 
         val activeKeys = redisProvider.getSet<Any>("${prefix}_keys")?.size?.toLong() ?: 0L
 
         val startOfToday = TimezoneUtil.startOfLocalDayUtc()
-        val totalToday = apiUsageMapper.selectCount(
-            Wrappers.lambdaQuery<ApiUsage>().ge(ApiUsage::createTime, startOfToday)
-        )
-        val errorToday = apiUsageMapper.selectCount(
-            Wrappers.lambdaQuery<ApiUsage>().ge(ApiUsage::createTime, startOfToday).eq(ApiUsage::success, 0)
-        )
+        val totalToday =
+            apiUsageMapper.selectCount(
+                Wrappers.lambdaQuery<ApiUsage>().ge(ApiUsage::createTime, startOfToday),
+            )
+        val errorToday =
+            apiUsageMapper.selectCount(
+                Wrappers.lambdaQuery<ApiUsage>().ge(ApiUsage::createTime, startOfToday).eq(ApiUsage::success, 0),
+            )
 
         return ApiMonitorDashboardVo(
             live = live,
@@ -75,31 +81,34 @@ class ApiMonitorServiceImpl(
             errorToday = errorToday,
             activeKeys = activeKeys,
             topApis = topApis(10),
-            todayTopApis = topApis(10, startOfToday)
+            todayTopApis = topApis(10, startOfToday),
         )
     }
 
     private fun topApis(limit: Int, startTime: LocalDateTime? = null): List<ApiTopVo> {
-        val rows = apiUsageMapper.selectMaps(
-            QueryWrapper<ApiUsage>()
-                .select("api_code", "count(*) as count", "coalesce(sum(cost), 0) as cost")
-                .apply { startTime?.let { ge("create_time", it) } }
-                .groupBy("api_code")
-                .orderByDesc("count")
-                .last("limit $limit")
-        )
-        val interfaces = rows
-            .mapNotNull { it["api_code"] as? String }
-            .toSet()
-            .associateWith { pluginRegistryCache.getByCode(it) }
-            .filterValues { it != null }
-            .mapValues { it.value!! }
-        val plugins = interfaces.values
-            .mapNotNull { it.pluginId }
-            .toSet()
-            .associateWith { pluginRegistryCache.getByPluginId(it) }
-            .filterValues { it != null }
-            .mapValues { it.value!! }
+        val rows =
+            apiUsageMapper.selectMaps(
+                QueryWrapper<ApiUsage>()
+                    .select("api_code", "count(*) as count", "coalesce(sum(cost), 0) as cost")
+                    .apply { startTime?.let { ge("create_time", it) } }
+                    .groupBy("api_code")
+                    .orderByDesc("count")
+                    .last("limit $limit"),
+            )
+        val interfaces =
+            rows
+                .mapNotNull { it["api_code"] as? String }
+                .toSet()
+                .associateWith { pluginRegistryCache.getByCode(it) }
+                .filterValues { it != null }
+                .mapValues { it.value!! }
+        val plugins =
+            interfaces.values
+                .mapNotNull { it.pluginId }
+                .toSet()
+                .associateWith { pluginRegistryCache.getByPluginId(it) }
+                .filterValues { it != null }
+                .mapValues { it.value!! }
 
         return rows.map { row ->
             val apiCode = row["api_code"] as? String ?: ""
@@ -109,7 +118,7 @@ class ApiMonitorServiceImpl(
                 count = (row["count"] as? Number)?.toLong() ?: 0L,
                 cost = (row["cost"] as? Number)?.let { BigDecimal(it.toString()) } ?: BigDecimal.ZERO,
                 pluginVo = apiInterface?.pluginId?.let { plugins[it]?.toVo() },
-                interfaceVo = apiInterface?.toVo()
+                interfaceVo = apiInterface?.toVo(),
             )
         }
     }

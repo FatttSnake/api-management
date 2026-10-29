@@ -32,20 +32,21 @@ import java.time.Instant
 class PublicStorageController(
     private val serverProperties: ServerProperties,
     private val fileStorageProvider: FileStorageProvider,
-    private val externalLinkSigner: ExternalLinkSigner
+    private val externalLinkSigner: ExternalLinkSigner,
 ) {
     private companion object {
         /**
          * Types a browser may render in place; everything else is forced to download
          * because this route shares an origin with the admin console.
          */
-        val INLINE_SAFE_TYPES = setOf(
-            MediaType.IMAGE_PNG,
-            MediaType.IMAGE_JPEG,
-            MediaType.IMAGE_GIF,
-            MediaType.parseMediaType("image/webp"),
-            MediaType.parseMediaType("image/bmp")
-        )
+        val INLINE_SAFE_TYPES =
+            setOf(
+                MediaType.IMAGE_PNG,
+                MediaType.IMAGE_JPEG,
+                MediaType.IMAGE_GIF,
+                MediaType.parseMediaType("image/webp"),
+                MediaType.parseMediaType("image/bmp"),
+            )
 
         const val MAX_CACHE_SECONDS = 3600L
     }
@@ -68,7 +69,7 @@ class PublicStorageController(
         @PathVariable pluginId: String,
         @PathVariable path: String,
         @RequestParam("e") expiresAt: Long,
-        @RequestParam("s") signature: String
+        @RequestParam("s") signature: String,
     ): ResponseEntity<ByteArray> {
         // Both are composed from the parsed path variables, never read out of the
         // request, so the signature is verified over the gateway's own reference and
@@ -95,9 +96,10 @@ class PublicStorageController(
 
         val fileName = key.substringAfterLast('/')
         val mediaType = MediaTypeFactory.getMediaType(fileName).orElse(MediaType.APPLICATION_OCTET_STREAM)
-        val disposition = (if (mediaType in INLINE_SAFE_TYPES) ContentDisposition.inline() else ContentDisposition.attachment())
-            .filename(fileName, StandardCharsets.UTF_8)
-            .build()
+        val disposition =
+            (if (mediaType in INLINE_SAFE_TYPES) ContentDisposition.inline() else ContentDisposition.attachment())
+                .filename(fileName, StandardCharsets.UTF_8)
+                .build()
 
         return ResponseEntity
             .ok()

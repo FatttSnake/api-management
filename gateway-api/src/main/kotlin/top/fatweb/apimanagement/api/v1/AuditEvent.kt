@@ -14,7 +14,7 @@ data class AuditEvent @JvmOverloads constructor(
     val action: String,
     val target: String = "",
     val detail: String = "",
-    val attributes: Map<String, String> = emptyMap()
+    val attributes: Map<String, String> = emptyMap(),
 ) {
     init {
         require(action.isNotBlank()) { "action must not be blank" }

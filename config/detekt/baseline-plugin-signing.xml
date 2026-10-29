@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ClassOrdering:PluginSigner.kt:PluginSigner$private val BYTE_MASK: BigInteger = BigInteger.valueOf(0xff)</ID>
+    <ID>ClassOrdering:PluginSigner.kt:PluginSigner$private val ED25519_BASE_POINT: Point = Point( BigInteger("15112221349535400772501151409588531511454012693041857206046113283949847762202"), BigInteger("46316835694926478169428394003475163141307993866256225615783033603165251855960"), )</ID>
+    <ID>ClassOrdering:PluginSigner.kt:PluginSigner$private val ED25519_D: BigInteger = BigInteger .valueOf(-121665) .multiply(BigInteger.valueOf(121666).modInverse(ED25519_P)) .mod(ED25519_P)</ID>
+    <ID>ClassOrdering:PluginSigner.kt:PluginSigner$private val ED25519_P: BigInteger = BigInteger.TWO.pow(255).subtract(BigInteger.valueOf(19))</ID>
+    <ID>ClassOrdering:PluginSigner.kt:PluginSigner$private val ED25519_SPKI_PREFIX: ByteArray = byteArrayOf( 0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00, )</ID>
+    <ID>NestedBlockDepth:PluginSigner.kt:PluginSigner$private fun addJarEntry</ID>
+    <ID>TooManyFunctions:PluginSigner.kt:PluginSigner</ID>
+  </CurrentIssues>
+</SmellBaseline>
