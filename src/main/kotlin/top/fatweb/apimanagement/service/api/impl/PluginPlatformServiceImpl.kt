@@ -56,7 +56,6 @@ import top.fatweb.apimanagement.service.api.IApiInterfaceService
 import top.fatweb.apimanagement.service.api.IApiPluginSettingService
 import top.fatweb.apimanagement.service.api.IPluginModuleService
 import top.fatweb.apimanagement.service.api.IPluginPlatformService
-import top.fatweb.apimanagement.service.api.PluginModuleUpload
 import top.fatweb.apimanagement.util.PluginCryptoUtil
 import top.fatweb.apimanagement.util.PluginDatasourceUtil
 import top.fatweb.apimanagement.util.saveOrThrowException
@@ -116,13 +115,12 @@ class PluginPlatformServiceImpl(
      *
      * @param jarBytes plugin jar
      * @param jarName original jar name
-     * @param modules dependency modules uploaded with the jar
      * @return installed plugin row
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
     @Transactional
-    override fun install(jarBytes: ByteArray, jarName: String, modules: List<PluginModuleUpload>): ApiPlugin {
+    override fun install(jarBytes: ByteArray, jarName: String): ApiPlugin {
         if (jarBytes.size > serverProperties.storage.pluginJarMaxBytes) {
             throw PluginInstallException(
                 "Plugin jar is ${jarBytes.size} bytes, limit is ${serverProperties.storage.pluginJarMaxBytes}",
@@ -136,7 +134,7 @@ class PluginPlatformServiceImpl(
             val descriptor = artifactStore.descriptor(jar.path)
             pluginId = descriptor.pluginId
             return runtimeRegistry.withLock(pluginId) {
-                installLocked(descriptor, jar, jarName, signerKeyId, modules)
+                installLocked(descriptor, jar, jarName, signerKeyId)
             }
         } catch (ex: Throwable) {
             // The jar is content-addressed: a byte-identical reinstall is the jar the installed
@@ -162,7 +160,6 @@ class PluginPlatformServiceImpl(
         jar: PluginArtifactStore.StoredJar,
         jarName: String,
         signerKeyId: String,
-        modules: List<PluginModuleUpload>,
     ): ApiPlugin {
         val pluginId = descriptor.pluginId
         val previousRow = get(pluginId)
@@ -189,15 +186,7 @@ class PluginPlatformServiceImpl(
         val enabled = previousRow?.enable != 0
         var loaded: LoadedPlugin? = null
         try {
-            val uploaded = modules.associate { it.fileName.removeSuffix(".jar") to it.bytes }
-            moduleService.installForPlugin(pluginId, lock) { module ->
-                uploaded[module.sha256]
-                    ?: moduleService
-                        .store()
-                        .path(module.sha256)
-                        .takeIf { Files.isRegularFile(it) }
-                        ?.let { Files.readAllBytes(it) }
-            }
+            moduleService.installForPlugin(pluginId, lock)
 
             // The old runtime is taken down only after the artifact, descriptor, version,
             // dependency lock and config schema have all been accepted

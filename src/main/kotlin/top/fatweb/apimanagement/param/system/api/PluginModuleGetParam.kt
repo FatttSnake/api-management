@@ -37,4 +37,20 @@ data class PluginModuleGetParam(
      */
     @field:Schema(description = "查询 Maven version")
     var searchVersion: String?,
+    /**
+     * SHA-256 prefix to search for
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @field:Schema(description = "查询模块 SHA-256 前缀")
+    var searchSha: String?,
+    /**
+     * Whether to list only referenced (`true`) or unreferenced (`false`) modules; null lists both
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @field:Schema(description = "是否被插件引用，留空查询全部")
+    var referenced: Boolean?,
 ) : PageSortParam()

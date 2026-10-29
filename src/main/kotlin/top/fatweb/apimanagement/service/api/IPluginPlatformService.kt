@@ -23,14 +23,16 @@ interface IPluginPlatformService : IService<ApiPlugin> {
     /**
      * Installs or upgrades a plugin.
      *
+     * The dependency modules are read from the module store, where
+     * [IPluginModuleService.stage] put them before the plugin was uploaded.
+     *
      * @param jarBytes plugin jar
      * @param jarName original jar name
-     * @param modules dependency modules uploaded with the jar, keyed by digest file name
      * @return installed plugin row
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun install(jarBytes: ByteArray, jarName: String, modules: List<PluginModuleUpload>): ApiPlugin
+    fun install(jarBytes: ByteArray, jarName: String): ApiPlugin
 
     /**
      * Uninstalls a plugin.
@@ -166,32 +168,4 @@ interface IPluginPlatformService : IService<ApiPlugin> {
      * @since 1.0.0
      */
     fun loadInstalled()
-}
-
-/**
- * A dependency module uploaded together with a plugin jar.
- *
- * @property fileName file name, normally `<sha256>.jar`
- * @property bytes module bytes
- * @author FatttSnake, fatttsnake@gmail.com
- * @since 1.0.0
- */
-data class PluginModuleUpload(val fileName: String, val bytes: ByteArray) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as PluginModuleUpload
-
-        if (fileName != other.fileName) return false
-        if (!bytes.contentEquals(other.bytes)) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = fileName.hashCode()
-        result = 31 * result + bytes.contentHashCode()
-        return result
-    }
 }

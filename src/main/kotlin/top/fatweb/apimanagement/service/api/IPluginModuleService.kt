@@ -3,7 +3,6 @@ package top.fatweb.apimanagement.service.api
 import com.baomidou.mybatisplus.spring.service.IService
 import top.fatweb.apimanagement.entity.api.PluginModule
 import top.fatweb.apimanagement.param.system.api.PluginModuleGetParam
-import top.fatweb.apimanagement.plugin.runtime.module.LockedModule
 import top.fatweb.apimanagement.plugin.runtime.module.PluginModuleLock
 import top.fatweb.apimanagement.plugin.runtime.module.PluginModuleStore
 import top.fatweb.apimanagement.vo.PageVo
@@ -18,20 +17,15 @@ import java.time.Duration
  */
 interface IPluginModuleService : IService<PluginModule> {
     /**
-     * Installs every module in a lock and references them from a plugin
+     * Claims every module in a lock from the module store and references them from a plugin
      *
      * @param pluginId plugin ID
      * @param lock dependency lock
-     * @param bytesOf module bytes by module
      * @return installed modules
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun installForPlugin(
-        pluginId: String,
-        lock: PluginModuleLock,
-        bytesOf: (LockedModule) -> ByteArray?,
-    ): List<PluginModule>
+    fun installForPlugin(pluginId: String, lock: PluginModuleLock): List<PluginModule>
 
     /**
      * Stages a module uploaded before its plugin.
@@ -62,7 +56,7 @@ interface IPluginModuleService : IService<PluginModule> {
     fun release(pluginId: String)
 
     /**
-     * Gets an installed module page.
+     * Gets an uploaded module page, including the plugins referencing each module.
      *
      * @param param query parameters
      * @return module page

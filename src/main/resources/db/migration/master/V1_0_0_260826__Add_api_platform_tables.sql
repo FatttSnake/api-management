@@ -172,9 +172,9 @@ drop table if exists t_b_plugin_module;
 create table t_b_plugin_module
 (
     id          bigint       not null primary key,
-    group_id       varchar(200) not null comment 'Maven group',
-    artifact_id    varchar(200) not null comment 'Maven artifact',
-    module_version varchar(100) not null comment 'Resolved Maven version',
+    group_id       varchar(200) null comment 'Maven group, empty until a plugin claims the module',
+    artifact_id    varchar(200) null comment 'Maven artifact, empty until a plugin claims the module',
+    module_version varchar(100) null comment 'Resolved Maven version, empty until a plugin claims the module',
     sha256         varchar(64)  not null comment 'Module jar SHA-256',
     size           bigint       not null default 0 comment 'Module jar size in bytes',
     source         varchar(500) null comment 'Repository the module was resolved from',

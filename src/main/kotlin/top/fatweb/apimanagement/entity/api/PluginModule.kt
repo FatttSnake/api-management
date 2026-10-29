@@ -117,13 +117,16 @@ class PluginModule : Serializable {
     var version: Int? = null
 
     /**
-     * Maven coordinate
+     * Maven coordinate, or the digest while the module is staged and has no coordinate yet
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
     val coordinate: String
-        get() = "$groupId:$artifactId:$moduleVersion"
+        get() {
+            val parts = listOfNotNull(groupId, artifactId, moduleVersion)
+            return if (parts.size == 3) parts.joinToString(":") else "sha256:$sha256"
+        }
 
     override fun toString(): String =
         "PluginModule(id=$id, groupId=$groupId, artifactId=$artifactId, moduleVersion=$moduleVersion, sha256=$sha256)"

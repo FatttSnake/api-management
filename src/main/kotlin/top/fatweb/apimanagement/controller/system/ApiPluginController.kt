@@ -88,7 +88,6 @@ class ApiPluginController(private val pluginPlatformService: IPluginPlatformServ
             .install(
                 jarBytes = file.bytes,
                 jarName = file.originalFilename ?: "plugin.jar",
-                modules = emptyList(),
             ).toVo(),
     )
 

@@ -226,7 +226,7 @@ flowchart TD
 | Controller | 作用 |
 |---|---|
 | `controller/system/ApiPluginController.kt` | 插件列表、详情、安装、升级、启停、卸载、reload、配置、接口治理 |
-| `controller/system/PluginModuleController.kt` | 模块分页、上传、删除、GC |
+| `controller/system/PluginModuleController.kt` | 模块分页（含引用插件）、上传暂存、删除、GC |
 | `controller/system/ApiTrustKeyController.kt` | 信任公钥管理 |
 
 ## 7. 安装 / 升级流程
@@ -243,11 +243,11 @@ sequenceDiagram
     participant DB as DB / Cache
     participant RR as PluginRouteRegistry
 
-    C->>S: install(jarBytes, jarName, modules)
+    C->>S: install(jarBytes, jarName)
     S->>S: 写 data/plugins/<sha256>.jar
     S->>S: verifySignature（PluginSigner + 信任表）
     S->>S: 读 descriptor / lock / plugin-config
-    S->>M: installForPlugin(pluginId, lock, bytesOf)
+    S->>M: installForPlugin(pluginId, lock)
     M->>M: store.install + module/edge/ref 行
     S->>R: load(jar, services)
     R->>MR: acquire(lock)
@@ -280,12 +280,14 @@ sequenceDiagram
    - `unloadRuntime(..., uninstalling = true)`：排空、注销路由、取消事件/调度、`onStop`、`onUninstall`、关闭 loader。
    - `moduleService.release(pluginId)`：释放当前模块引用。
 3. 模块安装：
-   - 上传的模块通过 `PluginModuleController.install` -> `IPluginModuleService.stage` 先进入模块仓库。
+   - 模块先通过 `PluginModuleController.install` → `IPluginModuleService.stage` 上传：落盘、从 jar 的 `META-INF/maven/**/pom.properties` 读取坐标，并插入模块行，管理员在列表里就能确认「这个 SHA / GAV 已经在仓库里」。没有该元数据的 jar（如 BouncyCastle 这类 OSGi bundle）坐标留空，列表仍显示 SHA 和大小。
    - `installForPlugin` 对 lock 中每个模块：
-     - `FileSystemPluginModuleStore.install` 校验 SHA 并落盘。
-     - `PluginModule` 行 upsert。
+     - 按 SHA 在模块仓库查找并校验完整性，缺失或损坏时分别报 `Missing dependency module` / `is corrupted`。
+     - `PluginModule` 行 upsert：坐标以 lock 为准（缺失时补全；与 jar 自带元数据不一致时覆盖，lock 在签名内），并写入引用。
      - `t_b_plugin_module_edge` 写直接依赖边。
      - `t_b_plugin_module_ref` 写插件引用。
+   - 列表接口返回 `referenced`、`referencedBy`，并可按 `referenced` 和 SHA-256 前缀过滤。
+   - 未被插件引用的模块（含上传后一直没装插件的模块）由 GC 按宽限期回收。
 4. 运行时装配：
    - `PluginRuntimeLoader.load`
      - `PluginDescriptorParser.parse`
@@ -522,7 +524,7 @@ erDiagram
 | `t_b_api_interface` | 路由/接口行：code、path、method、apiVersion、计费/限流/访问模式 |
 | `t_b_api_plugin_setting` | 插件配置值（secret 存密文） |
 | `t_b_api_plugin_trust_key` | 可信签名公钥 |
-| `t_b_plugin_module` | 依赖模块：`module_version` 是 Maven 版本，`version` 是乐观锁 |
+| `t_b_plugin_module` | 依赖模块：`module_version` 是 Maven 版本，`version` 是乐观锁；jar 没有 Maven 元数据时坐标在插件认领前为空 |
 | `t_b_plugin_module_edge` | 模块直接依赖边，带 `version` 乐观锁 |
 | `t_b_plugin_module_ref` | 插件对模块的引用，带 `version` 乐观锁 |
 | `t_s_menu` / `t_s_scope` / `t_s_operation` / `t_s_power` | 插件接口的权限树 |
@@ -615,7 +617,7 @@ erDiagram
 | 入口 | 主要调用链 |
 |---|---|
 | 安装插件 | `ApiPluginController.install` → `PluginPlatformServiceImpl.install` → `PluginModuleServiceImpl.installForPlugin` → `PluginRuntimeLoader.load` → `PluginModuleRegistry.acquire` → `PluginClassLoader.onStart` → `registerEndpoints` → `PluginRouteRegistry.replace` |
-| 模块上传 | `PluginModuleController.install` → `PluginModuleServiceImpl.stage` → `FileSystemPluginModuleStore.install` |
+| 模块上传 | `PluginModuleController.install` → `PluginModuleServiceImpl.stage` → `FileSystemPluginModuleStore.install` + 暂存模块行 |
 | 启动恢复 | `PluginPlatformServiceImpl.run` → `loadInstalled` → `loadFromRow` → `PluginRuntimeLoader.load` |
 | 请求 | `PluginApiHandlerMapping.getHandlerInternal` → `ApiAccessInterceptor.preHandle` → `PluginApiHandlerAdapter.handle` → `ApiHandler.handle` |
 | 停用 | `ApiPluginController.updatePluginStatus` → `PluginPlatformServiceImpl.setEnabled(false)` → `unloadRuntime` |

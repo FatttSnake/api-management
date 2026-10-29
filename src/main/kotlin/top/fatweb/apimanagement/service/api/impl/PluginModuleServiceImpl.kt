@@ -8,10 +8,12 @@ import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import top.fatweb.apimanagement.converter.api.toVoPage
+import top.fatweb.apimanagement.entity.api.ApiPlugin
 import top.fatweb.apimanagement.entity.api.PluginModule
 import top.fatweb.apimanagement.entity.api.PluginModuleEdge
 import top.fatweb.apimanagement.entity.api.PluginModuleRef
 import top.fatweb.apimanagement.exception.PluginInstallException
+import top.fatweb.apimanagement.mapper.api.ApiPluginMapper
 import top.fatweb.apimanagement.mapper.api.PluginModuleMapper
 import top.fatweb.apimanagement.param.system.api.PluginModuleGetParam
 import top.fatweb.apimanagement.plugin.runtime.module.FileSystemPluginModuleStore
@@ -22,10 +24,12 @@ import top.fatweb.apimanagement.properties.ServerProperties
 import top.fatweb.apimanagement.service.api.IPluginModuleEdgeService
 import top.fatweb.apimanagement.service.api.IPluginModuleRefService
 import top.fatweb.apimanagement.service.api.IPluginModuleService
+import top.fatweb.apimanagement.util.MavenCoordinateUtil
 import top.fatweb.apimanagement.util.PluginIdUtil
 import top.fatweb.apimanagement.util.saveOrThrowException
 import top.fatweb.apimanagement.util.setPageSort
 import top.fatweb.apimanagement.vo.PageVo
+import top.fatweb.apimanagement.vo.api.PluginModuleReferenceVo
 import top.fatweb.apimanagement.vo.api.PluginModuleVo
 import java.nio.file.Files
 import java.nio.file.Path
@@ -44,6 +48,7 @@ class PluginModuleServiceImpl(
     serverProperties: ServerProperties,
     private val pluginModuleEdgeService: IPluginModuleEdgeService,
     private val pluginModuleRefService: IPluginModuleRefService,
+    private val apiPluginMapper: ApiPluginMapper,
 ) : ServiceImpl<PluginModuleMapper, PluginModule>(),
     IPluginModuleService {
     private val maxModules: Int = serverProperties.storage.pluginModuleMaxCount
@@ -55,32 +60,30 @@ class PluginModuleServiceImpl(
         )
 
     /**
-     * Installs every module in a lock and references them from a plugin.
+     * Claims every module in a lock from the module store and references them from a plugin.
      *
      * @param pluginId plugin ID
      * @param lock dependency lock
-     * @param bytesOf module bytes by module
      * @return installed modules
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
     @Synchronized
     @Transactional
-    override fun installForPlugin(
-        pluginId: String,
-        lock: PluginModuleLock,
-        bytesOf: (LockedModule) -> ByteArray?,
-    ): List<PluginModule> {
+    override fun installForPlugin(pluginId: String, lock: PluginModuleLock): List<PluginModule> {
         requirePluginId(pluginId)
         lock.validate(maxModules)
 
         val ordered = topologicalOrder(lock)
         val installed = LinkedHashMap<LockedModule, PluginModule>()
         ordered.forEach { module ->
-            val bytes =
-                bytesOf(module)
-                    ?: throw PluginInstallException("Missing dependency module: ${module.coordinate}")
-            val path = moduleStore.install(module.sha256, bytes)
+            val path = moduleStore.path(module.sha256)
+            if (!moduleStore.contains(module.sha256)) {
+                throw PluginInstallException("Missing dependency module: ${module.coordinate}")
+            }
+            if (!moduleStore.verify(module.sha256)) {
+                throw PluginInstallException("Dependency module ${module.coordinate} is corrupted")
+            }
             if (module.size > 0 && Files.size(path) != module.size) {
                 throw PluginInstallException(
                     "Module ${module.coordinate} is ${Files.size(path)} bytes, lock says ${module.size}",
@@ -118,14 +121,35 @@ class PluginModuleServiceImpl(
     /**
      * Stages a module uploaded before its plugin.
      *
+     * The row is what makes the upload visible in the list. Its coordinate is read from the
+     * jar's Maven metadata; a jar without it stays coordinate-less until a plugin's lock
+     * claims the digest.
+     *
      * @param bytes module bytes
      * @return module digest
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
+    @Synchronized
+    @Transactional
     override fun stage(bytes: ByteArray): String {
         val digest = FileSystemPluginModuleStore.sha256(bytes)
         moduleStore.install(digest, bytes)
+        if (getOne(KtQueryWrapper(PluginModule()).eq(PluginModule::sha256, digest)) == null) {
+            val coordinate = MavenCoordinateUtil.read(bytes)
+            saveOrThrowException(PluginInstallException("Cannot stage module $digest")) {
+                save(
+                    PluginModule().apply {
+                        groupId = coordinate?.groupId
+                        artifactId = coordinate?.artifactId
+                        moduleVersion = coordinate?.version
+                        sha256 = digest
+                        size = bytes.size.toLong()
+                        installTime = LocalDateTime.now()
+                    },
+                )
+            }
+        }
         return digest
     }
 
@@ -149,7 +173,8 @@ class PluginModuleServiceImpl(
                     KtQueryWrapper(PluginModuleRef()).eq(PluginModuleRef::moduleId, moduleId),
                 )
             if (references.isNotEmpty()) {
-                throw PluginInstallException("Module ${module.coordinate} is still referenced by a plugin")
+                val pluginIds = references.mapNotNull { it.pluginId }.sorted().joinToString()
+                throw PluginInstallException("Module ${module.coordinate} is still referenced by $pluginIds")
             }
             pluginModuleEdgeService.remove(
                 KtQueryWrapper(PluginModuleEdge()).eq(PluginModuleEdge::moduleId, moduleId),
@@ -178,7 +203,7 @@ class PluginModuleServiceImpl(
     }
 
     /**
-     * Gets an installed module page.
+     * Gets an uploaded module page, including the plugins referencing each module.
      *
      * @param param query parameters
      * @return module page
@@ -193,8 +218,15 @@ class PluginModuleServiceImpl(
                 param?.searchGroup?.let { like(PluginModule::groupId, it) }
                 param?.searchArtifact?.let { like(PluginModule::artifactId, it) }
                 param?.searchVersion?.let { like(PluginModule::moduleVersion, it) }
+                param?.searchSha?.let { likeRight(PluginModule::sha256, it) }
+                when (param?.referenced) {
+                    true -> inSql(PluginModule::id, REFERENCED_MODULE_IDS)
+                    false -> notInSql(PluginModule::id, REFERENCED_MODULE_IDS)
+                    null -> {}
+                }
             }
-        return page(page, wrapper).toVoPage()
+        val modulePage = page(page, wrapper)
+        return modulePage.toVoPage(referencesByModule(modulePage.records.mapNotNull { it.id }))
     }
 
     /**
@@ -270,14 +302,17 @@ class PluginModuleServiceImpl(
     override fun store(): PluginModuleStore = moduleStore
 
     private fun upsert(module: LockedModule): PluginModule {
+        val staged = getOne(KtQueryWrapper(PluginModule()).eq(PluginModule::sha256, module.sha256))
+        if (staged != null) {
+            claim(module, staged)
+            return staged
+        }
+
         val existing = get(module.group, module.name, module.version)
         if (existing != null) {
-            if (existing.sha256 != module.sha256) {
-                throw PluginInstallException(
-                    "Module ${module.coordinate} is already installed with digest ${existing.sha256}",
-                )
-            }
-            return existing
+            throw PluginInstallException(
+                "Module ${module.coordinate} is already installed with digest ${existing.sha256}",
+            )
         }
 
         val entity =
@@ -294,6 +329,93 @@ class PluginModuleServiceImpl(
             save(entity)
         }
         return entity
+    }
+
+    /**
+     * Fills a staged module's details from the lock that claims it.
+     *
+     * The lock lives inside the signed plugin jar and wins over the jar's own metadata: a
+     * shaded jar can carry the coordinate of the artifact it bundled.
+     *
+     * @param module module declared by the lock
+     * @param staged row the upload created
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    private fun claim(module: LockedModule, staged: PluginModule) {
+        val owner = get(module.group, module.name, module.version)
+        if (owner != null && owner.id != staged.id) {
+            throw PluginInstallException(
+                "Module ${module.coordinate} is already installed with digest ${owner.sha256}",
+            )
+        }
+
+        val coordinateChanged =
+            staged.groupId != module.group ||
+                staged.artifactId != module.name ||
+                staged.moduleVersion != module.version
+        val sourceMissing = staged.source == null && module.source != null
+        val sizeMissing = (staged.size ?: 0) <= 0 && module.size > 0
+        if (!coordinateChanged && !sourceMissing && !sizeMissing) {
+            return
+        }
+
+        staged.groupId = module.group
+        staged.artifactId = module.name
+        staged.moduleVersion = module.version
+        if (sourceMissing) {
+            staged.source = module.source
+        }
+        if (sizeMissing) {
+            staged.size = module.size
+        }
+        saveOrThrowException(PluginInstallException("Cannot register module ${module.coordinate}")) {
+            updateById(staged)
+        }
+    }
+
+    /**
+     * Resolves the plugins that reference each module of one page.
+     *
+     * @param moduleIds module IDs on the current page
+     * @return references by module ID
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    private fun referencesByModule(moduleIds: List<Long>): Map<Long, List<PluginModuleReferenceVo>> {
+        if (moduleIds.isEmpty()) {
+            return emptyMap()
+        }
+        val references =
+            pluginModuleRefService.list(
+                KtQueryWrapper(PluginModuleRef()).`in`(PluginModuleRef::moduleId, moduleIds),
+            )
+        val pluginIds = references.mapNotNull { it.pluginId }.distinct()
+        val plugins =
+            if (pluginIds.isEmpty()) {
+                emptyMap()
+            } else {
+                apiPluginMapper
+                    .selectList(KtQueryWrapper(ApiPlugin()).`in`(ApiPlugin::pluginId, pluginIds))
+                    .mapNotNull { plugin -> plugin.pluginId?.let { it to plugin } }
+                    .toMap()
+            }
+
+        val byModule = mutableMapOf<Long, MutableList<PluginModuleReferenceVo>>()
+        references.forEach { reference ->
+            val moduleId = reference.moduleId ?: return@forEach
+            val plugin = plugins[reference.pluginId]
+            byModule
+                .getOrPut(moduleId) { mutableListOf() }
+                .add(
+                    PluginModuleReferenceVo(
+                        pluginId = reference.pluginId,
+                        name = plugin?.name ?: reference.pluginId,
+                        enable = plugin?.let { it.enable == 1 },
+                    ),
+                )
+        }
+        return byModule.mapValues { (_, moduleReferences) -> moduleReferences.sortedBy { it.pluginId } }
     }
 
     private fun replaceReferences(pluginId: String, modules: List<PluginModule>) {
@@ -344,3 +466,5 @@ class PluginModuleServiceImpl(
         }
     }
 }
+
+private const val REFERENCED_MODULE_IDS = "select module_id from t_b_plugin_module_ref"

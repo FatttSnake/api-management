@@ -36,7 +36,7 @@ class PluginModuleController(
     private val serverProperties: ServerProperties,
 ) {
     /**
-     * Lists installed modules.
+     * Lists uploaded modules with their coordinates and the plugins referencing them.
      *
      * @return module page
      * @author FatttSnake, fatttsnake@gmail.com

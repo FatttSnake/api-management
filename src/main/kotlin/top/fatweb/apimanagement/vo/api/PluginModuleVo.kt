@@ -36,12 +36,12 @@ data class PluginModuleVo(
      */
     val artifactId: String?,
     /**
-     * Version
+     * Resolved Maven version
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    val version: String?,
+    val moduleVersion: String?,
     /**
      * SHA-256 digest
      *
@@ -84,4 +84,20 @@ data class PluginModuleVo(
      * @since 1.0.0
      */
     val updateTime: LocalDateTime?,
+    /**
+     * Whether any plugin currently references the module
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @field:Schema(description = "是否被插件引用")
+    val referenced: Boolean,
+    /**
+     * Plugins that currently reference the module
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @field:Schema(description = "引用该模块的插件")
+    val referencedBy: List<PluginModuleReferenceVo>,
 )

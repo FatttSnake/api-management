@@ -3,6 +3,7 @@ package top.fatweb.apimanagement.converter.api
 import com.baomidou.mybatisplus.core.metadata.IPage
 import top.fatweb.apimanagement.entity.api.PluginModule
 import top.fatweb.apimanagement.vo.PageVo
+import top.fatweb.apimanagement.vo.api.PluginModuleReferenceVo
 import top.fatweb.apimanagement.vo.api.PluginModuleVo
 
 /**
@@ -12,17 +13,19 @@ import top.fatweb.apimanagement.vo.api.PluginModuleVo
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-fun PluginModule.toVo() = PluginModuleVo(
+fun PluginModule.toVo(referencedBy: List<PluginModuleReferenceVo> = emptyList()) = PluginModuleVo(
     id = this.id,
     groupId = this.groupId,
     artifactId = this.artifactId,
-    version = this.moduleVersion,
+    moduleVersion = this.moduleVersion,
     sha256 = this.sha256,
     size = this.size,
     source = this.source,
     installTime = this.installTime,
     createTime = this.createTime,
     updateTime = this.updateTime,
+    referenced = referencedBy.isNotEmpty(),
+    referencedBy = referencedBy,
 )
 
 /**
@@ -32,10 +35,12 @@ fun PluginModule.toVo() = PluginModuleVo(
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-fun IPage<PluginModule>.toVoPage(): PageVo<PluginModuleVo> = PageVo(
+fun IPage<PluginModule>.toVoPage(
+    references: Map<Long, List<PluginModuleReferenceVo>> = emptyMap(),
+): PageVo<PluginModuleVo> = PageVo(
     total = total,
     pages = pages,
     size = size,
     current = current,
-    records = records.map(PluginModule::toVo),
+    records = records.map { module -> module.toVo(module.id?.let(references::get).orEmpty()) },
 )

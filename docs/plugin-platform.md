@@ -226,7 +226,7 @@ Management entry points:
 | Controller | Responsibility |
 |---|---|
 | `controller/system/ApiPluginController.kt` | Plugin list, detail, install, upgrade, enable/disable, uninstall, reload, config, interface governance |
-| `controller/system/PluginModuleController.kt` | Module paging, upload, delete, GC |
+| `controller/system/PluginModuleController.kt` | Module paging with referencing plugins, upload staging, delete, GC |
 | `controller/system/ApiTrustKeyController.kt` | Trusted signing key management |
 
 ## 7. Install / upgrade flow
@@ -243,11 +243,11 @@ sequenceDiagram
     participant DB as DB / Cache
     participant RR as PluginRouteRegistry
 
-    C->>S: install(jarBytes, jarName, modules)
+    C->>S: install(jarBytes, jarName)
     S->>S: write data/plugins/<sha256>.jar
     S->>S: verifySignature (PluginSigner + trust store)
     S->>S: read descriptor / lock / plugin-config
-    S->>M: installForPlugin(pluginId, lock, bytesOf)
+    S->>M: installForPlugin(pluginId, lock)
     M->>M: store.install + module/edge/ref rows
     S->>R: load(jar, services)
     R->>MR: acquire(lock)
@@ -280,12 +280,14 @@ sequenceDiagram
    - `unloadRuntime(..., uninstalling = true)`: drain, unregister routes, cancel events/schedules, `onStop`, `onUninstall`, close loaders.
    - `moduleService.release(pluginId)`: release current module references.
 3. Install modules:
-   - Uploaded modules enter the module store through `PluginModuleController.install` → `IPluginModuleService.stage`.
+   - A module enters the store through `PluginModuleController.install` → `IPluginModuleService.stage`: the file is stored, its coordinate is read from `META-INF/maven/**/pom.properties`, and a module row is inserted, so the list answers whether a SHA / GAV is already present. Jars without that metadata (OSGi bundles such as BouncyCastle) stay coordinate-less and show only their SHA and size.
    - `installForPlugin` processes every module in the lock:
-     - `FileSystemPluginModuleStore.install` verifies SHA and stores the file.
-     - Upsert the `PluginModule` row.
+     - Find and verify the module in the module store by SHA; a missing or corrupted one fails with `Missing dependency module` / `is corrupted`.
+     - Upsert the `PluginModule` row: the lock is authoritative (it fills a missing coordinate and replaces one the jar declares differently, since the lock is covered by the plugin signature), and the plugin reference is written.
      - Write direct dependency edges to `t_b_plugin_module_edge`.
      - Write plugin references to `t_b_plugin_module_ref`.
+   - The list returns `referenced` and `referencedBy`, and filters by `referenced` and a SHA-256 prefix.
+   - Modules no plugin references, including uploads that never got installed, are collected by GC after the grace period.
 4. Assemble the runtime:
    - `PluginRuntimeLoader.load`
      - `PluginDescriptorParser.parse`
@@ -522,7 +524,7 @@ erDiagram
 | `t_b_api_interface` | Route/interface row: code, path, method, apiVersion, billing/rate limit/access mode |
 | `t_b_api_plugin_setting` | Plugin settings (secrets stored encrypted) |
 | `t_b_api_plugin_trust_key` | Trusted signing public keys |
-| `t_b_plugin_module` | Dependency module: `module_version` is the Maven version, `version` is the optimistic lock |
+| `t_b_plugin_module` | Dependency module: `module_version` is the Maven version, `version` is the optimistic lock; the coordinate stays empty until a plugin claims a jar without Maven metadata |
 | `t_b_plugin_module_edge` | Direct module dependency edge with `version` optimistic lock |
 | `t_b_plugin_module_ref` | Plugin-to-module reference with `version` optimistic lock |
 | `t_s_menu` / `t_s_scope` / `t_s_operation` / `t_s_power` | Permission tree for plugin interfaces |
@@ -615,7 +617,7 @@ Entities:
 | Entry | Main call chain |
 |---|---|
 | Install plugin | `ApiPluginController.install` → `PluginPlatformServiceImpl.install` → `PluginModuleServiceImpl.installForPlugin` → `PluginRuntimeLoader.load` → `PluginModuleRegistry.acquire` → `PluginClassLoader.onStart` → `registerEndpoints` → `PluginRouteRegistry.replace` |
-| Upload module | `PluginModuleController.install` → `PluginModuleServiceImpl.stage` → `FileSystemPluginModuleStore.install` |
+| Upload module | `PluginModuleController.install` → `PluginModuleServiceImpl.stage` → `FileSystemPluginModuleStore.install` + staged module row |
 | Startup recovery | `PluginPlatformServiceImpl.run` → `loadInstalled` → `loadFromRow` → `PluginRuntimeLoader.load` |
 | Request | `PluginApiHandlerMapping.getHandlerInternal` → `ApiAccessInterceptor.preHandle` → `PluginApiHandlerAdapter.handle` → `ApiHandler.handle` |
 | Disable | `ApiPluginController.updatePluginStatus` → `PluginPlatformServiceImpl.setEnabled(false)` → `unloadRuntime` |
