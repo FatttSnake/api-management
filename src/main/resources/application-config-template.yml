@@ -46,6 +46,13 @@ app:
 #      prefix: # S3 storage path prefix
 #      publicEndpoint: https://s3.example.com # Public S3 endpoint of presigned URLs (falls back to endpoint)
 #      signingRegion: us-east-1 # Region of presigned URLs (falls back to region, 'auto' becomes us-east-1)
+  plugin:
+    module:
+      online: true # Whether missing dependency modules may be downloaded from Maven
+      repositories: # Maven repositories tried in order, only these are used
+        - https://repo.maven.apache.org/maven2/
+#      connect-timeout: 10s # Connect timeout of one download
+#      request-timeout: 5m # Timeout of one module download
 
 #server:
 #  port: 8080 # Server port (Will be replaced by environment variables in Docker)

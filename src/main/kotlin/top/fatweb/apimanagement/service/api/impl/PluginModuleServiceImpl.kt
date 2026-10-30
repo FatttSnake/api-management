@@ -24,6 +24,7 @@ import top.fatweb.apimanagement.properties.ServerProperties
 import top.fatweb.apimanagement.service.api.IPluginModuleEdgeService
 import top.fatweb.apimanagement.service.api.IPluginModuleRefService
 import top.fatweb.apimanagement.service.api.IPluginModuleService
+import top.fatweb.apimanagement.util.MavenCoordinate
 import top.fatweb.apimanagement.util.MavenCoordinateUtil
 import top.fatweb.apimanagement.util.PluginIdUtil
 import top.fatweb.apimanagement.util.saveOrThrowException
@@ -126,28 +127,52 @@ class PluginModuleServiceImpl(
      * claims the digest.
      *
      * @param bytes module bytes
+     * @param source repository the module was downloaded from, when known
+     * @param coordinate coordinate the plugin lock declares, when known
      * @return module digest
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
     @Synchronized
     @Transactional
-    override fun stage(bytes: ByteArray): String {
+    override fun stage(bytes: ByteArray, source: String?, coordinate: MavenCoordinate?): String {
         val digest = FileSystemPluginModuleStore.sha256(bytes)
         moduleStore.install(digest, bytes)
-        if (getOne(KtQueryWrapper(PluginModule()).eq(PluginModule::sha256, digest)) == null) {
-            val coordinate = MavenCoordinateUtil.read(bytes)
+        val resolved = coordinate ?: MavenCoordinateUtil.read(bytes)
+        val staged = getOne(KtQueryWrapper(PluginModule()).eq(PluginModule::sha256, digest))
+        if (staged == null) {
             saveOrThrowException(PluginInstallException("Cannot stage module $digest")) {
                 save(
                     PluginModule().apply {
-                        groupId = coordinate?.groupId
-                        artifactId = coordinate?.artifactId
-                        moduleVersion = coordinate?.version
+                        groupId = resolved?.groupId
+                        artifactId = resolved?.artifactId
+                        moduleVersion = resolved?.version
                         sha256 = digest
                         size = bytes.size.toLong()
+                        this.source = source
                         installTime = LocalDateTime.now()
                     },
                 )
+            }
+            return digest
+        }
+
+        var changed = false
+        if (source != null && staged.source == null) {
+            staged.source = source
+            changed = true
+        }
+        val current = listOfNotNull(staged.groupId, staged.artifactId, staged.moduleVersion)
+        val target = coordinate ?: resolved?.takeIf { current.isEmpty() }
+        if (target != null && current != listOf(target.groupId, target.artifactId, target.version)) {
+            staged.groupId = target.groupId
+            staged.artifactId = target.artifactId
+            staged.moduleVersion = target.version
+            changed = true
+        }
+        if (changed) {
+            saveOrThrowException(PluginInstallException("Cannot stage module $digest")) {
+                updateById(staged)
             }
         }
         return digest

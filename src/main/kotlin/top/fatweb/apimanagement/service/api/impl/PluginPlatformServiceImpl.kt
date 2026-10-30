@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.support.TransactionSynchronization
 import org.springframework.transaction.support.TransactionSynchronizationManager
+import org.springframework.transaction.support.TransactionTemplate
 import top.fatweb.apimanagement.component.plugin.PluginArtifactStore
 import top.fatweb.apimanagement.component.plugin.PluginConfigFieldType
 import top.fatweb.apimanagement.component.plugin.PluginConfigSchema
@@ -54,6 +55,7 @@ import top.fatweb.apimanagement.plugin.runtime.runtime.PluginDescriptor
 import top.fatweb.apimanagement.properties.ServerProperties
 import top.fatweb.apimanagement.service.api.IApiInterfaceService
 import top.fatweb.apimanagement.service.api.IApiPluginSettingService
+import top.fatweb.apimanagement.service.api.IPluginModuleFetchService
 import top.fatweb.apimanagement.service.api.IPluginModuleService
 import top.fatweb.apimanagement.service.api.IPluginPlatformService
 import top.fatweb.apimanagement.util.PluginCryptoUtil
@@ -86,6 +88,8 @@ class PluginPlatformServiceImpl(
     private val endpointRegistrar: PluginEndpointRegistrar,
     private val runtimeRegistry: PluginRuntimeRegistry,
     private val moduleService: IPluginModuleService,
+    private val moduleFetchService: IPluginModuleFetchService,
+    private val transactionTemplate: TransactionTemplate,
     private val openApiBuilder: PluginOpenApiBuilder,
     private val configSchemaCache: PluginConfigSchemaCache,
     private val registryCache: PluginRegistryCache,
@@ -119,7 +123,6 @@ class PluginPlatformServiceImpl(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @Transactional
     override fun install(jarBytes: ByteArray, jarName: String): ApiPlugin {
         if (jarBytes.size > serverProperties.storage.pluginJarMaxBytes) {
             throw PluginInstallException(
@@ -132,9 +135,16 @@ class PluginPlatformServiceImpl(
         try {
             val signerKeyId = artifactStore.verify(jar.path)
             val descriptor = artifactStore.descriptor(jar.path)
-            pluginId = descriptor.pluginId
-            return runtimeRegistry.withLock(pluginId) {
-                installLocked(descriptor, jar, jarName, signerKeyId)
+            val id = descriptor.pluginId
+            pluginId = id
+            val dependency = artifactStore.lock(jar.path)
+            // Missing modules are fetched before the transaction opens: a download must not
+            // hold a database connection for the length of a Maven request
+            moduleFetchService.ensure(dependency.lock)
+            return transactionTemplate.execute {
+                runtimeRegistry.withLock(id) {
+                    installLocked(descriptor, jar, jarName, signerKeyId, dependency)
+                }
             }
         } catch (ex: Throwable) {
             // The jar is content-addressed: a byte-identical reinstall is the jar the installed
@@ -160,6 +170,7 @@ class PluginPlatformServiceImpl(
         jar: PluginArtifactStore.StoredJar,
         jarName: String,
         signerKeyId: String,
+        dependency: PluginArtifactStore.PluginDependencyLock,
     ): ApiPlugin {
         val pluginId = descriptor.pluginId
         val previousRow = get(pluginId)
@@ -170,7 +181,6 @@ class PluginPlatformServiceImpl(
             )
         }
 
-        val dependency = artifactStore.lock(jar.path)
         val lock = dependency.lock
         if (descriptor.dependencies.isNotEmpty() && lock.modules.isEmpty()) {
             throw PluginInstallException(

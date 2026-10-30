@@ -5,6 +5,7 @@ import top.fatweb.apimanagement.entity.api.PluginModule
 import top.fatweb.apimanagement.param.system.api.PluginModuleGetParam
 import top.fatweb.apimanagement.plugin.runtime.module.PluginModuleLock
 import top.fatweb.apimanagement.plugin.runtime.module.PluginModuleStore
+import top.fatweb.apimanagement.util.MavenCoordinate
 import top.fatweb.apimanagement.vo.PageVo
 import top.fatweb.apimanagement.vo.api.PluginModuleVo
 import java.time.Duration
@@ -31,11 +32,13 @@ interface IPluginModuleService : IService<PluginModule> {
      * Stages a module uploaded before its plugin.
      *
      * @param bytes module bytes
+     * @param source repository the module was downloaded from, when known
+     * @param coordinate coordinate the plugin lock declares, when known
      * @return module digest
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun stage(bytes: ByteArray): String
+    fun stage(bytes: ByteArray, source: String? = null, coordinate: MavenCoordinate? = null): String
 
     /**
      * Deletes an unreferenced module.

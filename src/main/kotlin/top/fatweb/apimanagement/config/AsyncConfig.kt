@@ -52,6 +52,24 @@ class AsyncConfig {
     }
 
     /**
+     * Executor that downloads plugin dependency modules, one task at a time
+     *
+     * @return ThreadPoolTaskExecutor
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @Bean("pluginModuleFetchExecutor")
+    fun pluginModuleFetchExecutor(): ThreadPoolTaskExecutor = ThreadPoolTaskExecutor().apply {
+        setTaskDecorator(MdcTaskDecorator())
+        corePoolSize = 1
+        maxPoolSize = 1
+        queueCapacity = Int.MAX_VALUE
+        keepAliveSeconds = 60
+        setThreadNamePrefix("plugin-module-fetch-")
+        initialize()
+    }
+
+    /**
      * MDC context propagation task decorator
      *
      * @author FatttSnake, fatttsnake@gmail.com

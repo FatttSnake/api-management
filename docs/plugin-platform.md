@@ -128,6 +128,7 @@ sequenceDiagram
     Dev->>G: ./gradlew deployPlugin
     G->>GW: POST /system/api/plugin/module/install (per module)
     G->>GW: POST /system/api/plugin/install (plugin jar)
+    Note over GW: Missing lock modules are downloaded from app.plugin.module.repositories
 ```
 
 | File | Responsibility |
@@ -210,6 +211,8 @@ Sharing rules:
 | `PluginApiHandlerMapping`, `PluginApiHandlerAdapter` | `config/PluginWebConfig.kt` | Connect plugin routes to Spring MVC |
 | `PluginPlatformServiceImpl` | `service/api/impl/PluginPlatformServiceImpl.kt` | Install/upgrade/enable/disable/uninstall/reload, settings, interface governance |
 | `PluginModuleServiceImpl` | `service/api/impl/PluginModuleServiceImpl.kt` | Module install, reference, release, paging, GC |
+| `PluginModuleFetchServiceImpl` | `service/api/impl/PluginModuleFetchServiceImpl.kt` | Fetches missing modules from Maven and tracks per-module progress |
+| `PluginModuleDownloader` | `component/plugin/PluginModuleDownloader.kt` | Downloads one module from the configured repositories and verifies digest and size |
 | `PluginModuleEdgeServiceImpl`, `PluginModuleRefServiceImpl` | `service/api/impl/` | Module edges/references as MyBatis-Plus services |
 | `ApiInterfaceServiceImpl` | `service/api/impl/ApiInterfaceServiceImpl.kt` | Interface row persistence |
 | `PluginCapabilityFactory` | `component/plugin/runtime/PluginCapabilityFactory.kt` | Assembles `GatewayContext` capabilities for a plugin |
@@ -226,7 +229,7 @@ Management entry points:
 | Controller | Responsibility |
 |---|---|
 | `controller/system/ApiPluginController.kt` | Plugin list, detail, install, upgrade, enable/disable, uninstall, reload, config, interface governance |
-| `controller/system/PluginModuleController.kt` | Module paging with referencing plugins, upload staging, delete, GC |
+| `controller/system/PluginModuleController.kt` | Module paging with referencing plugins, upload staging, Maven fetch tasks, delete, GC |
 | `controller/system/ApiTrustKeyController.kt` | Trusted signing key management |
 
 ## 7. Install / upgrade flow
@@ -280,6 +283,8 @@ sequenceDiagram
    - `unloadRuntime(..., uninstalling = true)`: drain, unregister routes, cancel events/schedules, `onStop`, `onUninstall`, close loaders.
    - `moduleService.release(pluginId)`: release current module references.
 3. Install modules:
+   - Missing modules are fetched before the transaction opens: `PluginModuleFetchService.ensure` downloads every module the lock names but the store lacks from `app.plugin.module.repositories`, in order, when `app.plugin.module.online` is true. A response is accepted only when its SHA-256 and size match the lock; the repository that served it is written to `source`. With online mode off the install fails and lists the missing coordinates.
+   - The console starts the same download through `POST /system/api/plugin/module/fetch` and polls `GET /system/api/plugin/module/fetch/{taskId}`, which reports one step per module with its byte progress. The install endpoint itself also fetches, so a direct API call works without the console.
    - A module enters the store through `PluginModuleController.install` → `IPluginModuleService.stage`: the file is stored, its coordinate is read from `META-INF/maven/**/pom.properties`, and a module row is inserted, so the list answers whether a SHA / GAV is already present. Jars without that metadata (OSGi bundles such as BouncyCastle) stay coordinate-less and show only their SHA and size.
    - `installForPlugin` processes every module in the lock:
      - Find and verify the module in the module store by SHA; a missing or corrupted one fails with `Missing dependency module` / `is corrupted`.
@@ -609,14 +614,15 @@ Entities:
 ### Security boundary
 
 - This is not a sandbox; signed, trusted plugin code in the same JVM can still use reflection.
-- Dependency modules are installed by an administrator or the deploy tool; a running plugin cannot trigger an install.
+- Dependency modules come from an administrator upload, the deploy tool, or the Maven repositories configured on the gateway. A lock only names coordinates, digests and sizes; its `source` field is never followed, so a plugin cannot make the gateway request an arbitrary URL. A running plugin cannot trigger an install.
 - The gateway exposes only the JDK, Kotlin stdlib and `gateway-api` to a plugin.
 
 ## 15. Key call index
 
 | Entry | Main call chain |
 |---|---|
-| Install plugin | `ApiPluginController.install` → `PluginPlatformServiceImpl.install` → `PluginModuleServiceImpl.installForPlugin` → `PluginRuntimeLoader.load` → `PluginModuleRegistry.acquire` → `PluginClassLoader.onStart` → `registerEndpoints` → `PluginRouteRegistry.replace` |
+| Install plugin | `ApiPluginController.install` → `PluginPlatformServiceImpl.install` → `PluginModuleFetchService.ensure` → `PluginModuleServiceImpl.installForPlugin` → `PluginRuntimeLoader.load` → `PluginModuleRegistry.acquire` → `PluginClassLoader.onStart` → `registerEndpoints` → `PluginRouteRegistry.replace` |
+| Fetch modules | `PluginModuleController.fetch` → `PluginModuleFetchServiceImpl.start` → `PluginModuleDownloader.download` → `PluginModuleServiceImpl.stage` |
 | Upload module | `PluginModuleController.install` → `PluginModuleServiceImpl.stage` → `FileSystemPluginModuleStore.install` + staged module row |
 | Startup recovery | `PluginPlatformServiceImpl.run` → `loadInstalled` → `loadFromRow` → `PluginRuntimeLoader.load` |
 | Request | `PluginApiHandlerMapping.getHandlerInternal` → `ApiAccessInterceptor.preHandle` → `PluginApiHandlerAdapter.handle` → `ApiHandler.handle` |
@@ -627,6 +633,7 @@ Entities:
 
 ## 16. Current boundaries
 
-- Modules are installed by `deployPlugin` or uploaded through the management API; online Maven repository resolution is not implemented.
+- Online downloads fetch only the exact modules recorded in a plugin lock from `app.plugin.module.repositories`; the gateway never resolves versions or follows the repository named by a plugin.
+- Fetched modules are shareable like uploaded ones; the console shows each dependency and its download progress before the plugin is installed.
 - Runtime ABI checks cover the API major and version ranges; full symbol verification happens at build time.
 - Example plugins are maintained in a separate repository.

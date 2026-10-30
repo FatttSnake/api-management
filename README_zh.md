@@ -231,9 +231,11 @@ Java 插件作者使用同一套类型：`ApiHandler`、`EventSubscriber`、`Sub
 
 插件 jar 是瘦包。运行时依赖在构建期解析进 lock，每个模块 jar 单独上传（`deployPlugin` 会先传模块再传插件）。网关按 SHA-256 内容寻址存储在 `app.storage.plugin-module-dir`，相同 GAV + digest 的模块跨插件共享一个类加载器，不同版本并存。
 
+lock 中有、网关没有的模块会在安装时从 `app.plugin.module.repositories`（默认 Maven Central）下载，前提是 `app.plugin.module.online` 为真，且 SHA-256 与大小都必须与 lock 一致。`deployPlugin` 仍会先上传模块，因此离线部署不需要外网。控制台会在安装插件前逐个列出依赖并展示下载进度。
+
 网关只提供 **JDK、Kotlin stdlib 与 `gateway-api`**。Spring、Jackson、MyBatis、Hikari、Flyway、JDBC 驱动等全部是插件自己的普通依赖，由插件自己的模块图加载。Kotlin stdlib 与 `org.jetbrains:annotations` 由平台提供，因此从 lock 中排除。
 
-lock 由 `runtimeClasspath` 生成；运行期不做任何版本解析。模块也可以通过 `GET/POST/DELETE /system/api/plugin/module` 独立管理（上传、列表、删除无引用模块、GC）。
+lock 由 `runtimeClasspath` 生成；运行期不做任何版本解析。模块也可以通过 `/system/api/plugin/module` 独立管理（上传、列表、从 Maven 获取、删除无引用模块、GC）。
 
 资源查找只看到插件 jar、它的模块与平台的 `gateway-api` 资源。这是默认行为边界，不是安全沙箱：插件需签名可信，同 JVM 内仍可通过反射绕过。
 

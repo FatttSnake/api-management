@@ -246,13 +246,19 @@ module jar is uploaded separately (by `deployPlugin` before the plugin). The gat
 content-addressed under `app.storage.plugin-module-dir`, verifies SHA-256, and shares one class
 loader for modules with the same GAV and digest. Different versions coexist.
 
+A module the lock names but the gateway does not have is downloaded from
+`app.plugin.module.repositories` (Maven Central by default) while `app.plugin.module.online` is
+true, and accepted only when its SHA-256 and size match the lock. `deployPlugin` still uploads
+modules first, so offline deployments work without network access. The console lists every
+dependency and its download progress before installing the plugin.
+
 The gateway provides **only** the JDK, Kotlin stdlib and `gateway-api`. Spring, Jackson, MyBatis,
 Hikari, Flyway, JDBC drivers and everything else are ordinary plugin dependencies and are loaded
 from the plugin's own module graph. Kotlin stdlib and `org.jetbrains:annotations` are excluded from
 the lock because the platform supplies them.
 
 The lock is generated from `runtimeClasspath`; the runtime never resolves a version. Modules can
-also be managed independently through `GET/POST/DELETE /system/api/plugin/module` (upload, list,
+also be managed independently through `/system/api/plugin/module` (upload, list, fetch from Maven,
 delete an unreferenced module, GC).
 
 Resource lookups see the plugin jar and its modules, plus the platform's `gateway-api` resources.

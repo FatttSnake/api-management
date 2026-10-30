@@ -11,11 +11,13 @@ import top.fatweb.apimanagement.plugin.runtime.runtime.PluginDescriptorParser
 import top.fatweb.apimanagement.plugin.signing.PluginSigner
 import top.fatweb.apimanagement.properties.ServerProperties
 import top.fatweb.apimanagement.service.api.IApiPluginTrustKeyService
+import java.io.ByteArrayInputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 import java.util.jar.JarFile
+import java.util.jar.JarInputStream
 
 /**
  * Content-addressed storage of plugin jars and the entries read from them.
@@ -101,16 +103,24 @@ class PluginArtifactStore(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun descriptor(jar: Path): PluginDescriptor {
-        val bytes =
-            readEntry(jar, DESCRIPTOR_ENTRY)
-                ?: throw PluginInstallException("Plugin jar has no $DESCRIPTOR_ENTRY")
-        return try {
-            descriptorParser.parse(bytes)
-        } catch (ex: Exception) {
-            throw PluginInstallException("Invalid plugin descriptor: ${ex.message}", ex)
-        }
-    }
+    fun descriptor(jar: Path): PluginDescriptor = parseDescriptor(
+        readEntry(jar, DESCRIPTOR_ENTRY)
+            ?: throw PluginInstallException("Plugin jar has no $DESCRIPTOR_ENTRY"),
+    )
+
+    /**
+     * Reads and parses the plugin descriptor from jar bytes that are not stored as an artifact.
+     *
+     * @param jarBytes plugin jar bytes
+     * @return descriptor
+     * @throws PluginInstallException when the descriptor is absent or malformed
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    fun descriptor(jarBytes: ByteArray): PluginDescriptor = parseDescriptor(
+        readEntryOrThrow(jarBytes, DESCRIPTOR_ENTRY)
+            ?: throw PluginInstallException("Plugin jar has no $DESCRIPTOR_ENTRY"),
+    )
 
     /**
      * Reads the dependency lock.
@@ -123,13 +133,21 @@ class PluginArtifactStore(
      */
     fun lock(jar: Path): PluginDependencyLock {
         val bytes = readEntry(jar, LOCK_ENTRY) ?: return PluginDependencyLock(null, PluginModuleLock())
-        val lock =
-            try {
-                lockParser.parse(bytes)
-            } catch (ex: Exception) {
-                throw PluginInstallException("Invalid dependency lock: ${ex.message}", ex)
-            }
-        return PluginDependencyLock(bytes, lock)
+        return PluginDependencyLock(bytes, parseLock(bytes))
+    }
+
+    /**
+     * Reads the dependency lock from jar bytes that are not stored as an artifact.
+     *
+     * @param bytes plugin jar bytes
+     * @return parsed lock, or an empty one when the jar declares no dependencies
+     * @throws PluginInstallException when the lock is malformed
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    fun lock(bytes: ByteArray): PluginModuleLock {
+        val lockBytes = readEntryOrThrow(bytes, LOCK_ENTRY) ?: return PluginModuleLock()
+        return parseLock(lockBytes)
     }
 
     /**
@@ -167,6 +185,36 @@ class PluginArtifactStore(
 
     private fun readEntry(jar: Path, name: String): ByteArray? = JarFile(jar.toFile()).use { file ->
         file.getJarEntry(name)?.let { entry -> file.getInputStream(entry).readBytes() }
+    }
+
+    private fun readEntry(bytes: ByteArray, name: String): ByteArray? =
+        JarInputStream(ByteArrayInputStream(bytes)).use { input ->
+            var entry = input.nextJarEntry
+            while (entry != null) {
+                if (entry.name == name) {
+                    return@use input.readBytes()
+                }
+                entry = input.nextJarEntry
+            }
+            null
+        }
+
+    private fun readEntryOrThrow(bytes: ByteArray, name: String): ByteArray? = try {
+        readEntry(bytes, name)
+    } catch (ex: Exception) {
+        throw PluginInstallException("Cannot read plugin jar: ${ex.message}", ex)
+    }
+
+    private fun parseDescriptor(bytes: ByteArray): PluginDescriptor = try {
+        descriptorParser.parse(bytes)
+    } catch (ex: Exception) {
+        throw PluginInstallException("Invalid plugin descriptor: ${ex.message}", ex)
+    }
+
+    private fun parseLock(bytes: ByteArray): PluginModuleLock = try {
+        lockParser.parse(bytes)
+    } catch (ex: Exception) {
+        throw PluginInstallException("Invalid dependency lock: ${ex.message}", ex)
     }
 
     /**

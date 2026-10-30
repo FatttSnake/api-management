@@ -128,6 +128,7 @@ sequenceDiagram
     Dev->>G: ./gradlew deployPlugin
     G->>GW: POST /system/api/plugin/module/install（逐模块）
     G->>GW: POST /system/api/plugin/install（插件 jar）
+    Note over GW: lock 中缺失的模块从 app.plugin.module.repositories 下载
 ```
 
 | 文件 | 作用 |
@@ -210,6 +211,8 @@ flowchart TD
 | `PluginApiHandlerMapping`、`PluginApiHandlerAdapter` | `config/PluginWebConfig.kt` | 把插件路由接入 Spring MVC |
 | `PluginPlatformServiceImpl` | `service/api/impl/PluginPlatformServiceImpl.kt` | 安装/升级/启停/卸载/reload、配置、接口治理 |
 | `PluginModuleServiceImpl` | `service/api/impl/PluginModuleServiceImpl.kt` | 模块安装、引用、释放、分页、GC |
+| `PluginModuleFetchServiceImpl` | `service/api/impl/PluginModuleFetchServiceImpl.kt` | 从 Maven 补齐缺失模块，并记录逐模块进度 |
+| `PluginModuleDownloader` | `component/plugin/PluginModuleDownloader.kt` | 从配置的仓库下载单个模块，校验 SHA-256 与大小 |
 | `PluginModuleEdgeServiceImpl`、`PluginModuleRefServiceImpl` | `service/api/impl/` | 模块边/引用，MyBatis-Plus service |
 | `ApiInterfaceServiceImpl` | `service/api/impl/ApiInterfaceServiceImpl.kt` | 接口行持久化 |
 | `PluginCapabilityFactory` | `component/plugin/runtime/PluginCapabilityFactory.kt` | 为每个插件装配 `GatewayContext` 能力 |
@@ -226,7 +229,7 @@ flowchart TD
 | Controller | 作用 |
 |---|---|
 | `controller/system/ApiPluginController.kt` | 插件列表、详情、安装、升级、启停、卸载、reload、配置、接口治理 |
-| `controller/system/PluginModuleController.kt` | 模块分页（含引用插件）、上传暂存、删除、GC |
+| `controller/system/PluginModuleController.kt` | 模块分页（含引用插件）、上传暂存、Maven 获取任务、删除、GC |
 | `controller/system/ApiTrustKeyController.kt` | 信任公钥管理 |
 
 ## 7. 安装 / 升级流程
@@ -280,7 +283,9 @@ sequenceDiagram
    - `unloadRuntime(..., uninstalling = true)`：排空、注销路由、取消事件/调度、`onStop`、`onUninstall`、关闭 loader。
    - `moduleService.release(pluginId)`：释放当前模块引用。
 3. 模块安装：
-   - 模块先通过 `PluginModuleController.install` → `IPluginModuleService.stage` 上传：落盘、从 jar 的 `META-INF/maven/**/pom.properties` 读取坐标，并插入模块行，管理员在列表里就能确认「这个 SHA / GAV 已经在仓库里」。没有该元数据的 jar（如 BouncyCastle 这类 OSGi bundle）坐标留空，列表仍显示 SHA 和大小。
+   - 缺失模块在事务开启前补齐：`PluginModuleFetchService.ensure` 在 `app.plugin.module.online` 为真时，按顺序从 `app.plugin.module.repositories` 下载 lock 中有、模块仓库中没有的模块。只有 SHA-256 和大小都与 lock 一致才接受，实际提供文件的仓库写入 `source`。在线模式关闭时安装失败并列出缺失坐标。
+   - 控制台通过 `POST /system/api/plugin/module/fetch` 启动同一套下载，再轮询 `GET /system/api/plugin/module/fetch/{taskId}`，按模块逐个展示字节进度。安装接口自身也会补齐，因此不经控制台直接调用同样可用。
+   - 模块也可以通过 `PluginModuleController.install` → `IPluginModuleService.stage` 上传：落盘、从 jar 的 `META-INF/maven/**/pom.properties` 读取坐标，并插入模块行，管理员在列表里就能确认「这个 SHA / GAV 已经在仓库里」。没有该元数据的 jar（如 BouncyCastle 这类 OSGi bundle）坐标留空，列表仍显示 SHA 和大小。
    - `installForPlugin` 对 lock 中每个模块：
      - 按 SHA 在模块仓库查找并校验完整性，缺失或损坏时分别报 `Missing dependency module` / `is corrupted`。
      - `PluginModule` 行 upsert：坐标以 lock 为准（缺失时补全；与 jar 自带元数据不一致时覆盖，lock 在签名内），并写入引用。
@@ -609,14 +614,15 @@ erDiagram
 ### 安全边界
 
 - 不是沙箱；同 JVM 内签名可信插件仍可用反射。
-- 依赖模块只能通过管理员上传或部署工具上传，插件运行期不能触发安装。
+- 依赖模块来自管理员上传、部署工具，或网关配置的 Maven 仓库。lock 只提供坐标、SHA-256 和大小；其中的 `source` 字段不会被访问，插件无法让网关请求任意 URL。插件运行期不能触发安装。
 - 网关只向插件暴露 JDK、Kotlin stdlib、`gateway-api`。
 
 ## 15. 关键调用索引
 
 | 入口 | 主要调用链 |
 |---|---|
-| 安装插件 | `ApiPluginController.install` → `PluginPlatformServiceImpl.install` → `PluginModuleServiceImpl.installForPlugin` → `PluginRuntimeLoader.load` → `PluginModuleRegistry.acquire` → `PluginClassLoader.onStart` → `registerEndpoints` → `PluginRouteRegistry.replace` |
+| 安装插件 | `ApiPluginController.install` → `PluginPlatformServiceImpl.install` → `PluginModuleFetchService.ensure` → `PluginModuleServiceImpl.installForPlugin` → `PluginRuntimeLoader.load` → `PluginModuleRegistry.acquire` → `PluginClassLoader.onStart` → `registerEndpoints` → `PluginRouteRegistry.replace` |
+| 获取模块 | `PluginModuleController.fetch` → `PluginModuleFetchServiceImpl.start` → `PluginModuleDownloader.download` → `PluginModuleServiceImpl.stage` |
 | 模块上传 | `PluginModuleController.install` → `PluginModuleServiceImpl.stage` → `FileSystemPluginModuleStore.install` + 暂存模块行 |
 | 启动恢复 | `PluginPlatformServiceImpl.run` → `loadInstalled` → `loadFromRow` → `PluginRuntimeLoader.load` |
 | 请求 | `PluginApiHandlerMapping.getHandlerInternal` → `ApiAccessInterceptor.preHandle` → `PluginApiHandlerAdapter.handle` → `ApiHandler.handle` |
@@ -627,7 +633,8 @@ erDiagram
 
 ## 16. 当前边界
 
-- 模块目前由 `deployPlugin` 或管理端上传，未实现在线 Maven 仓库解析。
+- 在线下载只按 lock 记录的精确模块从 `app.plugin.module.repositories` 获取；网关不做版本求解，也不访问插件指定的仓库。
+- 在线获取的模块与上传模块一样共享；控制台会在安装前逐个展示依赖及下载进度。
 - 运行期 ABI 只校验 API 大版本/版本范围，完整符号检查在构建期。
 - 示例插件在独立仓库维护。
 

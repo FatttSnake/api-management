@@ -15,8 +15,10 @@ import top.fatweb.apimanagement.entity.common.ResponseCode
 import top.fatweb.apimanagement.entity.common.ResponseResult
 import top.fatweb.apimanagement.param.system.api.PluginModuleGetParam
 import top.fatweb.apimanagement.properties.ServerProperties
+import top.fatweb.apimanagement.service.api.IPluginModuleFetchService
 import top.fatweb.apimanagement.service.api.IPluginModuleService
 import top.fatweb.apimanagement.vo.PageVo
+import top.fatweb.apimanagement.vo.api.PluginModuleFetchVo
 import top.fatweb.apimanagement.vo.api.PluginModuleVo
 import java.time.Duration
 
@@ -33,6 +35,7 @@ import java.time.Duration
 )
 class PluginModuleController(
     private val pluginModuleService: IPluginModuleService,
+    private val pluginModuleFetchService: IPluginModuleFetchService,
     private val serverProperties: ServerProperties,
 ) {
     /**
@@ -47,6 +50,37 @@ class PluginModuleController(
     @PreAuthorize("hasAnyAuthority('system:plugin:plugin:query')")
     fun getModules(@ProcessParam @Valid param: PluginModuleGetParam?): ResponseResult<PageVo<PluginModuleVo>> =
         ResponseResult.databaseSuccess(data = pluginModuleService.getPage(param))
+
+    /**
+     * Starts downloading the modules of an uploaded plugin jar from Maven.
+     *
+     * @param file plugin jar
+     * @return fetch task snapshot
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @Operation(summary = "从 Maven 获取 API 插件依赖模块")
+    @PostMapping("/fetch")
+    @PreAuthorize("hasAnyAuthority('system:plugin:plugin:install')")
+    fun fetch(@RequestPart("file") file: MultipartFile): ResponseResult<PluginModuleFetchVo> =
+        ResponseResult.databaseSuccess(
+            ResponseCode.DATABASE_INSERT_SUCCESS,
+            data = pluginModuleFetchService.start(file.bytes),
+        )
+
+    /**
+     * Gets a module fetch task.
+     *
+     * @param taskId task ID
+     * @return fetch task snapshot
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    @Operation(summary = "获取 API 插件依赖模块获取任务")
+    @GetMapping("/fetch/{taskId}")
+    @PreAuthorize("hasAnyAuthority('system:plugin:plugin:install')")
+    fun getFetchTask(@PathVariable taskId: String): ResponseResult<PluginModuleFetchVo> =
+        ResponseResult.databaseSuccess(data = pluginModuleFetchService.get(taskId))
 
     /**
      * Uploads a dependency module before its plugin.
