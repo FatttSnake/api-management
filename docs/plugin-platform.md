@@ -135,7 +135,7 @@ sequenceDiagram
 |---|---|
 | `ApiPluginExtension.kt` | `apiPlugin { }` DSL: pluginId, versionCode, mainClass, requiresGateway, requiresGatewayApi, `sharedLoader`, deploy settings |
 | `ApiPlugin.kt` | Applies the plugin, adds `compileOnly gateway-api`, registers tasks, puts generated files into the jar |
-| `ApiPluginTasks.kt` | `GeneratePluginDescriptor`, `GenPluginKeys`, `PreparePluginPubKey`, `SignPlugin`, `VerifyPlugin`, `DeployPlugin` |
+| `GeneratePluginDescriptor.kt`, `GenPluginKeys.kt`, `PreparePluginPubKey.kt`, `SignPlugin.kt`, `VerifyPlugin.kt`, `DeployPlugin.kt` | Descriptor, key, signing, verification and deploy tasks |
 | `GeneratePluginLock.kt` | Builds `META-INF/api-plugin-deps.json` from `runtimeClasspath` (including shared-loader groups), copies module jars into `build/generated/api-plugin-modules/` |
 | `CheckPluginAbi.kt` | Parses plugin class constant pools and checks class/method/field/constructor references to `top.fatweb.apimanagement.api.*` |
 | `plugin-signing/PluginSigner.kt` | Builds the jar manifest, signs, verifies, computes SPKI fingerprints |
@@ -188,7 +188,7 @@ flowchart TD
 
 | File | Responsibility |
 |---|---|
-| `classloader/GatewayApiClassLoader.kt` | Allows only `java.`, `javax.`, `jdk.`, `sun.`, `kotlin.`, `top.fatweb.apimanagement.api.`; everything else throws `ClassNotFoundException` |
+| `classloader/GatewayApiClassLoader.kt` | Allows only `java.`, `javax.`, `jdk.`, `sun.`, `kotlin.`, `org.ietf.jgss.`, `org.w3c.dom.`, `org.xml.sax.`, `top.fatweb.apimanagement.api.`; everything else throws `ClassNotFoundException` |
 | `classloader/ModuleClassLoader.kt` | Child-first over one loader unit (one module, or a shared-loader group), then its dependency-unit loaders, then the platform |
 | `classloader/PluginClassLoader.kt` | Child-first: plugin jar → lock unit loaders → platform |
 | `classloader/ModuleKey.kt` | Sharing key: member set (GAV + sha256) + external dependency-unit fingerprints |
@@ -211,7 +211,7 @@ Sharing rules:
 - Group members see each other without a declared dependency edge. If two members contain the same
   class, the jar that sorts first by digest wins; do not group alternative implementations.
 - Grouping must not create a cycle between loader units (`A -> B -> C` with a group `{A, C}` is
-  rejected). Groups do not change module rows, edges, references, fetch or GC.
+  rejected). Groups do not change module rows, references, fetch or GC.
 - Different versions have different GAVs and coexist.
 - Unloading a plugin releases its unit references; the loader closes when the count reaches zero.
 - Disk modules are GC'd against the set of plugin references; unreferenced modules remain until the grace period expires.
@@ -226,7 +226,7 @@ Sharing rules:
 | `PluginModuleServiceImpl` | `service/api/impl/PluginModuleServiceImpl.kt` | Module install, reference, release, paging, GC |
 | `PluginModuleFetchServiceImpl` | `service/api/impl/PluginModuleFetchServiceImpl.kt` | Fetches missing modules from Maven and tracks per-module progress |
 | `PluginModuleDownloader` | `component/plugin/PluginModuleDownloader.kt` | Downloads one module from the configured repositories and verifies digest and size |
-| `PluginModuleEdgeServiceImpl`, `PluginModuleRefServiceImpl` | `service/api/impl/` | Module edges/references as MyBatis-Plus services |
+| `PluginModuleRefServiceImpl` | `service/api/impl/` | Module references as a MyBatis-Plus service |
 | `ApiInterfaceServiceImpl` | `service/api/impl/ApiInterfaceServiceImpl.kt` | Interface row persistence |
 | `PluginCapabilityFactory` | `component/plugin/runtime/PluginCapabilityFactory.kt` | Assembles `GatewayContext` capabilities for a plugin |
 | `PluginEventBus` | `component/plugin/runtime/PluginEventBus.kt` | In-process events owned by pluginId |
@@ -292,20 +292,18 @@ sequenceDiagram
    - `readDescriptor`: `PluginDescriptorParser` validates format 1, pluginId, versions, mainClass and version ranges.
    - Read the lock with `PluginModuleLockParser`.
    - Read `META-INF/plugin-config.json`, parse with `PluginConfigSchemaUtil` and publish to `PluginConfigSchemaCache`.
-2. On upgrade, unload the current runtime first:
-   - `unloadRuntime(..., uninstalling = true)`: drain, unregister routes, cancel events/schedules, `onStop`, `onUninstall`, close loaders.
-   - `moduleService.release(pluginId)`: release current module references.
-3. Install modules:
-   - Missing modules are fetched before the transaction opens: `PluginModuleFetchService.ensure` downloads every module the lock names but the store lacks from `app.plugin.module.repositories`, in order, when `app.plugin.module.online` is true. A response is accepted only when its SHA-256 and size match the lock; the repository that served it is written to `source`. With online mode off the install fails and lists the missing coordinates.
+2. Install modules:
+   - Missing modules are fetched before the transaction opens: `PluginModuleFetchService.ensure` downloads every module the lock names but the store lacks from `app.plugin.module.repositories`, in order, when `app.plugin.module.online` is true. A response is accepted only when its SHA-256 and size match the lock; the repository that served it is written to the module row's `source` column. With online mode off the install fails and lists the missing coordinates.
    - The console starts the same download through `POST /system/api/plugin/module/fetch` and polls `GET /system/api/plugin/module/fetch/{taskId}`, which reports one step per module with its byte progress. The install endpoint itself also fetches, so a direct API call works without the console.
    - A module enters the store through `PluginModuleController.install` → `IPluginModuleService.stage`: the file is stored, its coordinate is read from `META-INF/maven/**/pom.properties`, and a module row is inserted, so the list answers whether a SHA / GAV is already present. Jars without that metadata (OSGi bundles such as BouncyCastle) stay coordinate-less and show only their SHA and size.
    - `installForPlugin` processes every module in the lock:
      - Find and verify the module in the module store by SHA; a missing or corrupted one fails with `Missing dependency module` / `is corrupted`.
      - Upsert the `PluginModule` row: the lock is authoritative (it fills a missing coordinate and replaces one the jar declares differently, since the lock is covered by the plugin signature), and the plugin reference is written.
-     - Write direct dependency edges to `t_b_plugin_module_edge`.
      - Write plugin references to `t_b_plugin_module_ref`.
    - The list returns `referenced` and `referencedBy`, and filters by `referenced` and a SHA-256 prefix.
    - Modules no plugin references, including uploads that never got installed, are collected by GC after the grace period.
+3. On upgrade, take the current runtime down after the new artifact, lock and config schema are accepted:
+   - `runtimeRegistry.unload(..., uninstalling = true)`: drain, unregister routes, cancel events/schedules, `onStop`, `onUninstall`, close loaders.
 4. Assemble the runtime:
    - `PluginRuntimeLoader.load`
      - `PluginDescriptorParser.parse`
@@ -317,8 +315,8 @@ sequenceDiagram
      - Run `onStart` under the plugin TCCL
      - `RouteCollector.freeze()` validates operationId/path conflicts
 5. Persist:
-   - `upsertPluginRow`: plugin row, descriptor fields, lock, load status, OpenAPI.
-   - `registerEndpoints`:
+   - `upsertPluginRow`: plugin row, descriptor fields, load status, OpenAPI.
+   - `endpointRegistrar.register`:
      - Ensure menu/scope/operation/power
      - Build interface codes from `operationId`
      - Update/insert `t_b_api_interface`
@@ -328,7 +326,6 @@ sequenceDiagram
    - `refreshCache`: refresh `PluginRegistryCache` and `PluginConfigSchemaCache`
 6. Failure cleanup:
    - Close created loaders/runtime
-   - Release module references
    - Delete the new jar
    - Throw `PluginInstallException`
 
@@ -348,7 +345,7 @@ flowchart TD
     B --> C[loadInstalled]
     C --> D{enabled?}
     D -- no --> E[loadStatus=DISABLED]
-    D -- yes --> F[loadFromRow]
+    D -- yes --> F[runtimeRegistry.load]
     F --> G[PluginRuntimeLoader.load]
     G --> H{success?}
     H -- yes --> I[routeRegistry.replace + loadStatus=LOADED]
@@ -359,7 +356,7 @@ flowchart TD
 
 Related files:
 
-- `PluginPlatformServiceImpl.kt`: `run` / `loadInstalled` / `loadFromRow` / `refreshCache`
+- `PluginPlatformServiceImpl.kt`: `run` / `loadInstalled` / `runtimeRegistry.load` / `refreshCache`
 - `PluginRuntimeLoader.kt`: actual loading and `onStart`
 - `PluginRouteRegistry.kt`: route recovery
 - `PluginRegistryCache.kt`: request hot-path cache
@@ -449,8 +446,8 @@ sequenceDiagram
 ```mermaid
 stateDiagram-v2
     [*] --> LOADED: install + onStart
-    LOADED --> DISABLED: setEnabled(false) / unloadRuntime
-    DISABLED --> LOADED: setEnabled(true) / loadFromRow
+    LOADED --> DISABLED: setEnabled(false) / runtimeRegistry.unload
+    DISABLED --> LOADED: setEnabled(true) / runtimeRegistry.load
     LOADED --> LOADED: reload / upgrade
     LOADED --> LOAD_ERROR: reload / startup failure
     LOAD_ERROR --> LOADED: reload success
@@ -462,7 +459,7 @@ stateDiagram-v2
 
 `PluginPlatformServiceImpl.setEnabled(false)`:
 
-- `unloadRuntime(..., purge=false, uninstalling=false)`
+- `runtimeRegistry.unload(..., purge=false, uninstalling=false)`
   - `inFlightTracker.beginDrain`
   - `routeRegistry.unregisterPlugin`
   - `eventBus.removePlugin`
@@ -477,7 +474,7 @@ stateDiagram-v2
 
 `setEnabled(true)`:
 
-- `loadFromRow(row)` when no runtime exists.
+- `runtimeRegistry.load(row)` when no runtime exists.
 - `runtimeLoader.load`, then `routeRegistry.replace`.
 - Sets `loadStatus=LOADED`.
 
@@ -494,7 +491,7 @@ stateDiagram-v2
 
 `uninstall(pluginId, purgeData)`:
 
-1. `unloadRuntime(purge=..., uninstalling=true)`:
+1. `runtimeRegistry.unload(purge=..., uninstalling=true)`:
    - drain → unregister routes → cancel events/schedules → `onPurge` (optional) → `onStop` → `onUninstall` → close loaders
 2. Release module references
 3. Delete interface rows, permission tree and the plugin row
@@ -529,7 +526,6 @@ erDiagram
     t_b_api_plugin ||--o{ t_b_api_interface : owns
     t_b_api_plugin ||--o{ t_b_api_plugin_setting : has
     t_b_api_plugin_trust_key ||--o{ t_b_api_plugin : signs
-    t_b_plugin_module ||--o{ t_b_plugin_module_edge : depends
     t_b_plugin_module ||--o{ t_b_plugin_module_ref : referenced_by
     t_s_menu ||--o{ t_s_scope : contains
     t_s_scope ||--o{ t_s_operation : contains
@@ -538,12 +534,11 @@ erDiagram
 
 | Table | Purpose |
 |---|---|
-| `t_b_api_plugin` | Plugin row: versions, jar hash, signer, descriptor fields, lock, load status/error, OpenAPI |
+| `t_b_api_plugin` | Plugin row: versions, jar hash, signer, descriptor fields, load status/error, OpenAPI |
 | `t_b_api_interface` | Route/interface row: code, path, method, apiVersion, billing/rate limit/access mode |
 | `t_b_api_plugin_setting` | Plugin settings (secrets stored encrypted) |
 | `t_b_api_plugin_trust_key` | Trusted signing public keys |
 | `t_b_plugin_module` | Dependency module: `module_version` is the Maven version, `version` is the optimistic lock; the coordinate stays empty until a plugin claims a jar without Maven metadata |
-| `t_b_plugin_module_edge` | Direct module dependency edge with `version` optimistic lock |
 | `t_b_plugin_module_ref` | Plugin-to-module reference with `version` optimistic lock |
 | `t_s_menu` / `t_s_scope` / `t_s_operation` / `t_s_power` | Permission tree for plugin interfaces |
 
@@ -552,7 +547,6 @@ Entities:
 - `entity/api/ApiPlugin.kt`
 - `entity/api/ApiInterface.kt`
 - `entity/api/PluginModule.kt`
-- `entity/api/PluginModuleEdge.kt`
 - `entity/api/PluginModuleRef.kt`
 - `entity/permission/Menu.kt`, `Scope.kt`, `Operation.kt`, `Power.kt`
 
@@ -627,26 +621,26 @@ Entities:
 ### Security boundary
 
 - This is not a sandbox; signed, trusted plugin code in the same JVM can still use reflection.
-- Dependency modules come from an administrator upload, the deploy tool, or the Maven repositories configured on the gateway. A lock only names coordinates, digests and sizes; its `source` field is never followed, so a plugin cannot make the gateway request an arbitrary URL. A running plugin cannot trigger an install.
+- Dependency modules come from an administrator upload, the deploy tool, or the Maven repositories configured on the gateway. A lock only names coordinates, digests, sizes and dependency edges; the gateway never follows a URL from the lock, so a plugin cannot make it request an arbitrary URL. A running plugin cannot trigger an install.
 - The gateway exposes only the JDK, Kotlin stdlib and `gateway-api` to a plugin.
 
 ## 15. Key call index
 
 | Entry | Main call chain |
 |---|---|
-| Install plugin | `ApiPluginController.install` → `PluginPlatformServiceImpl.install` → `PluginModuleFetchService.ensure` → `PluginModuleServiceImpl.installForPlugin` → `PluginRuntimeLoader.load` → `PluginModuleRegistry.acquire` → `PluginClassLoader.onStart` → `registerEndpoints` → `PluginRouteRegistry.replace` |
+| Install plugin | `ApiPluginController.install` → `PluginPlatformServiceImpl.install` → `PluginModuleFetchService.ensure` → `PluginModuleServiceImpl.installForPlugin` → `PluginRuntimeLoader.load` → `PluginModuleRegistry.acquire` → `ApiPlugin.onStart` → `endpointRegistrar.register` → `PluginRouteRegistry.replace` |
 | Fetch modules | `PluginModuleController.fetch` → `PluginModuleFetchServiceImpl.start` → `PluginModuleDownloader.download` → `PluginModuleServiceImpl.stage` |
 | Upload module | `PluginModuleController.install` → `PluginModuleServiceImpl.stage` → `FileSystemPluginModuleStore.install` + staged module row |
-| Startup recovery | `PluginPlatformServiceImpl.run` → `loadInstalled` → `loadFromRow` → `PluginRuntimeLoader.load` |
+| Startup recovery | `PluginPlatformServiceImpl.run` → `loadInstalled` → `runtimeRegistry.load` → `PluginRuntimeLoader.load` |
 | Request | `PluginApiHandlerMapping.getHandlerInternal` → `ApiAccessInterceptor.preHandle` → `PluginApiHandlerAdapter.handle` → `ApiHandler.handle` |
-| Disable | `ApiPluginController.updatePluginStatus` → `PluginPlatformServiceImpl.setEnabled(false)` → `unloadRuntime` |
-| Uninstall | `ApiPluginController.uninstall` → `PluginPlatformServiceImpl.uninstall` → `unloadRuntime` → `remove` rows → `refreshCache` |
+| Disable | `ApiPluginController.updatePluginStatus` → `PluginPlatformServiceImpl.setEnabled(false)` → `runtimeRegistry.unload` |
+| Uninstall | `ApiPluginController.uninstall` → `PluginPlatformServiceImpl.uninstall` → `runtimeRegistry.unload` → `remove` rows → `refreshCache` |
 | Save settings | `ApiPluginController.updateConfig` → `PluginPlatformServiceImpl.updatePluginConfig` → `onCommitted { reload }` |
 | Documentation | `UserApiDocController` → `ApiDocServiceImpl` → the `openapi` field generated by `PluginOpenApiBuilder` |
 
 ## 16. Current boundaries
 
-- Online downloads fetch only the exact modules recorded in a plugin lock from `app.plugin.module.repositories`; the gateway never resolves versions or follows the repository named by a plugin.
+- Online downloads fetch only the exact modules recorded in a plugin lock from `app.plugin.module.repositories`; the gateway never resolves versions and never follows a URL supplied by a plugin.
 - Fetched modules are shareable like uploaded ones; the console shows each dependency and its download progress before the plugin is installed.
 - Runtime ABI checks cover the API major and version ranges; full symbol verification happens at build time.
 - Example plugins are maintained in a separate repository.

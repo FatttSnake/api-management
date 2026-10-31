@@ -30,7 +30,6 @@ class PluginModuleLockParser(private val maxModules: Int = PluginModuleLock.DEFA
         val lock =
             PluginModuleLock(
                 format = json.format,
-                constraints = json.constraints,
                 modules =
                 json.modules.map { module ->
                     LockedModule(
@@ -39,7 +38,6 @@ class PluginModuleLockParser(private val maxModules: Int = PluginModuleLock.DEFA
                         version = module.version,
                         sha256 = module.sha256,
                         size = module.size,
-                        source = module.source,
                         dependencies = module.dependencies,
                     )
                 },
@@ -62,7 +60,6 @@ class PluginModuleLockParser(private val maxModules: Int = PluginModuleLock.DEFA
 
     private data class LockJson(
         val format: Int = 0,
-        val constraints: Map<String, String> = emptyMap(),
         val modules: List<ModuleJson> = emptyList(),
         val groups: List<List<String>> = emptyList(),
     )
@@ -73,7 +70,6 @@ class PluginModuleLockParser(private val maxModules: Int = PluginModuleLock.DEFA
         val version: String = "",
         val sha256: String = "",
         val size: Long = 0,
-        val source: String? = null,
         val dependencies: List<String> = emptyList(),
     )
 }

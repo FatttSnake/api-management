@@ -22,7 +22,6 @@ fun ApiPlugin.toVo() = ApiPluginVo(
     defaultPrice = this.defaultPrice,
     defaultRateLimit = this.defaultRateLimit,
     defaultAccessMode = this.defaultAccessMode,
-    source = this.source,
     versionName = this.versionName,
     versionCode = this.versionCode,
     jarName = this.jarName,

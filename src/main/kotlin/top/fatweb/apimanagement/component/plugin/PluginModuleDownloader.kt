@@ -17,8 +17,8 @@ import java.security.MessageDigest
 /**
  * Downloads dependency modules from the configured Maven repositories.
  *
- * Only repositories configured on the gateway are used; the source recorded in a plugin lock
- * is never followed. A downloaded jar must match the digest and the size recorded in the lock.
+ * Only repositories configured on the gateway are used. A downloaded jar must match the digest
+ * and the size recorded in the lock.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
@@ -95,7 +95,7 @@ class PluginModuleDownloader(private val pluginProperties: PluginProperties, ser
                 .build()
         val response = client.send(request, HttpResponse.BodyHandlers.ofInputStream())
         val body = response.body()
-        try {
+        body.use { body ->
             if (response.statusCode() !in 200..299) {
                 throw PluginInstallException("HTTP ${response.statusCode()}")
             }
@@ -120,8 +120,6 @@ class PluginModuleDownloader(private val pluginProperties: PluginProperties, ser
                 onProgress(total)
             }
             return output.toByteArray()
-        } finally {
-            body.close()
         }
     }
 

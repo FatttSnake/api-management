@@ -82,7 +82,6 @@ abstract class GeneratePluginDescriptor : DefaultTask() {
                 "mainClass" to main,
                 "requiresGateway" to requiresGateway.get(),
                 "requiresGatewayApi" to requiresGatewayApi.get(),
-                "dependencies" to emptyMap<String, String>(),
             )
         val out = outputFile.get().asFile
         out.parentFile.mkdirs()

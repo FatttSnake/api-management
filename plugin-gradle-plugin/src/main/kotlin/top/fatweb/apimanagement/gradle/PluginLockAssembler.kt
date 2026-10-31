@@ -1,5 +1,6 @@
 package top.fatweb.apimanagement.gradle
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import tools.jackson.module.kotlin.jacksonObjectMapper
 
 /**
@@ -59,6 +60,7 @@ internal data class LockModuleDocument(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
+    @get:JsonIgnore
     val coordinate: String
         get() = "$group:$name:$version"
 }
@@ -67,7 +69,6 @@ internal data class LockModuleDocument(
  * Contents of `META-INF/api-plugin-deps.json`.
  *
  * @property format lock format version
- * @property constraints resolved versions
  * @property modules modules, sorted by coordinate
  * @property groups shared-loader groups, each a sorted list of digests
  * @author FatttSnake, fatttsnake@gmail.com
@@ -75,7 +76,6 @@ internal data class LockModuleDocument(
  */
 internal data class LockDocument(
     val format: Int = 1,
-    val constraints: Map<String, String>,
     val modules: List<LockModuleDocument>,
     val groups: List<List<String>>,
 )
@@ -134,13 +134,7 @@ internal object PluginLockAssembler {
                 }
         requireAcyclicUnits(modules, groups)
 
-        val constraints = LinkedHashMap<String, String>()
-        byCoordinate.keys.sorted().forEach { coordinate ->
-            val parts = coordinate.split(':')
-            constraints["${parts[0]}:${parts[1]}"] = parts[2]
-        }
-
-        return LockDocument(format = 1, constraints = constraints, modules = modules, groups = groups)
+        return LockDocument(format = 1, modules = modules, groups = groups)
     }
 
     /**

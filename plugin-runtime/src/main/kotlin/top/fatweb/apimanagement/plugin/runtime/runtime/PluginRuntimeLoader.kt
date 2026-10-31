@@ -52,11 +52,6 @@ class PluginRuntimeLoader(
                 ?.let(lockParser::parse)
                 ?: PluginModuleLock()
 
-        if (descriptor.dependencies.isNotEmpty() && lock.modules.isEmpty()) {
-            throw PluginLoadException(
-                "Plugin ${descriptor.pluginId} declares dependencies but has no dependency lock",
-            )
-        }
         if (descriptor.apiVersion > GatewayApiInfo.major) {
             throw PluginLoadException(
                 "Plugin ${descriptor.pluginId} requires API ${descriptor.apiVersion}, " +

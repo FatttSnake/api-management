@@ -32,8 +32,7 @@ import java.util.UUID
  * Authentication is the console's own access token: the author logs in, copies `accessToken`
  * out of the response and hands it to the task. The task therefore never calls `/login`,
  * never sees a credential and never persists the token - it only refuses to run without one.
- * The token is a shared, non-rotating secret, so it is wrapped as [Internal] rather than
- * [Input] to keep it out of the task's input fingerprint.
+ * The token is a shared, non-rotating secret and is never written to the task's outputs.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
@@ -151,7 +150,7 @@ abstract class DeployPlugin : DefaultTask() {
             gatewayFailure(reply, fingerprint)
         }
 
-        val info = reply.data?.takeIf { !it.isNull() }?.let { data -> mapper.treeToValue<PluginInfo>(data) }
+        val info = reply.data?.takeIf { !it.isNull }?.let { data -> mapper.treeToValue<PluginInfo>(data) }
         logger.lifecycle(
             "Deployed plugin {} version {} (versionCode {})",
             info?.pluginId ?: jar.name,

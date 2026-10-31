@@ -65,8 +65,8 @@ class PluginRuntimeLoaderTests {
         PluginApiHandlerAdapter(jsonMapper()).handle(request, response, chain.handler)
 
         assertEquals(200, response.status)
-        assertTrue(response.getContentAsString().contains("\"message\":\"hello, world\""))
-        assertTrue(response.getContentAsString().contains("\"plugin\":\"fixture\""))
+        assertTrue(response.contentAsString.contains("\"message\":\"hello, world\""))
+        assertTrue(response.contentAsString.contains("\"plugin\":\"fixture\""))
 
         loaded.stop()
         loaded.uninstall()
@@ -106,40 +106,13 @@ class PluginRuntimeLoaderTests {
     }
 
     @Test
-    fun `refuses a plugin with declared dependencies but no lock`() {
-        val platform = GatewayApiClassLoader(javaClass.classLoader)
-        val store = FileSystemPluginModuleStore(root.resolve("modules-deps"))
-        val moduleRegistry = PluginModuleRegistry(store, platform)
-        val loader = PluginRuntimeLoader(platform, moduleRegistry)
-        val pluginJar = root.resolve("fixture-deps.jar")
-        Files.write(
-            pluginJar,
-            jarOf(
-                FixtureApiPlugin::class,
-                PingHandler::class,
-                entries =
-                mapOf(
-                    PluginRuntimeLoader.DESCRIPTOR_ENTRY to
-                        descriptorJson("""{"fixture:a":"1.0.0"}""").toByteArray(),
-                    PluginRuntimeLoader.LOCK_ENTRY to """{"format":1,"modules":[]}""".toByteArray(),
-                ),
-            ),
-        )
-
-        assertFailsWith<PluginLoadException> {
-            loader.load(pluginJar, testServices())
-        }
-        moduleRegistry.close()
-    }
-
-    @Test
     fun `rejects an unsupported descriptor format`() {
         assertFailsWith<PluginDescriptorException> {
             PluginDescriptorParser().parse(descriptorJson().replace("\"format\": 1", "\"format\": 2"))
         }
     }
 
-    private fun descriptorJson(dependencies: String = "{}"): String =
+    private fun descriptorJson(): String =
         """
         {
           "format": 1,
@@ -149,8 +122,7 @@ class PluginRuntimeLoaderTests {
           "versionCode": 1,
           "mainClass": "fixture.plugin.FixtureApiPlugin",
           "requiresGateway": ">=1.0.0 <2.0.0",
-          "requiresGatewayApi": "^1.0",
-          "dependencies": $dependencies
+          "requiresGatewayApi": "^1.0"
         }
         """.trimIndent()
 

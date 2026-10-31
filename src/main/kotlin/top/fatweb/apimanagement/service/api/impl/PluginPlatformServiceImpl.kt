@@ -137,13 +137,13 @@ class PluginPlatformServiceImpl(
             val descriptor = artifactStore.descriptor(jar.path)
             val id = descriptor.pluginId
             pluginId = id
-            val dependency = artifactStore.lock(jar.path)
+            val lock = artifactStore.lock(jar.path)
             // Missing modules are fetched before the transaction opens: a download must not
             // hold a database connection for the length of a Maven request
-            moduleFetchService.ensure(dependency.lock)
+            moduleFetchService.ensure(lock)
             return transactionTemplate.execute {
                 runtimeRegistry.withLock(id) {
-                    installLocked(descriptor, jar, jarName, signerKeyId, dependency)
+                    installLocked(descriptor, jar, jarName, signerKeyId, lock)
                 }
             }
         } catch (ex: Throwable) {
@@ -170,7 +170,7 @@ class PluginPlatformServiceImpl(
         jar: PluginArtifactStore.StoredJar,
         jarName: String,
         signerKeyId: String,
-        dependency: PluginArtifactStore.PluginDependencyLock,
+        lock: PluginModuleLock,
     ): ApiPlugin {
         val pluginId = descriptor.pluginId
         val previousRow = get(pluginId)
@@ -181,12 +181,6 @@ class PluginPlatformServiceImpl(
             )
         }
 
-        val lock = dependency.lock
-        if (descriptor.dependencies.isNotEmpty() && lock.modules.isEmpty()) {
-            throw PluginInstallException(
-                "Plugin $pluginId declares dependencies but has no dependency lock",
-            )
-        }
         val schemaJson = artifactStore.configSchema(jar.path)
         val schema = PluginConfigSchemaUtil.parseOrThrow(schemaJson)
 
@@ -215,9 +209,6 @@ class PluginPlatformServiceImpl(
                     signerKeyId = signerKeyId,
                     schemaJson = schemaJson,
                     openapiJson = loaded?.let { openApiBuilder.build(pluginId, it.routes) },
-                    lockJson = dependency.bytes?.toString(Charsets.UTF_8),
-                    lockHash = dependency.hash(artifactStore::sha256),
-                    lock = lock,
                 )
 
             if (loaded != null) {
@@ -679,24 +670,14 @@ class PluginPlatformServiceImpl(
         signerKeyId: String,
         schemaJson: String?,
         openapiJson: String?,
-        lockJson: String?,
-        lockHash: String?,
-        lock: PluginModuleLock,
     ): ApiPlugin {
         // updateById ignores null fields; the nullable columns below must be cleared on an
-        // upgrade (a previous load error, an old schema/lock) and are set explicitly here.
+        // upgrade (a previous load error, an old schema) and are set explicitly here.
         val existing = get(descriptor.pluginId)
-        if (existing != null && (existing.versionCode ?: 0) > descriptor.versionCode) {
-            throw PluginVersionConflictException(
-                "Plugin ${descriptor.pluginId} version ${descriptor.versionCode} is older than " +
-                    "installed version ${existing.versionCode}",
-            )
-        }
         val row =
             existing ?: ApiPlugin().apply {
                 pluginId = descriptor.pluginId
                 enable = 1
-                source = "UPLOADED"
                 defaultAccessMode = ApiInterface.AccessMode.RESTRICTED
             }
         row.name = descriptor.name
@@ -708,12 +689,9 @@ class PluginPlatformServiceImpl(
         row.signerKeyId = signerKeyId
         row.configSchema = schemaJson
         row.openapi = openapiJson
-        row.descriptorFormat = descriptor.format
         row.gatewayApiVersion = descriptor.apiVersion
         row.requiresGateway = descriptor.requiresGateway
         row.requiresGatewayApi = descriptor.requiresGatewayApi
-        row.dependencyLock = lockJson
-        row.lockHash = lockHash
         row.loadStatus = "LOADED"
         row.loadErrorCode = null
         row.loadError = null
@@ -727,17 +705,12 @@ class PluginPlatformServiceImpl(
                 updateById(row)
             }
         }
-        if (lock.modules.isNotEmpty() && lockHash == null) {
-            throw PluginInstallException("Dependency lock has no digest")
-        }
         updateOrThrowException {
             update(
                 KtUpdateWrapper(ApiPlugin()).apply {
                     eq(ApiPlugin::id, row.id)
                     set(ApiPlugin::configSchema, schemaJson)
                     set(ApiPlugin::openapi, openapiJson)
-                    set(ApiPlugin::dependencyLock, lockJson)
-                    set(ApiPlugin::lockHash, lockHash)
                     set(ApiPlugin::loadError, null as String?)
                     set(ApiPlugin::loadErrorCode, null as String?)
                     set(ApiPlugin::updateTime, LocalDateTime.now())

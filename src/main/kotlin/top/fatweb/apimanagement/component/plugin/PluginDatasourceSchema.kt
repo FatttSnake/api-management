@@ -129,20 +129,6 @@ enum class PluginDatasourceSlot {
      * @since 1.0.0
      */
     PARAMS,
-
-    ;
-
-    companion object {
-        /**
-         * Parse a declared slot
-         *
-         * @param raw Slot as written in the schema
-         * @return Slot, or null when unknown
-         * @author FatttSnake, fatttsnake@gmail.com
-         * @since 1.0.0
-         */
-        fun parse(raw: String): PluginDatasourceSlot? = entries.firstOrNull { it.name.equals(raw, ignoreCase = true) }
-    }
 }
 
 /**

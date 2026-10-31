@@ -9,7 +9,6 @@ create table t_b_api_plugin
     default_price       decimal(10, 4) null comment 'Default price per call (null=free)',
     default_rate_limit  int            null comment 'Default rate limit per minute (null=unlimited)',
     default_access_mode varchar(20)    not null default 'RESTRICTED' comment 'Default access mode [DEFAULT, RESTRICTED]',
-    source              varchar(20)    not null default 'UPLOADED' comment 'Plugin source [BUILT_IN, UPLOADED]',
     version_name        varchar(32)    null comment 'Plugin version name, e.g. 1.2.0',
     version_code        int            not null default 0 comment 'Plugin version code (monotonic)',
     file_hash           varchar(64)    null comment 'Plugin jar file hash (t_s_storage_blob.file_hash)',
@@ -17,13 +16,10 @@ create table t_b_api_plugin
     signer_key_id       varchar(64)    null comment 'Signer public key fingerprint (t_b_api_plugin_trust_key.key_id)',
     openapi             longtext       null comment 'Embedded OpenAPI fragment JSON',
     config_schema       text           null comment 'Embedded plugin config schema JSON snapshot (META-INF/plugin-config.json)',
-    descriptor_format   int            not null default 1 comment 'Plugin descriptor format',
     gateway_api_version int            not null default 1 comment 'Gateway API major version the plugin was compiled against',
     requires_gateway    varchar(100)   not null default '>=1.0.0 <2.0.0' comment 'Required gateway version range',
     requires_gateway_api varchar(100)  not null default '^1.0' comment 'Required gateway API version range',
-    dependency_lock     longtext       null comment 'Resolved dependency lock JSON',
-    lock_hash           varchar(64)    null comment 'Dependency lock SHA-256',
-    load_status         varchar(20)    not null default 'LOADED' comment 'Load status [LOADED, LOAD_ERROR, DISABLED, UNRESOLVED]',
+    load_status         varchar(20)    not null default 'LOADED' comment 'Load status [LOADED, LOAD_ERROR, DISABLED]',
     load_error_code     varchar(40)    null comment 'Load error code',
     load_error          varchar(512)   null comment 'Last mount error message',
     create_time         datetime       not null default (utc_timestamp()) comment 'Create time',
@@ -186,17 +182,6 @@ create table t_b_plugin_module
     constraint t_b_plugin_module_unique_sha unique (sha256)
 ) comment 'API Platform - Plugin Module';
 create index t_b_plugin_module_index_sha on t_b_plugin_module (sha256);
-
-drop table if exists t_b_plugin_module_edge;
-create table t_b_plugin_module_edge
-(
-    id                  bigint not null primary key,
-    module_id           bigint not null comment 'Dependent module ID',
-    dependency_module_id bigint not null comment 'Direct dependency module ID',
-    version             int    not null default 0,
-    constraint t_b_plugin_module_edge_unique unique (module_id, dependency_module_id)
-) comment 'API Platform - Plugin Module Edge';
-create index t_b_plugin_module_edge_index_dependency on t_b_plugin_module_edge (dependency_module_id);
 
 drop table if exists t_b_plugin_module_ref;
 create table t_b_plugin_module_ref

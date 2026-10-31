@@ -10,7 +10,6 @@ import org.springframework.transaction.annotation.Transactional
 import top.fatweb.apimanagement.converter.api.toVoPage
 import top.fatweb.apimanagement.entity.api.ApiPlugin
 import top.fatweb.apimanagement.entity.api.PluginModule
-import top.fatweb.apimanagement.entity.api.PluginModuleEdge
 import top.fatweb.apimanagement.entity.api.PluginModuleRef
 import top.fatweb.apimanagement.exception.PluginInstallException
 import top.fatweb.apimanagement.mapper.api.ApiPluginMapper
@@ -21,7 +20,6 @@ import top.fatweb.apimanagement.plugin.runtime.module.LockedModule
 import top.fatweb.apimanagement.plugin.runtime.module.PluginModuleLock
 import top.fatweb.apimanagement.plugin.runtime.module.PluginModuleStore
 import top.fatweb.apimanagement.properties.ServerProperties
-import top.fatweb.apimanagement.service.api.IPluginModuleEdgeService
 import top.fatweb.apimanagement.service.api.IPluginModuleRefService
 import top.fatweb.apimanagement.service.api.IPluginModuleService
 import top.fatweb.apimanagement.util.MavenCoordinate
@@ -47,7 +45,6 @@ import java.time.LocalDateTime
 @DS("master")
 class PluginModuleServiceImpl(
     serverProperties: ServerProperties,
-    private val pluginModuleEdgeService: IPluginModuleEdgeService,
     private val pluginModuleRefService: IPluginModuleRefService,
     private val apiPluginMapper: ApiPluginMapper,
 ) : ServiceImpl<PluginModuleMapper, PluginModule>(),
@@ -91,28 +88,6 @@ class PluginModuleServiceImpl(
                 )
             }
             installed[module] = upsert(module)
-        }
-
-        ordered.forEach { module ->
-            val entity = installed.getValue(module)
-            val moduleId = entity.id ?: throw PluginInstallException("Module has no ID: ${module.coordinate}")
-            pluginModuleEdgeService.remove(
-                KtQueryWrapper(PluginModuleEdge()).eq(PluginModuleEdge::moduleId, moduleId),
-            )
-            module.dependencies.forEach { digest ->
-                val dependency = ordered.first { it.sha256 == digest }
-                val dependencyId =
-                    installed.getValue(dependency).id
-                        ?: throw PluginInstallException("Dependency has no ID: ${dependency.coordinate}")
-                saveOrThrowException {
-                    pluginModuleEdgeService.save(
-                        PluginModuleEdge().apply {
-                            this.moduleId = moduleId
-                            this.dependencyModuleId = dependencyId
-                        },
-                    )
-                }
-            }
         }
 
         replaceReferences(pluginId, ordered.map { installed.getValue(it) })
@@ -201,12 +176,6 @@ class PluginModuleServiceImpl(
                 val pluginIds = references.mapNotNull { it.pluginId }.sorted().joinToString()
                 throw PluginInstallException("Module ${module.coordinate} is still referenced by $pluginIds")
             }
-            pluginModuleEdgeService.remove(
-                KtQueryWrapper(PluginModuleEdge()).eq(PluginModuleEdge::moduleId, moduleId),
-            )
-            pluginModuleEdgeService.remove(
-                KtQueryWrapper(PluginModuleEdge()).eq(PluginModuleEdge::dependencyModuleId, moduleId),
-            )
             removeById(moduleId)
         }
         moduleStore.delete(sha256)
@@ -306,12 +275,6 @@ class PluginModuleServiceImpl(
             }
         stale.forEach { module ->
             val moduleId = module.id ?: return@forEach
-            pluginModuleEdgeService.remove(
-                KtQueryWrapper(PluginModuleEdge()).eq(PluginModuleEdge::moduleId, moduleId),
-            )
-            pluginModuleEdgeService.remove(
-                KtQueryWrapper(PluginModuleEdge()).eq(PluginModuleEdge::dependencyModuleId, moduleId),
-            )
             removeById(moduleId)
         }
         return deleted
@@ -347,7 +310,6 @@ class PluginModuleServiceImpl(
                 moduleVersion = module.version
                 sha256 = module.sha256
                 size = module.size
-                source = module.source
                 installTime = LocalDateTime.now()
             }
         saveOrThrowException(PluginInstallException("Cannot install module ${module.coordinate}")) {
@@ -379,21 +341,13 @@ class PluginModuleServiceImpl(
             staged.groupId != module.group ||
                 staged.artifactId != module.name ||
                 staged.moduleVersion != module.version
-        val sourceMissing = staged.source == null && module.source != null
-        val sizeMissing = (staged.size ?: 0) <= 0 && module.size > 0
-        if (!coordinateChanged && !sourceMissing && !sizeMissing) {
+        if (!coordinateChanged) {
             return
         }
 
         staged.groupId = module.group
         staged.artifactId = module.name
         staged.moduleVersion = module.version
-        if (sourceMissing) {
-            staged.source = module.source
-        }
-        if (sizeMissing) {
-            staged.size = module.size
-        }
         saveOrThrowException(PluginInstallException("Cannot register module ${module.coordinate}")) {
             updateById(staged)
         }

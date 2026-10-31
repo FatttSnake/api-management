@@ -131,9 +131,9 @@ class PluginArtifactStore(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun lock(jar: Path): PluginDependencyLock {
-        val bytes = readEntry(jar, LOCK_ENTRY) ?: return PluginDependencyLock(null, PluginModuleLock())
-        return PluginDependencyLock(bytes, parseLock(bytes))
+    fun lock(jar: Path): PluginModuleLock {
+        val bytes = readEntry(jar, LOCK_ENTRY) ?: return PluginModuleLock()
+        return parseLock(bytes)
     }
 
     /**
@@ -227,26 +227,6 @@ class PluginArtifactStore(
      * @since 1.0.0
      */
     class StoredJar(val digest: String, val path: Path, val created: Boolean)
-
-    /**
-     * A dependency lock and the raw bytes it was read from.
-     *
-     * @property bytes raw lock JSON, or null when the jar has no lock
-     * @property lock parsed lock
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    class PluginDependencyLock(val bytes: ByteArray?, val lock: PluginModuleLock) {
-        /**
-         * Digest of the raw lock, or null when absent.
-         *
-         * @param sha256 digest function
-         * @return hex digest or null
-         * @author FatttSnake, fatttsnake@gmail.com
-         * @since 1.0.0
-         */
-        fun hash(sha256: (ByteArray) -> String): String? = bytes?.let(sha256)
-    }
 
     private companion object {
         const val DESCRIPTOR_ENTRY = "META-INF/api-plugin.json"

@@ -10,7 +10,6 @@
                t_b_api_plugin.default_price as api_plugin_default_price,
                t_b_api_plugin.default_rate_limit as api_plugin_default_rate_limit,
                t_b_api_plugin.default_access_mode as api_plugin_default_access_mode,
-               t_b_api_plugin.source as api_plugin_source,
                t_b_api_plugin.version_name as api_plugin_version_name,
                t_b_api_plugin.version_code as api_plugin_version_code,
                t_b_api_plugin.file_hash as api_plugin_file_hash,
@@ -53,7 +52,6 @@
         <result property="defaultPrice" column="api_plugin_default_price"/>
         <result property="defaultRateLimit" column="api_plugin_default_rate_limit"/>
         <result property="defaultAccessMode" column="api_plugin_default_access_mode"/>
-        <result property="source" column="api_plugin_source"/>
         <result property="versionName" column="api_plugin_version_name"/>
         <result property="versionCode" column="api_plugin_version_code"/>
         <result property="fileHash" column="api_plugin_file_hash"/>

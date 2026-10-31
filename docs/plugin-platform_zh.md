@@ -135,7 +135,7 @@ sequenceDiagram
 |---|---|
 | `ApiPluginExtension.kt` | `apiPlugin { }` DSL：pluginId、versionCode、mainClass、requiresGateway、requiresGatewayApi、`sharedLoader`、部署参数 |
 | `ApiPlugin.kt` | 应用插件、加 `compileOnly gateway-api`、注册所有 task、把生成目录放进 jar |
-| `ApiPluginTasks.kt` | `GeneratePluginDescriptor`、`GenPluginKeys`、`PreparePluginPubKey`、`SignPlugin`、`VerifyPlugin`、`DeployPlugin` |
+| `GeneratePluginDescriptor.kt`、`GenPluginKeys.kt`、`PreparePluginPubKey.kt`、`SignPlugin.kt`、`VerifyPlugin.kt`、`DeployPlugin.kt` | 描述符、密钥、签名、验签与部署 task |
 | `GeneratePluginLock.kt` | 从 `runtimeClasspath` 生成 `META-INF/api-plugin-deps.json`（含共享 loader 组），并把模块 jar 复制到 `build/generated/api-plugin-modules/` |
 | `CheckPluginAbi.kt` | 解析插件 class 常量池，检查对 `top.fatweb.apimanagement.api.*` 的类/方法/字段/构造器引用 |
 | `plugin-signing/PluginSigner.kt` | 构建 jar 清单、签名、验签、SPKI 指纹 |
@@ -183,7 +183,7 @@ flowchart TD
 
 | 文件 | 作用 |
 |---|---|
-| `classloader/GatewayApiClassLoader.kt` | 只放行 `java.`、`javax.`、`jdk.`、`sun.`、`kotlin.`、`top.fatweb.apimanagement.api.`；其余 `ClassNotFoundException` |
+| `classloader/GatewayApiClassLoader.kt` | 只放行 `java.`、`javax.`、`jdk.`、`sun.`、`kotlin.`、`org.ietf.jgss.`、`org.w3c.dom.`、`org.xml.sax.`、`top.fatweb.apimanagement.api.`；其余 `ClassNotFoundException` |
 | `classloader/ModuleClassLoader.kt` | child-first：一个装载单元（一个模块或一个共享 loader 组）的 jar → 依赖单元的 loader → 平台 |
 | `classloader/PluginClassLoader.kt` | child-first：插件 jar → lock 中的装载单元 loader → 平台 |
 | `classloader/ModuleKey.kt` | 共享键：成员集合（GAV + sha256）+ 外部依赖单元的指纹 |
@@ -203,7 +203,7 @@ flowchart TD
 
 - 装载单元是一个模块，或一个显式共享 loader 组。同一单元（成员集合与 digest）且外部依赖单元指纹相同，共享一个 `ModuleClassLoader`。
 - 组成员之间不需要依赖边就能互相看见。若两个成员包含同名类，按 digest 排序靠前的 jar 生效；不要把同一批类的不同实现放进一组。
-- 分组不能造成装载单元环（`A -> B -> C` 加组 `{A, C}` 会被拒绝）。组不改变模块行、边、引用、下载与 GC。
+- 分组不能造成装载单元环（`A -> B -> C` 加组 `{A, C}` 会被拒绝）。组不改变模块行、引用、下载与 GC。
 - 不同版本 GAV 不同，自然并存。
 - 插件卸载时释放单元引用；引用归零关闭 loader。
 - 磁盘模块按插件引用集合 GC，未引用超过宽限期才删除。
@@ -218,7 +218,7 @@ flowchart TD
 | `PluginModuleServiceImpl` | `service/api/impl/PluginModuleServiceImpl.kt` | 模块安装、引用、释放、分页、GC |
 | `PluginModuleFetchServiceImpl` | `service/api/impl/PluginModuleFetchServiceImpl.kt` | 从 Maven 补齐缺失模块，并记录逐模块进度 |
 | `PluginModuleDownloader` | `component/plugin/PluginModuleDownloader.kt` | 从配置的仓库下载单个模块，校验 SHA-256 与大小 |
-| `PluginModuleEdgeServiceImpl`、`PluginModuleRefServiceImpl` | `service/api/impl/` | 模块边/引用，MyBatis-Plus service |
+| `PluginModuleRefServiceImpl` | `service/api/impl/` | 模块引用，MyBatis-Plus service |
 | `ApiInterfaceServiceImpl` | `service/api/impl/ApiInterfaceServiceImpl.kt` | 接口行持久化 |
 | `PluginCapabilityFactory` | `component/plugin/runtime/PluginCapabilityFactory.kt` | 为每个插件装配 `GatewayContext` 能力 |
 | `PluginEventBus` | `component/plugin/runtime/PluginEventBus.kt` | 进程内事件，按 pluginId 归属 |
@@ -284,20 +284,18 @@ sequenceDiagram
    - `readDescriptor`：`PluginDescriptorParser` 校验 format 1、pluginId、版本、mainClass、版本范围。
    - 读取 lock：`PluginModuleLockParser`。
    - 读取 `META-INF/plugin-config.json`，`PluginConfigSchemaUtil.parse`，写入 `PluginConfigSchemaCache`。
-2. 升级时先卸载当前运行时：
-   - `unloadRuntime(..., uninstalling = true)`：排空、注销路由、取消事件/调度、`onStop`、`onUninstall`、关闭 loader。
-   - `moduleService.release(pluginId)`：释放当前模块引用。
-3. 模块安装：
-   - 缺失模块在事务开启前补齐：`PluginModuleFetchService.ensure` 在 `app.plugin.module.online` 为真时，按顺序从 `app.plugin.module.repositories` 下载 lock 中有、模块仓库中没有的模块。只有 SHA-256 和大小都与 lock 一致才接受，实际提供文件的仓库写入 `source`。在线模式关闭时安装失败并列出缺失坐标。
+2. 模块安装：
+   - 缺失模块在事务开启前补齐：`PluginModuleFetchService.ensure` 在 `app.plugin.module.online` 为真时，按顺序从 `app.plugin.module.repositories` 下载 lock 中有、模块仓库中没有的模块。只有 SHA-256 和大小都与 lock 一致才接受，实际提供文件的仓库写入模块行的 `source` 列。在线模式关闭时安装失败并列出缺失坐标。
    - 控制台通过 `POST /system/api/plugin/module/fetch` 启动同一套下载，再轮询 `GET /system/api/plugin/module/fetch/{taskId}`，按模块逐个展示字节进度。安装接口自身也会补齐，因此不经控制台直接调用同样可用。
    - 模块也可以通过 `PluginModuleController.install` → `IPluginModuleService.stage` 上传：落盘、从 jar 的 `META-INF/maven/**/pom.properties` 读取坐标，并插入模块行，管理员在列表里就能确认「这个 SHA / GAV 已经在仓库里」。没有该元数据的 jar（如 BouncyCastle 这类 OSGi bundle）坐标留空，列表仍显示 SHA 和大小。
    - `installForPlugin` 对 lock 中每个模块：
      - 按 SHA 在模块仓库查找并校验完整性，缺失或损坏时分别报 `Missing dependency module` / `is corrupted`。
      - `PluginModule` 行 upsert：坐标以 lock 为准（缺失时补全；与 jar 自带元数据不一致时覆盖，lock 在签名内），并写入引用。
-     - `t_b_plugin_module_edge` 写直接依赖边。
      - `t_b_plugin_module_ref` 写插件引用。
    - 列表接口返回 `referenced`、`referencedBy`，并可按 `referenced` 和 SHA-256 前缀过滤。
    - 未被插件引用的模块（含上传后一直没装插件的模块）由 GC 按宽限期回收。
+3. 升级时，在新 artifact、lock 与配置 schema 都接受之后才停掉当前运行时：
+   - `runtimeRegistry.unload(..., uninstalling = true)`：排空、注销路由、取消事件/调度、`onStop`、`onUninstall`、关闭 loader。
 4. 运行时装配：
    - `PluginRuntimeLoader.load`
      - `PluginDescriptorParser.parse`
@@ -309,8 +307,8 @@ sequenceDiagram
      - 在插件 TCCL 下执行 `onStart`
      - `RouteCollector.freeze()` 校验 operationId/路径冲突
 5. 持久化：
-   - `upsertPluginRow`：插件行、descriptor 字段、lock、load status、OpenAPI。
-   - `registerEndpoints`：
+   - `upsertPluginRow`：插件行、descriptor 字段、load status、OpenAPI。
+   - `endpointRegistrar.register`：
      - 确保菜单/scope/operation/power
      - 按 `operationId` 生成接口 code
      - 更新/插入 `t_b_api_interface`
@@ -320,7 +318,6 @@ sequenceDiagram
    - `refreshCache`：刷新 `PluginRegistryCache` 与 `PluginConfigSchemaCache`
 6. 失败清理：
    - 关闭已创建的 loader/run
-   - 释放模块引用
    - 删除新 jar
    - 抛出 `PluginInstallException`
 
@@ -340,7 +337,7 @@ flowchart TD
     B --> C[loadInstalled]
     C --> D{enabled?}
     D -- 否 --> E[loadStatus=DISABLED]
-    D -- 是 --> F[loadFromRow]
+    D -- 是 --> F[runtimeRegistry.load]
     F --> G[PluginRuntimeLoader.load]
     G --> H{成功?}
     H -- 是 --> I[routeRegistry.replace + loadStatus=LOADED]
@@ -351,7 +348,7 @@ flowchart TD
 
 相关文件：
 
-- `PluginPlatformServiceImpl.kt`：`run` / `loadInstalled` / `loadFromRow` / `refreshCache`
+- `PluginPlatformServiceImpl.kt`：`run` / `loadInstalled` / `runtimeRegistry.load` / `refreshCache`
 - `PluginRuntimeLoader.kt`：实际加载与 `onStart`
 - `PluginRouteRegistry.kt`：恢复路由
 - `PluginRegistryCache.kt`：请求热路径缓存
@@ -441,8 +438,8 @@ sequenceDiagram
 ```mermaid
 stateDiagram-v2
     [*] --> LOADED: install + onStart
-    LOADED --> DISABLED: setEnabled(false) / unloadRuntime
-    DISABLED --> LOADED: setEnabled(true) / loadFromRow
+    LOADED --> DISABLED: setEnabled(false) / runtimeRegistry.unload
+    DISABLED --> LOADED: setEnabled(true) / runtimeRegistry.load
     LOADED --> LOADED: reload / upgrade
     LOADED --> LOAD_ERROR: reload / startup failure
     LOAD_ERROR --> LOADED: reload success
@@ -454,7 +451,7 @@ stateDiagram-v2
 
 `PluginPlatformServiceImpl.setEnabled(false)`：
 
-- `unloadRuntime(..., purge=false, uninstalling=false)`
+- `runtimeRegistry.unload(..., purge=false, uninstalling=false)`
   - `inFlightTracker.beginDrain`
   - `routeRegistry.unregisterPlugin`
   - `eventBus.removePlugin`
@@ -469,7 +466,7 @@ stateDiagram-v2
 
 `setEnabled(true)`：
 
-- 没有 runtime 时 `loadFromRow(row)`。
+- 没有 runtime 时 `runtimeRegistry.load(row)`。
 - 重新 `runtimeLoader.load`、`routeRegistry.replace`。
 - 更新 `loadStatus=LOADED`。
 
@@ -486,7 +483,7 @@ stateDiagram-v2
 
 `uninstall(pluginId, purgeData)`：
 
-1. `unloadRuntime(purge=..., uninstalling=true)`：
+1. `runtimeRegistry.unload(purge=..., uninstalling=true)`：
    - 排空 → 注销路由 → 取消事件/调度 → `onPurge`（可选）→ `onStop` → `onUninstall` → 关 loader
 2. 释放模块引用
 3. 删除接口行、权限树、插件行
@@ -521,7 +518,6 @@ erDiagram
     t_b_api_plugin ||--o{ t_b_api_interface : owns
     t_b_api_plugin ||--o{ t_b_api_plugin_setting : has
     t_b_api_plugin_trust_key ||--o{ t_b_api_plugin : signs
-    t_b_plugin_module ||--o{ t_b_plugin_module_edge : depends
     t_b_plugin_module ||--o{ t_b_plugin_module_ref : referenced_by
     t_s_menu ||--o{ t_s_scope : contains
     t_s_scope ||--o{ t_s_operation : contains
@@ -530,12 +526,11 @@ erDiagram
 
 | 表 | 作用 |
 |---|---|
-| `t_b_api_plugin` | 插件行：版本、jar hash、签名者、descriptor 字段、lock、load status/error、OpenAPI |
+| `t_b_api_plugin` | 插件行：版本、jar hash、签名者、descriptor 字段、load status/error、OpenAPI |
 | `t_b_api_interface` | 路由/接口行：code、path、method、apiVersion、计费/限流/访问模式 |
 | `t_b_api_plugin_setting` | 插件配置值（secret 存密文） |
 | `t_b_api_plugin_trust_key` | 可信签名公钥 |
 | `t_b_plugin_module` | 依赖模块：`module_version` 是 Maven 版本，`version` 是乐观锁；jar 没有 Maven 元数据时坐标在插件认领前为空 |
-| `t_b_plugin_module_edge` | 模块直接依赖边，带 `version` 乐观锁 |
 | `t_b_plugin_module_ref` | 插件对模块的引用，带 `version` 乐观锁 |
 | `t_s_menu` / `t_s_scope` / `t_s_operation` / `t_s_power` | 插件接口的权限树 |
 
@@ -544,7 +539,6 @@ erDiagram
 - `entity/api/ApiPlugin.kt`
 - `entity/api/ApiInterface.kt`
 - `entity/api/PluginModule.kt`
-- `entity/api/PluginModuleEdge.kt`
 - `entity/api/PluginModuleRef.kt`
 - `entity/permission/Menu.kt`、`Scope.kt`、`Operation.kt`、`Power.kt`
 
@@ -619,20 +613,20 @@ erDiagram
 ### 安全边界
 
 - 不是沙箱；同 JVM 内签名可信插件仍可用反射。
-- 依赖模块来自管理员上传、部署工具，或网关配置的 Maven 仓库。lock 只提供坐标、SHA-256 和大小；其中的 `source` 字段不会被访问，插件无法让网关请求任意 URL。插件运行期不能触发安装。
+- 依赖模块来自管理员上传、部署工具，或网关配置的 Maven 仓库。lock 只提供坐标、SHA-256、大小和依赖边；网关不会跟随 lock 里的 URL，插件无法让它请求任意地址。插件运行期不能触发安装。
 - 网关只向插件暴露 JDK、Kotlin stdlib、`gateway-api`。
 
 ## 15. 关键调用索引
 
 | 入口 | 主要调用链 |
 |---|---|
-| 安装插件 | `ApiPluginController.install` → `PluginPlatformServiceImpl.install` → `PluginModuleFetchService.ensure` → `PluginModuleServiceImpl.installForPlugin` → `PluginRuntimeLoader.load` → `PluginModuleRegistry.acquire` → `PluginClassLoader.onStart` → `registerEndpoints` → `PluginRouteRegistry.replace` |
+| 安装插件 | `ApiPluginController.install` → `PluginPlatformServiceImpl.install` → `PluginModuleFetchService.ensure` → `PluginModuleServiceImpl.installForPlugin` → `PluginRuntimeLoader.load` → `PluginModuleRegistry.acquire` → `ApiPlugin.onStart` → `endpointRegistrar.register` → `PluginRouteRegistry.replace` |
 | 获取模块 | `PluginModuleController.fetch` → `PluginModuleFetchServiceImpl.start` → `PluginModuleDownloader.download` → `PluginModuleServiceImpl.stage` |
 | 模块上传 | `PluginModuleController.install` → `PluginModuleServiceImpl.stage` → `FileSystemPluginModuleStore.install` + 暂存模块行 |
-| 启动恢复 | `PluginPlatformServiceImpl.run` → `loadInstalled` → `loadFromRow` → `PluginRuntimeLoader.load` |
+| 启动恢复 | `PluginPlatformServiceImpl.run` → `loadInstalled` → `runtimeRegistry.load` → `PluginRuntimeLoader.load` |
 | 请求 | `PluginApiHandlerMapping.getHandlerInternal` → `ApiAccessInterceptor.preHandle` → `PluginApiHandlerAdapter.handle` → `ApiHandler.handle` |
-| 停用 | `ApiPluginController.updatePluginStatus` → `PluginPlatformServiceImpl.setEnabled(false)` → `unloadRuntime` |
-| 卸载 | `ApiPluginController.uninstall` → `PluginPlatformServiceImpl.uninstall` → `unloadRuntime` → `remove` 行 → `refreshCache` |
+| 停用 | `ApiPluginController.updatePluginStatus` → `PluginPlatformServiceImpl.setEnabled(false)` → `runtimeRegistry.unload` |
+| 卸载 | `ApiPluginController.uninstall` → `PluginPlatformServiceImpl.uninstall` → `runtimeRegistry.unload` → `remove` 行 → `refreshCache` |
 | 配置保存 | `ApiPluginController.updateConfig` → `PluginPlatformServiceImpl.updatePluginConfig` → `onCommitted { reload }` |
 | 文档 | `UserApiDocController` → `ApiDocServiceImpl` → `PluginOpenApiBuilder` 生成的 `openapi` 字段 |
 

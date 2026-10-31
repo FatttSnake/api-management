@@ -86,7 +86,6 @@ class PluginModuleRegistry(private val store: PluginModuleStore, private val pla
                                 }
                             val created =
                                 ModuleClassLoader(
-                                    key,
                                     unit.members.map { store.path(it.sha256) },
                                     platform,
                                     dependencyLoaders,
@@ -232,9 +231,8 @@ class PluginModuleGraph internal constructor(
 /**
  * A lock references a module that is not installed.
  *
- * @property missing missing coordinates
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-class PluginModuleMissingException(val missing: List<String>) :
+class PluginModuleMissingException(missing: List<String>) :
     RuntimeException("Missing plugin modules: ${missing.joinToString(", ")}")

@@ -90,15 +90,6 @@ class ApiPlugin : Serializable {
     var defaultAccessMode: ApiInterface.AccessMode? = null
 
     /**
-     * Plugin source: BUILT_IN or UPLOADED
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    @TableField("source")
-    var source: String? = null
-
-    /**
      * Plugin version name, e.g. "1.2.0"
      *
      * @author FatttSnake, fatttsnake@gmail.com
@@ -117,7 +108,7 @@ class ApiPlugin : Serializable {
     var versionCode: Int? = null
 
     /**
-     * Plugin jar file hash (t_s_storage_blob.file_hash)
+     * Plugin jar SHA-256 digest, stored as {pluginDir}/{digest}.jar
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -144,9 +135,8 @@ class ApiPlugin : Serializable {
     var signerKeyId: String? = null
 
     /**
-     * OpenAPI fragment JSON, generated from the plugin's controllers on every mount and
-     * therefore always describing the interfaces this version actually serves; null when
-     * its generation failed
+     * OpenAPI fragment JSON, generated from the plugin's routes when it is mounted; null when
+     * the plugin is disabled
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -155,8 +145,8 @@ class ApiPlugin : Serializable {
     var openapi: String? = null
 
     /**
-     * Embedded plugin config schema JSON snapshot (from META-INF/plugin-config.json),
-     * refreshed on every mount so it always matches the installed version
+     * Embedded plugin config schema JSON (from META-INF/plugin-config.json), snapshotted on
+     * install and upgrade so it always matches the installed version
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -172,15 +162,6 @@ class ApiPlugin : Serializable {
      */
     @TableField("load_error")
     var loadError: String? = null
-
-    /**
-     * Plugin descriptor format
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    @TableField("descriptor_format")
-    var descriptorFormat: Int? = null
 
     /**
      * Gateway API major version the plugin was compiled against
@@ -208,24 +189,6 @@ class ApiPlugin : Serializable {
      */
     @TableField("requires_gateway_api")
     var requiresGatewayApi: String? = null
-
-    /**
-     * Resolved dependency lock JSON
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    @TableField("dependency_lock")
-    var dependencyLock: String? = null
-
-    /**
-     * Dependency lock SHA-256
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    @TableField("lock_hash")
-    var lockHash: String? = null
 
     /**
      * Load status
@@ -274,5 +237,5 @@ class ApiPlugin : Serializable {
     var version: Int? = null
 
     override fun toString(): String =
-        "ApiPlugin(id=$id, pluginId=$pluginId, name=$name, description=$description, enable=$enable, defaultPrice=$defaultPrice, defaultRateLimit=$defaultRateLimit, defaultAccessMode=$defaultAccessMode, source=$source, versionName=$versionName, versionCode=$versionCode, fileHash=$fileHash, jarName=$jarName, signerKeyId=$signerKeyId, loadError=$loadError, createTime=$createTime, updateTime=$updateTime, version=$version)"
+        "ApiPlugin(id=$id, pluginId=$pluginId, name=$name, description=$description, enable=$enable, defaultPrice=$defaultPrice, defaultRateLimit=$defaultRateLimit, defaultAccessMode=$defaultAccessMode, versionName=$versionName, versionCode=$versionCode, fileHash=$fileHash, jarName=$jarName, signerKeyId=$signerKeyId, loadError=$loadError, createTime=$createTime, updateTime=$updateTime, version=$version)"
 }

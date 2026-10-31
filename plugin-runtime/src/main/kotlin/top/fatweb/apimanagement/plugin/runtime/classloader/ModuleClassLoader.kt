@@ -10,16 +10,11 @@ import java.nio.file.Path
  * class, the jar that sorts first by digest wins. Two plugins that ask for the same unit share
  * one loader instance.
  *
- * @param moduleKey unit identity
  * @param jars jars of the unit, in resolution order
  * @param platform platform class loader
  * @param dependencies dependency loaders
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-class ModuleClassLoader(
-    val moduleKey: ModuleKey,
-    jars: List<Path>,
-    platform: ClassLoader,
-    dependencies: List<ModuleClassLoader>,
-) : ChildFirstClassLoader(jars.map { it.toUri().toURL() }.toTypedArray(), platform, dependencies)
+class ModuleClassLoader(jars: List<Path>, platform: ClassLoader, dependencies: List<ModuleClassLoader>) :
+    ChildFirstClassLoader(jars.map { it.toUri().toURL() }.toTypedArray(), platform, dependencies)

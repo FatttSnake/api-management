@@ -8,7 +8,6 @@ package top.fatweb.apimanagement.plugin.runtime.module
  * @property version resolved version
  * @property sha256 module jar digest
  * @property size module jar size in bytes
- * @property source repository the module was resolved from
  * @property dependencies direct dependency digests
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
@@ -19,7 +18,6 @@ data class LockedModule(
     val version: String,
     val sha256: String,
     val size: Long = 0,
-    val source: String? = null,
     val dependencies: List<String> = emptyList(),
 ) {
     /**
@@ -36,7 +34,6 @@ data class LockedModule(
  * Dependency lock carried by a plugin jar.
  *
  * @property format lock format version
- * @property constraints declared version ranges, keyed by `group:name`
  * @property modules resolved modules
  * @property groups modules that share one class loader, each group a list of module digests
  * @author FatttSnake, fatttsnake@gmail.com
@@ -44,7 +41,6 @@ data class LockedModule(
  */
 data class PluginModuleLock(
     val format: Int = 1,
-    val constraints: Map<String, String> = emptyMap(),
     val modules: List<LockedModule> = emptyList(),
     val groups: List<List<String>> = emptyList(),
 ) {
@@ -107,15 +103,6 @@ data class PluginModuleLock(
         requireAcyclic(modules, byDigest)
         validateGroups(byDigest)
         requireAcyclicUnits()
-
-        constraints.forEach { (coordinate, range) ->
-            if (coordinate.isBlank() || !coordinate.contains(':')) {
-                throw PluginModuleLockException("Invalid dependency constraint key: $coordinate")
-            }
-            if (range.isBlank()) {
-                throw PluginModuleLockException("Empty dependency constraint for $coordinate")
-            }
-        }
     }
 
     private fun validateGroups(byDigest: Map<String, LockedModule>) {

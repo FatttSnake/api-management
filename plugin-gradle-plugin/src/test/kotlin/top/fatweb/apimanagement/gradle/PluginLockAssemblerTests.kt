@@ -29,7 +29,6 @@ class PluginLockAssemblerTests {
         assertEquals(listOf(listOf(shaA, shaB)), document.groups)
         assertEquals(listOf("fixture:a:1.0.0", "fixture:b:1.0.0"), document.modules.map { it.coordinate })
         assertEquals(listOf(shaA), document.modules[1].dependencies)
-        assertEquals(mapOf("fixture:a" to "1.0.0", "fixture:b" to "1.0.0"), document.constraints)
     }
 
     @Test

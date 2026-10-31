@@ -81,14 +81,6 @@ data class ApiPluginVo(
     @field:Schema(description = "默认访问模式 (接口继承此值)", allowableValues = ["DEFAULT", "RESTRICTED"])
     val defaultAccessMode: ApiInterface.AccessMode?,
     /**
-     * Plugin source: BUILT_IN or UPLOADED
-     *
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    @field:Schema(description = "插件来源", allowableValues = ["BUILT_IN", "UPLOADED"])
-    val source: String?,
-    /**
      * Plugin version name
      *
      * @author FatttSnake, fatttsnake@gmail.com
@@ -134,7 +126,7 @@ data class ApiPluginVo(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "加载状态", allowableValues = ["LOADED", "LOAD_ERROR", "DISABLED", "UNRESOLVED"])
+    @field:Schema(description = "加载状态", allowableValues = ["LOADED", "LOAD_ERROR", "DISABLED"])
     val loadStatus: String?,
     /**
      * Load error code

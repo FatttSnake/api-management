@@ -36,7 +36,7 @@ data class StorageProperties(
      */
     @field:Valid val local: LocalStorageProperties = LocalStorageProperties(),
     /**
-     * Directory where plugin jars are materialized for class loading
+     * Directory holding plugin jars, named by SHA-256 digest
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0

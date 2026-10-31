@@ -69,12 +69,12 @@ class PluginArtifactStoreTests {
 
     private companion object {
         val LOCK = """
-            {"format":1,"constraints":{},"modules":[{"group":"com.example","name":"demo",
+            {"format":1,"modules":[{"group":"com.example","name":"demo",
             "version":"1.0.0","sha256":"${"a".repeat(64)}","size":12,"dependencies":[]}]}
         """.trimIndent()
 
         val GROUPED_LOCK = """
-            {"format":1,"constraints":{},"modules":[
+            {"format":1,"modules":[
             {"group":"com.example","name":"demo","version":"1.0.0",
              "sha256":"${"a".repeat(64)}","size":12,"dependencies":[]},
             {"group":"com.example","name":"other","version":"1.0.0",

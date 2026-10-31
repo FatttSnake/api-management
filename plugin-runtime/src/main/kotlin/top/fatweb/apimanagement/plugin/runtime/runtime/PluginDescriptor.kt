@@ -20,7 +20,6 @@ import java.nio.charset.StandardCharsets
  * @property requiresGatewayApi gateway API version range
  * @property description description
  * @property author author
- * @property dependencies declared dependency ranges, keyed by `group:name`
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
@@ -36,7 +35,6 @@ data class PluginDescriptor(
     val requiresGatewayApi: String,
     val description: String = "",
     val author: String = "",
-    val dependencies: Map<String, String> = emptyMap(),
 )
 
 /**
@@ -81,7 +79,6 @@ class PluginDescriptorParser {
                 requiresGatewayApi = json.requiresGatewayApi,
                 description = json.description,
                 author = json.author,
-                dependencies = json.dependencies,
             )
         validate(descriptor)
         return descriptor
@@ -120,11 +117,6 @@ class PluginDescriptorParser {
         if (descriptor.requiresGateway.isBlank() || descriptor.requiresGatewayApi.isBlank()) {
             throw PluginDescriptorException("requiresGateway and requiresGatewayApi must not be blank")
         }
-        descriptor.dependencies.forEach { (coordinate, range) ->
-            if (coordinate.isBlank() || !coordinate.contains(':') || range.isBlank()) {
-                throw PluginDescriptorException("Invalid dependency declaration: $coordinate = $range")
-            }
-        }
     }
 
     private data class DescriptorJson(
@@ -138,7 +130,6 @@ class PluginDescriptorParser {
         val requiresGatewayApi: String = "",
         val description: String = "",
         val author: String = "",
-        val dependencies: Map<String, String> = emptyMap(),
     )
 
     private companion object {

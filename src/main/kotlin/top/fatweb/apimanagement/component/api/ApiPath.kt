@@ -17,7 +17,7 @@ internal object ApiPath {
     private val REGEX = Regex("/api/([^/]+)/v(\\d+)(/.*)?$")
 
     /**
-     * Plugin and API version a request addresses
+     * Plugin a request addresses
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -30,27 +30,20 @@ internal object ApiPath {
          * @since 1.0.0
          */
         val plugin: String,
-        /**
-         * API version as it appears in the URL
-         *
-         * @author FatttSnake, fatttsnake@gmail.com
-         * @since 1.0.0
-         */
-        val apiVersion: Int,
     )
 
     /**
-     * Parse the plugin and version a request addresses
+     * Parse the plugin a request addresses
      *
-     * @param request Request being routed or authorised
-     * @return Plugin and version, or null when the URI is not an API URL
+     * @param request Request being routed or authorized
+     * @return Plugin, or null when the URI is not an API URL
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
     fun parse(request: HttpServletRequest): Scoped? {
         val uri = request.requestURI.removePrefix(request.contextPath ?: "")
         val match = REGEX.matchAt(uri, 0) ?: return null
-        val version = match.groupValues[2].toIntOrNull() ?: return null
-        return Scoped(plugin = match.groupValues[1], apiVersion = version)
+        match.groupValues[2].toIntOrNull() ?: return null
+        return Scoped(plugin = match.groupValues[1])
     }
 }

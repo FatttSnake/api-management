@@ -60,7 +60,7 @@ api-management/
 │       ├── ApiPlugin.kt                          # Applies the apiPlugin DSL, adds gateway-api as compileOnly
 │       ├── GeneratePluginLock.kt                 # Resolves runtime dependencies into api-plugin-deps.json
 │       ├── CheckPluginAbi.kt                     # Verifies plugin bytecode against gateway-api.abi.json
-│       └── GeneratePluginDescriptor / GenPluginKeys / SignPlugin / VerifyPlugin / DeployPlugin
+│       └── GeneratePluginDescriptor / GenPluginKeys / PreparePluginPubKey / SignPlugin / VerifyPlugin / DeployPlugin
 ├── src/main/kotlin/top/fatweb/apimanagement/
 │   ├── ApiManagementApplication.kt               # Entry point (ensures data dirs, generates config template on first run)
 │   ├── annotation / aspectj                      # Annotations & interceptors (API access, parameter processing, event/sys logs)

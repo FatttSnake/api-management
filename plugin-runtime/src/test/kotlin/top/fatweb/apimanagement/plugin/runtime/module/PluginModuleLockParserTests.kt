@@ -20,7 +20,6 @@ class PluginModuleLockParserTests {
                 """
                 {
                   "format": 1,
-                  "constraints": { "fixture:a": "[1.0,2.0)" },
                   "modules": [
                     {
                       "group": "fixture",
@@ -43,7 +42,6 @@ class PluginModuleLockParserTests {
             )
 
         assertEquals(1, lock.format)
-        assertEquals("[1.0,2.0)", lock.constraints["fixture:a"])
         assertEquals(listOf("fixture:a:1.0.0", "fixture:b:1.0.0"), lock.modules.map { it.coordinate })
         assertEquals(listOf(shaA), lock.modules[1].dependencies)
         assertEquals(emptyList(), lock.groups)
@@ -181,17 +179,22 @@ class PluginModuleLockParserTests {
     fun `ignores unknown fields`() {
         val lock =
             parser.parse(
-                lockJson(
-                    """
+                """
+                {
+                  "format": 1,
+                  "constraints": { "fixture:a": "[1.0,2.0)" },
+                  "modules": [
                     {
                       "group": "fixture",
                       "name": "a",
                       "version": "1.0.0",
                       "sha256": "$shaA",
+                      "source": "central",
                       "future": true
                     }
-                    """.trimIndent(),
-                ),
+                  ]
+                }
+                """.trimIndent(),
             )
         assertEquals("fixture:a:1.0.0", lock.modules.single().coordinate)
     }

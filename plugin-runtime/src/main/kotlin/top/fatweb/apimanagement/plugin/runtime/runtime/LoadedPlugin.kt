@@ -8,8 +8,8 @@ import top.fatweb.apimanagement.plugin.runtime.route.RegisteredRoute
 /**
  * A plugin whose `onStart` has completed.
  *
- * The caller owns the lifecycle: call [stop], [purge] and [uninstall] in that order, then
- * [close] to release the class loaders.
+ * The caller owns the lifecycle: call [purge] when the plugin's data is being deleted, then
+ * [stop], then [uninstall] on a real uninstall, and finally [close] to release the class loaders.
  *
  * @property descriptor plugin descriptor
  * @property plugin plugin instance

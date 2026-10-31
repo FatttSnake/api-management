@@ -60,7 +60,7 @@ api-management/
 │       ├── ApiPlugin.kt                          # 应用 apiPlugin DSL，将 gateway-api 作为 compileOnly
 │       ├── GeneratePluginLock.kt                 # 解析运行时依赖并生成 api-plugin-deps.json
 │       ├── CheckPluginAbi.kt                     # 对照 gateway-api.abi.json 校验插件字节码
-│       └── GeneratePluginDescriptor / GenPluginKeys / SignPlugin / VerifyPlugin / DeployPlugin
+│       └── GeneratePluginDescriptor / GenPluginKeys / PreparePluginPubKey / SignPlugin / VerifyPlugin / DeployPlugin
 ├── src/main/kotlin/top/fatweb/apimanagement/
 │   ├── ApiManagementApplication.kt               # 启动入口（校验/创建 data 目录、首次运行生成配置模板）
 │   ├── annotation / aspectj                      # 注解与拦截切面（API 访问拦截、参数处理、操作/事件日志）

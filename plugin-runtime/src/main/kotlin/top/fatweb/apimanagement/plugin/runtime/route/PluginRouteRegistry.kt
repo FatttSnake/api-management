@@ -52,15 +52,6 @@ class PluginRouteRegistry {
     }
 
     /**
-     * Returns a snapshot of all routes.
-     *
-     * @return routes
-     * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
-     */
-    fun all(): List<RegisteredRoute> = routes
-
-    /**
      * Matches a request.
      *
      * @param method HTTP method

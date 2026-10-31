@@ -6,8 +6,8 @@ import java.math.BigDecimal
  * Plugin config schema
  *
  * The parsed declaration of the settings a plugin owns, shipped inside the plugin's own jar as
- * `META-INF/plugin-config.json` and snapshotted onto the plugin row at mount time. A key
- * declared here is administrator-owned and never holds a current value.
+ * `META-INF/plugin-config.json` and snapshotted onto the plugin row on install and upgrade. A
+ * key declared here is administrator-owned and never holds a current value.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
