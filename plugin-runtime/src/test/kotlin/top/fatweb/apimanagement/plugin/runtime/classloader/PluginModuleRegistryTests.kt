@@ -8,6 +8,7 @@ import top.fatweb.apimanagement.plugin.runtime.jarOf
 import top.fatweb.apimanagement.plugin.runtime.module.FileSystemPluginModuleStore
 import top.fatweb.apimanagement.plugin.runtime.module.LockedModule
 import top.fatweb.apimanagement.plugin.runtime.module.PluginModuleLock
+import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.AfterTest
@@ -116,6 +117,134 @@ class PluginModuleRegistryTests {
     }
 
     @Test
+    fun `grouped members share one loader and see each other without a dependency edge`() {
+        setUp()
+        val lock =
+            lockOf(
+                LockedModule("fixture", "a", "1.0.0", shaA),
+                LockedModule("fixture", "b", "1.0.0", shaB),
+                groups = listOf(listOf(shaA, shaB)),
+            )
+        val graph = registry.acquire(lock)
+
+        assertSame(graph.loaderFor(shaA), graph.loaderFor(shaB))
+        assertEquals(1, graph.loaders().size)
+        assertEquals(1, graph.moduleKeys().size)
+        val type = graph.loaderFor(shaB)!!.loadClass("fixture.b.FixtureB")
+        val instance = type.getDeclaredConstructor().newInstance()
+        assertEquals("A1B1", type.getMethod("value").invoke(instance))
+
+        graph.close()
+    }
+
+    @Test
+    fun `a member cannot see an undeclared dependency without a group`() {
+        setUp()
+        val graph = registry.acquire(lockOf(LockedModule("fixture", "b", "1.0.0", shaB)))
+        val type = graph.loaderFor(shaB)!!.loadClass("fixture.b.FixtureB")
+        val instance = type.getDeclaredConstructor().newInstance()
+
+        assertFailsWith<InvocationTargetException> {
+            type.getMethod("value").invoke(instance)
+        }
+
+        graph.close()
+    }
+
+    @Test
+    fun `shares a grouped loader and releases it with the last plugin`() {
+        setUp()
+        val lock =
+            lockOf(
+                LockedModule("fixture", "a", "1.0.0", shaA),
+                LockedModule("fixture", "b", "1.0.0", shaB),
+                groups = listOf(listOf(shaA, shaB)),
+            )
+        val first = registry.acquire(lock)
+        val second = registry.acquire(lock)
+
+        assertSame(first.loaderFor(shaA), second.loaderFor(shaA))
+        assertEquals(1, registry.sharedLoaderCount())
+        assertEquals(2, registry.references(first.moduleKeys().single()))
+        first.close()
+        assertEquals(1, registry.references(second.moduleKeys().single()))
+        second.close()
+        assertEquals(0, registry.sharedLoaderCount())
+    }
+
+    @Test
+    fun `group member order does not change the sharing key`() {
+        setUp()
+        val first =
+            registry.acquire(
+                lockOf(
+                    LockedModule("fixture", "a", "1.0.0", shaA),
+                    LockedModule("fixture", "b", "1.0.0", shaB),
+                    groups = listOf(listOf(shaA, shaB)),
+                ),
+            )
+        val second =
+            registry.acquire(
+                lockOf(
+                    LockedModule("fixture", "a", "1.0.0", shaA),
+                    LockedModule("fixture", "b", "1.0.0", shaB),
+                    groups = listOf(listOf(shaB, shaA)),
+                ),
+            )
+
+        assertSame(first.loaderFor(shaA), second.loaderFor(shaA))
+        assertEquals(1, registry.sharedLoaderCount())
+        first.close()
+        second.close()
+    }
+
+    @Test
+    fun `ungrouped modules keep their own loader`() {
+        setUp()
+        val jarC = jarOf(FixtureA::class, marker = "v2")
+        val shaC = FileSystemPluginModuleStore.sha256(jarC)
+        store.install(shaC, jarC)
+
+        val graph =
+            registry.acquire(
+                lockOf(
+                    LockedModule("fixture", "a", "1.0.0", shaA),
+                    LockedModule("fixture", "b", "1.0.0", shaB),
+                    LockedModule("fixture", "c", "1.0.0", shaC),
+                    groups = listOf(listOf(shaA, shaB)),
+                ),
+            )
+
+        assertSame(graph.loaderFor(shaA), graph.loaderFor(shaB))
+        assertNotSame(graph.loaderFor(shaA), graph.loaderFor(shaC))
+        assertEquals(2, graph.loaders().size)
+        assertEquals(2, graph.moduleKeys().size)
+        graph.close()
+    }
+
+    @Test
+    fun `resolves a plugin through a grouped module graph`() {
+        setUp()
+        val lock =
+            lockOf(
+                LockedModule("fixture", "a", "1.0.0", shaA),
+                LockedModule("fixture", "b", "1.0.0", shaB),
+                groups = listOf(listOf(shaA, shaB)),
+            )
+        val graph = registry.acquire(lock)
+        val pluginJar = root.resolve("grouped-plugin.jar")
+        Files.write(pluginJar, jarOf(FixturePlugin::class))
+
+        PluginClassLoader(pluginJar, platform, graph.loaders().toList()).use { loader ->
+            val type = loader.loadClass("fixture.plugin.FixturePlugin")
+            val instance = type.getDeclaredConstructor().newInstance()
+            assertEquals("A1B1P", type.getMethod("value").invoke(instance))
+        }
+
+        graph.close()
+    }
+
+    @Test
     fun `reports missing modules`() {
         setUp()
         val missing = LockedModule("fixture", "missing", "1.0.0", "c".repeat(64))
@@ -124,5 +253,6 @@ class PluginModuleRegistryTests {
         }
     }
 
-    private fun lockOf(vararg modules: LockedModule): PluginModuleLock = PluginModuleLock(modules = modules.toList())
+    private fun lockOf(vararg modules: LockedModule, groups: List<List<String>> = emptyList()): PluginModuleLock =
+        PluginModuleLock(modules = modules.toList(), groups = groups)
 }

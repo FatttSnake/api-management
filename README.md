@@ -202,7 +202,7 @@ Publish the contract and tooling once:
 | Entry | Purpose |
 |---|---|
 | `META-INF/api-plugin.json` | Descriptor format 1: pluginId, versions, mainClass, `requiresGateway`, `requiresGatewayApi` |
-| `META-INF/api-plugin-deps.json` | Exact dependency lock: GAV, SHA-256, size and direct dependency edges |
+| `META-INF/api-plugin-deps.json` | Exact dependency lock: GAV, SHA-256, size, direct dependency edges and optional shared-loader groups |
 | `META-INF/plugin.pub.pem` / `META-INF/plugin.sig` | Ed25519 public key and signature |
 
 `checkPluginAbi` (part of `build`) reads `META-INF/gateway-api.abi.json` from the gateway API jar
@@ -244,7 +244,25 @@ map or a plain bean; `ApiResponse.raw(...)` bypasses the business envelope.
 The plugin jar is thin. Runtime dependencies are resolved at build time into the lock, and each
 module jar is uploaded separately (by `deployPlugin` before the plugin). The gateway stores modules
 content-addressed under `app.storage.plugin-module-dir`, verifies SHA-256, and shares one class
-loader for modules with the same GAV and digest. Different versions coexist.
+loader for the same loading unit. Different versions coexist.
+
+By default one module is one loading unit, and a module sees only its declared dependencies.
+Some libraries do not fit that model: Flyway resolves database types from a static
+`ServiceLoader` registry bound to the loader that defined `flyway-core`, and MyBatis-Plus
+references MyBatis and SLF4J from POM dependencies marked optional. Declare such modules as a
+**shared loader group** and they are loaded by one composite child-first loader, so they see each
+other without a dependency edge:
+
+```kotlin
+apiPlugin {
+    sharedLoader("org.flywaydb:flyway-core", "org.flywaydb:flyway-mysql")
+}
+```
+
+The DSL takes `group:artifact` values without versions; the resolved version comes from the
+classpath. A group is the unit of sharing, reference counting and unloading, and grouping must not
+create a cycle between loading units. Group only modules that must be mutually visible, and never
+modules that ship the same classes: the first jar by digest wins.
 
 A module the lock names but the gateway does not have is downloaded from
 `app.plugin.module.repositories` (Maven Central by default) while `app.plugin.module.online` is

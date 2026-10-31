@@ -44,6 +44,7 @@ class ApiPlugin : Plugin<Project> {
         ext.trustSigner.convention(
             providers.gradleProperty("apiPlugin.trustSigner").map { it.toBoolean() }.orElse(false),
         )
+        ext.sharedLoaders.convention(emptyList())
 
         val projectVersion = providers.provider { project.version.toString() }
         val versionName =
@@ -88,6 +89,7 @@ class ApiPlugin : Plugin<Project> {
                     providers.provider { artifactModules(runtimeClasspath.get()) },
                 )
                 task.dependencyEdges.set(providers.provider { dependencyEdges(runtimeClasspath.get()) })
+                task.sharedLoaderGroups.set(ext.sharedLoaders)
                 task.outputFile.set(generatedRoot.map { it.file("META-INF/api-plugin-deps.json") })
                 task.modulesDirectory.set(modulesDirectory)
             }

@@ -46,6 +46,90 @@ class PluginModuleLockParserTests {
         assertEquals("[1.0,2.0)", lock.constraints["fixture:a"])
         assertEquals(listOf("fixture:a:1.0.0", "fixture:b:1.0.0"), lock.modules.map { it.coordinate })
         assertEquals(listOf(shaA), lock.modules[1].dependencies)
+        assertEquals(emptyList(), lock.groups)
+    }
+
+    @Test
+    fun `parses shared loader groups`() {
+        val lock =
+            parser.parse(
+                lockJson(
+                    "${module(name = "a", sha = shaA)}, ${module(name = "b", sha = shaB)}",
+                    groups = """[["$shaB", "$shaA"]]""",
+                ),
+            )
+
+        assertEquals(1, lock.format)
+        assertEquals(listOf(listOf(shaB, shaA)), lock.groups)
+    }
+
+    @Test
+    fun `empty lock keeps format 1`() {
+        val lock = PluginModuleLock()
+        lock.validate()
+
+        assertEquals(1, lock.format)
+    }
+
+    @Test
+    fun `rejects a group with fewer than two modules`() {
+        assertFailsWith<PluginModuleLockException> {
+            parser.parse(lockJson(module(name = "a", sha = shaA), groups = """[["$shaA"]]"""))
+        }
+    }
+
+    @Test
+    fun `rejects a digest listed twice in one group`() {
+        assertFailsWith<PluginModuleLockException> {
+            parser.parse(
+                lockJson(
+                    "${module(name = "a", sha = shaA)}, ${module(name = "b", sha = shaB)}",
+                    groups = """[["$shaA", "$shaA"]]""",
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun `rejects a digest belonging to two groups`() {
+        assertFailsWith<PluginModuleLockException> {
+            parser.parse(
+                lockJson(
+                    """
+                    ${module(name = "a", sha = shaA)},
+                    ${module(name = "b", sha = shaB)},
+                    ${module(name = "c", sha = "c".repeat(64))}
+                    """.trimIndent(),
+                    groups = """[["$shaA", "$shaB"], ["$shaB", "${"c".repeat(64)}"]]""",
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun `rejects a group referencing an unknown digest`() {
+        assertFailsWith<PluginModuleLockException> {
+            parser.parse(
+                lockJson(
+                    module(name = "a", sha = shaA),
+                    groups = """[["$shaA", "${"b".repeat(64)}"]]""",
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun `rejects groups that create a loader unit cycle`() {
+        val shaC = "c".repeat(64)
+        val modules =
+            """
+            ${module(name = "a", sha = shaA, dependencies = listOf(shaB))},
+            ${module(name = "b", sha = shaB, dependencies = listOf(shaC))},
+            ${module(name = "c", sha = shaC)}
+            """.trimIndent()
+        assertFailsWith<PluginModuleLockException> {
+            parser.parse(lockJson(modules, groups = """[["$shaA", "$shaC"]]"""))
+        }
     }
 
     @Test
@@ -112,7 +196,8 @@ class PluginModuleLockParserTests {
         assertEquals("fixture:a:1.0.0", lock.modules.single().coordinate)
     }
 
-    private fun lockJson(modules: String): String = """{ "format": 1, "modules": [ $modules ] }"""
+    private fun lockJson(modules: String, groups: String = "[]"): String =
+        """{ "format": 1, "modules": [ $modules ], "groups": $groups }"""
 
     private fun module(
         name: String,

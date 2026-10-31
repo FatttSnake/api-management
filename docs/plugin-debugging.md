@@ -31,11 +31,15 @@ started and routes are swapped.
 | Layer | Sees |
 |---|---|
 | `GatewayApiClassLoader` | JDK, Kotlin stdlib, `top.fatweb.apimanagement.api.*` |
-| `ModuleClassLoader` | one dependency module, its direct dependencies, then the platform |
-| `PluginClassLoader` | the plugin jar, its lock modules, then the platform |
+| `ModuleClassLoader` | one loader unit (one module, or a declared shared-loader group), its dependency units, then the platform |
+| `PluginClassLoader` | the plugin jar, its lock unit loaders, then the platform |
 
 A plugin cannot see Spring, Jackson, MyBatis or any gateway internal class. If the plugin needs
 one of those, declare it as a normal dependency; it becomes a module.
+
+If a library cannot see another module's classes or `META-INF/services` entries, declare the
+modules that must be mutually visible as a shared-loader group in `apiPlugin { sharedLoader(...) }`.
+Grouping broadens visibility between those modules only; it does not widen the gateway allowlist.
 
 Resources are resolved from the plugin jar and its modules, plus `gateway-api` resources. This is
 a default-behavior boundary, not a security sandbox: signed plugin code can still use reflection.

@@ -200,7 +200,7 @@ knife4j:
 | 条目 | 用途 |
 |---|---|
 | `META-INF/api-plugin.json` | 描述符 format 1：pluginId、版本、mainClass、`requiresGateway`、`requiresGatewayApi` |
-| `META-INF/api-plugin-deps.json` | 精确依赖 lock：GAV、SHA-256、大小、直接依赖边 |
+| `META-INF/api-plugin-deps.json` | 精确依赖 lock：GAV、SHA-256、大小、直接依赖边与可选的共享 loader 组 |
 | `META-INF/plugin.pub.pem` / `META-INF/plugin.sig` | Ed25519 公钥与签名 |
 
 `checkPluginAbi`（`build` 的一部分）读取网关 API jar 内的 `META-INF/gateway-api.abi.json`，插件引用了网关不存在的类、方法、字段或构造器时直接失败；签名在 ABI 校验之后执行。
@@ -229,7 +229,17 @@ Java 插件作者使用同一套类型：`ApiHandler`、`EventSubscriber`、`Sub
 
 ## 依赖
 
-插件 jar 是瘦包。运行时依赖在构建期解析进 lock，每个模块 jar 单独上传（`deployPlugin` 会先传模块再传插件）。网关按 SHA-256 内容寻址存储在 `app.storage.plugin-module-dir`，相同 GAV + digest 的模块跨插件共享一个类加载器，不同版本并存。
+插件 jar 是瘦包。运行时依赖在构建期解析进 lock，每个模块 jar 单独上传（`deployPlugin` 会先传模块再传插件）。网关按 SHA-256 内容寻址存储在 `app.storage.plugin-module-dir`，同一个装载单元跨插件共享一个类加载器，不同版本并存。
+
+默认一个模块就是一个装载单元，只能看到自己声明的依赖。有些库不符合这个模型：Flyway 通过绑定在“定义 `flyway-core` 的 loader”上的静态 `ServiceLoader` 注册表发现数据库类型；MyBatis-Plus 会引用 POM 里标成 optional 的 MyBatis 与 SLF4J。把它们声明成**共享 loader 组**后，整组由一个 composite child-first loader 装载，成员之间不需要依赖边也能互相看见：
+
+```kotlin
+apiPlugin {
+    sharedLoader("org.flywaydb:flyway-core", "org.flywaydb:flyway-mysql")
+}
+```
+
+DSL 只接受 `group:artifact`（不带版本），版本来自实际解析结果。组是共享、引用计数与卸载的单位，组之间不能形成装载单元环。只把确实需要互相可见的模块放进一组，也不要把包含同一批类的模块放进一组：同名类由 digest 排序靠前的 jar 决定。
 
 lock 中有、网关没有的模块会在安装时从 `app.plugin.module.repositories`（默认 Maven Central）下载，前提是 `app.plugin.module.online` 为真，且 SHA-256 与大小都必须与 lock 一致。`deployPlugin` 仍会先上传模块，因此离线部署不需要外网。控制台会在安装插件前逐个列出依赖并展示下载进度。
 

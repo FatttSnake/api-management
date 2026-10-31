@@ -40,7 +40,7 @@ tasks.withType<Test> {
 
 kotlin {
     compilerOptions {
-        freeCompilerArgs.addAll("-Xjsr305=strict")
+        freeCompilerArgs.addAll("-Xjsr305=strict", "-jvm-default=no-compatibility")
     }
 }
 

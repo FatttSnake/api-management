@@ -43,6 +43,7 @@ class PluginModuleLockParser(private val maxModules: Int = PluginModuleLock.DEFA
                         dependencies = module.dependencies,
                     )
                 },
+                groups = json.groups,
             )
         lock.validate(maxModules)
         return lock
@@ -63,6 +64,7 @@ class PluginModuleLockParser(private val maxModules: Int = PluginModuleLock.DEFA
         val format: Int = 0,
         val constraints: Map<String, String> = emptyMap(),
         val modules: List<ModuleJson> = emptyList(),
+        val groups: List<List<String>> = emptyList(),
     )
 
     private data class ModuleJson(

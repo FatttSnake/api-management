@@ -1,5 +1,6 @@
 package top.fatweb.apimanagement.gradle
 
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 
 /**
@@ -116,4 +117,31 @@ interface ApiPluginExtension {
      * @since 1.0.0
      */
     val trustSigner: Property<Boolean>
+
+    /**
+     * Groups of modules that share one class loader. Each entry is a list of `group:artifact`
+     * values without versions.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    val sharedLoaders: ListProperty<List<String>>
+
+    /**
+     * Declares modules that must be loaded by one class loader.
+     *
+     * Use it for libraries that resolve types through `ServiceLoader` or another static
+     * registry, or whose POM marks a required dependency optional.
+     *
+     * @param coordinates `group:artifact` values, at least two
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    fun sharedLoader(vararg coordinates: String) {
+        require(coordinates.size >= 2) { "sharedLoader requires at least two coordinates" }
+        require(coordinates.all { it.isNotBlank() && it.count { character -> character == ':' } == 1 }) {
+            "sharedLoader expects group:artifact without a version"
+        }
+        sharedLoaders.add(coordinates.toList())
+    }
 }

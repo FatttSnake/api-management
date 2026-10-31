@@ -119,7 +119,7 @@ sequenceDiagram
     Dev->>G: ./gradlew build
     G->>G: compileKotlin
     G->>G: GeneratePluginDescriptor
-    G->>G: GeneratePluginLock（依赖 GAV + sha256 + 边）
+    G->>G: GeneratePluginLock（依赖 GAV + sha256 + 边 + 组）
     G->>G: CheckPluginAbi（对比 gateway-api.abi.json）
     G->>G: genPluginKeys / PreparePluginPubKey
     G->>G: SignPlugin（Ed25519）
@@ -133,10 +133,10 @@ sequenceDiagram
 
 | 文件 | 作用 |
 |---|---|
-| `ApiPluginExtension.kt` | `apiPlugin { }` DSL：pluginId、versionCode、mainClass、requiresGateway、requiresGatewayApi、部署参数 |
+| `ApiPluginExtension.kt` | `apiPlugin { }` DSL：pluginId、versionCode、mainClass、requiresGateway、requiresGatewayApi、`sharedLoader`、部署参数 |
 | `ApiPlugin.kt` | 应用插件、加 `compileOnly gateway-api`、注册所有 task、把生成目录放进 jar |
 | `ApiPluginTasks.kt` | `GeneratePluginDescriptor`、`GenPluginKeys`、`PreparePluginPubKey`、`SignPlugin`、`VerifyPlugin`、`DeployPlugin` |
-| `GeneratePluginLock.kt` | 从 `runtimeClasspath` 生成 `META-INF/api-plugin-deps.json`，并把模块 jar 复制到 `build/generated/api-plugin-modules/` |
+| `GeneratePluginLock.kt` | 从 `runtimeClasspath` 生成 `META-INF/api-plugin-deps.json`（含共享 loader 组），并把模块 jar 复制到 `build/generated/api-plugin-modules/` |
 | `CheckPluginAbi.kt` | 解析插件 class 常量池，检查对 `top.fatweb.apimanagement.api.*` 的类/方法/字段/构造器引用 |
 | `plugin-signing/PluginSigner.kt` | 构建 jar 清单、签名、验签、SPKI 指纹 |
 
@@ -157,6 +157,8 @@ META-INF/plugin.sig             Ed25519 签名
 
 其余运行期依赖全部进入 lock，并以独立模块形式上传。
 
+`apiPlugin { sharedLoader("group:artifact", ...) }` 会在 lock 中写入可选的 `groups` 字段：一组必须由同一个类加载器装载的模块 digest 列表。分组不改变打包与上传方式，每个成员仍然是独立的模块行与 jar。它面向假设扁平 classpath 的库，例如 Flyway 的静态数据库类型注册表，或 MyBatis-Plus 对 POM 中 optional 依赖的引用。DSL 只接受 `group:artifact`（不带版本），版本来自实际解析结果。
+
 ## 5. 运行时：类加载与模块仓库
 
 ### 5.1 三层类加载器
@@ -164,8 +166,8 @@ META-INF/plugin.sig             Ed25519 签名
 ```mermaid
 flowchart TD
     P[PluginClassLoader<br/>插件 jar]
-    M1[ModuleClassLoader<br/>module A]
-    M2[ModuleClassLoader<br/>module B]
+    M1[ModuleClassLoader<br/>装载单元 A]
+    M2[ModuleClassLoader<br/>装载单元 B]
     GA[GatewayApiClassLoader<br/>平台白名单]
     JDK[JDK / Kotlin stdlib]
 
@@ -182,25 +184,28 @@ flowchart TD
 | 文件 | 作用 |
 |---|---|
 | `classloader/GatewayApiClassLoader.kt` | 只放行 `java.`、`javax.`、`jdk.`、`sun.`、`kotlin.`、`top.fatweb.apimanagement.api.`；其余 `ClassNotFoundException` |
-| `classloader/ModuleClassLoader.kt` | child-first：自己 jar → 直接依赖模块 loader → 平台 |
-| `classloader/PluginClassLoader.kt` | child-first：插件 jar → lock 中的模块 loader → 平台 |
-| `classloader/ModuleKey.kt` | 共享键：GAV + sha256 + 直接依赖指纹 |
-| `classloader/PluginModuleRegistry.kt` | 全局共享、引用计数、拓扑加载、`PluginModuleGraph` |
+| `classloader/ModuleClassLoader.kt` | child-first：一个装载单元（一个模块或一个共享 loader 组）的 jar → 依赖单元的 loader → 平台 |
+| `classloader/PluginClassLoader.kt` | child-first：插件 jar → lock 中的装载单元 loader → 平台 |
+| `classloader/ModuleKey.kt` | 共享键：成员集合（GAV + sha256）+ 外部依赖单元的指纹 |
+| `classloader/PluginModuleRegistry.kt` | 装载单元、全局共享、引用计数、拓扑加载、`PluginModuleGraph` |
 
 ### 5.2 模块仓库
 
 | 文件 | 作用 |
 |---|---|
-| `module/PluginModuleLock.kt` | lock 模型与校验：重复坐标、非法 digest、缺依赖、循环、SNAPSHOT |
-| `module/PluginModuleLockParser.kt` | 解析 `META-INF/api-plugin-deps.json` |
+| `module/PluginModuleLock.kt` | lock 模型与校验：重复坐标、非法 digest、缺依赖、循环、SNAPSHOT、共享 loader 组结构与组级环 |
+| `module/PluginModuleLockParser.kt` | 解析 `META-INF/api-plugin-deps.json`，含 `groups` |
+| `module/LoaderUnit.kt` | 把模块与组归并为装载单元，依赖优先排序，拒绝单元环 |
 | `module/PluginModuleStore.kt` | 模块存储接口 |
 | `module/FileSystemPluginModuleStore.kt` | `data/plugin-modules/<sha256>.jar`；SHA 校验、原子写入、大小/数量限制、GC |
 
 模块共享规则：
 
-- 同一 `(GAV, sha256, 直接依赖指纹)` 共享一个 `ModuleClassLoader`。
+- 装载单元是一个模块，或一个显式共享 loader 组。同一单元（成员集合与 digest）且外部依赖单元指纹相同，共享一个 `ModuleClassLoader`。
+- 组成员之间不需要依赖边就能互相看见。若两个成员包含同名类，按 digest 排序靠前的 jar 生效；不要把同一批类的不同实现放进一组。
+- 分组不能造成装载单元环（`A -> B -> C` 加组 `{A, C}` 会被拒绝）。组不改变模块行、边、引用、下载与 GC。
 - 不同版本 GAV 不同，自然并存。
-- 插件卸载时释放引用；引用归零关闭 loader。
+- 插件卸载时释放单元引用；引用归零关闭 loader。
 - 磁盘模块按插件引用集合 GC，未引用超过宽限期才删除。
 
 ## 6. 网关侧 Spring 装配
@@ -254,7 +259,7 @@ sequenceDiagram
     M->>M: store.install + module/edge/ref 行
     S->>R: load(jar, services)
     R->>MR: acquire(lock)
-    MR->>MR: 拓扑排序 / 共享 loader / 引用计数
+    MR->>MR: 装载单元 / 拓扑排序 / 共享 loader / 引用计数
     MR->>PL: 创建 PluginClassLoader
     R->>PL: loadClass(mainClass)
     R->>R: 创建 RouteCollector + GatewayContextImpl

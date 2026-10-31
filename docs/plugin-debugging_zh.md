@@ -28,10 +28,12 @@ Agent 默认关闭、默认绑 `127.0.0.1:5005`，可用 `debug.port`、`debug.a
 | 层 | 可见内容 |
 |---|---|
 | `GatewayApiClassLoader` | JDK、Kotlin stdlib、`top.fatweb.apimanagement.api.*` |
-| `ModuleClassLoader` | 一个依赖模块、它的直接依赖，再到平台 |
-| `PluginClassLoader` | 插件 jar、lock 中的模块，再到平台 |
+| `ModuleClassLoader` | 一个装载单元（一个模块或一个共享 loader 组）、它的依赖单元，再到平台 |
+| `PluginClassLoader` | 插件 jar、lock 中的装载单元 loader，再到平台 |
 
 插件看不到 Spring、Jackson、MyBatis 或任何网关内部类；需要时按普通依赖声明，它会成为模块。
+
+如果某个库看不到另一个模块的类或 `META-INF/services` 条目，可以在 `apiPlugin { sharedLoader(...) }` 中把这些必须互相可见的模块声明成共享 loader 组。分组只扩大这些模块之间的可见性，不会放宽网关的白名单。
 
 资源从插件 jar、模块与 `gateway-api` 资源中解析。这是默认行为边界，不是安全沙箱：签名可信的
 插件代码仍可使用反射。

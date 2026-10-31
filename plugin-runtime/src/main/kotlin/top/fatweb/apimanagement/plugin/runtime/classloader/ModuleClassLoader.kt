@@ -3,22 +3,23 @@ package top.fatweb.apimanagement.plugin.runtime.classloader
 import java.nio.file.Path
 
 /**
- * Class loader for one dependency module.
+ * Class loader for one loader unit: one dependency module or one declared shared-loader group.
  *
- * Own classes are resolved child-first, then direct dependencies, then the platform. This lets
- * two plugins use different versions of the same module, while two plugins that ask for the
- * same module share one loader instance.
+ * Own classes are resolved child-first, then direct dependencies, then the platform. A group's
+ * members see each other without a declared dependency edge; when two members contain the same
+ * class, the jar that sorts first by digest wins. Two plugins that ask for the same unit share
+ * one loader instance.
  *
- * @param moduleKey module identity
- * @param jar module jar
+ * @param moduleKey unit identity
+ * @param jars jars of the unit, in resolution order
  * @param platform platform class loader
- * @param dependencies direct dependency loaders
+ * @param dependencies dependency loaders
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
 class ModuleClassLoader(
     val moduleKey: ModuleKey,
-    jar: Path,
+    jars: List<Path>,
     platform: ClassLoader,
     dependencies: List<ModuleClassLoader>,
-) : ChildFirstClassLoader(arrayOf(jar.toUri().toURL()), platform, dependencies)
+) : ChildFirstClassLoader(jars.map { it.toUri().toURL() }.toTypedArray(), platform, dependencies)

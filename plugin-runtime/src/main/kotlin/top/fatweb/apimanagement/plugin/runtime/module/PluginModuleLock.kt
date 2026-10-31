@@ -38,6 +38,7 @@ data class LockedModule(
  * @property format lock format version
  * @property constraints declared version ranges, keyed by `group:name`
  * @property modules resolved modules
+ * @property groups modules that share one class loader, each group a list of module digests
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
@@ -45,6 +46,7 @@ data class PluginModuleLock(
     val format: Int = 1,
     val constraints: Map<String, String> = emptyMap(),
     val modules: List<LockedModule> = emptyList(),
+    val groups: List<List<String>> = emptyList(),
 ) {
     /**
      * Validates the lock.
@@ -103,6 +105,8 @@ data class PluginModuleLock(
             }
         }
         requireAcyclic(modules, byDigest)
+        validateGroups(byDigest)
+        requireAcyclicUnits()
 
         constraints.forEach { (coordinate, range) ->
             if (coordinate.isBlank() || !coordinate.contains(':')) {
@@ -112,6 +116,39 @@ data class PluginModuleLock(
                 throw PluginModuleLockException("Empty dependency constraint for $coordinate")
             }
         }
+    }
+
+    private fun validateGroups(byDigest: Map<String, LockedModule>) {
+        val membership = HashMap<String, Int>()
+        groups.forEachIndexed { index, group ->
+            val label = "Shared loader group ${index + 1}"
+            if (group.size < 2) {
+                throw PluginModuleLockException("$label must contain at least two modules")
+            }
+            val seen = HashSet<String>()
+            group.forEach { digest ->
+                if (!DIGEST.matches(digest)) {
+                    throw PluginModuleLockException("$label contains an invalid SHA-256: $digest")
+                }
+                if (!seen.add(digest)) {
+                    throw PluginModuleLockException("$label lists module digest $digest more than once")
+                }
+                if (digest !in byDigest) {
+                    throw PluginModuleLockException("$label references missing module digest $digest")
+                }
+                val previous = membership.putIfAbsent(digest, index)
+                if (previous != null) {
+                    throw PluginModuleLockException(
+                        "Module digest $digest belongs to shared loader groups ${previous + 1} and ${index + 1}",
+                    )
+                }
+            }
+        }
+    }
+
+    private fun requireAcyclicUnits() {
+        // Grouping can make the loader-unit graph cyclic even when module edges are acyclic
+        loaderUnits()
     }
 
     private fun requireAcyclic(modules: List<LockedModule>, byDigest: Map<String, LockedModule>) {

@@ -1,17 +1,18 @@
 package top.fatweb.apimanagement.plugin.runtime.classloader
 
-import top.fatweb.apimanagement.plugin.runtime.module.LockedModule
+import top.fatweb.apimanagement.plugin.runtime.module.LoaderUnit
 import top.fatweb.apimanagement.plugin.runtime.module.PluginModuleLock
 import top.fatweb.apimanagement.plugin.runtime.module.PluginModuleLockException
 import top.fatweb.apimanagement.plugin.runtime.module.PluginModuleStore
+import top.fatweb.apimanagement.plugin.runtime.module.loaderUnits
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Gateway-wide registry of shared module class loaders.
+ * Gateway-wide registry of shared loader units.
  *
- * Modules with the same coordinate, digest and direct dependency set share one loader and one
- * copy of their classes. Distinct versions of the same artifact coexist because their keys
- * differ.
+ * Units with the same member set and external dependency-unit fingerprints share one loader
+ * and one copy of their classes. Distinct versions of the same artifact coexist because their
+ * keys differ.
  *
  * @param store module store
  * @param platform platform class loader
@@ -42,26 +43,31 @@ class PluginModuleRegistry(private val store: PluginModuleStore, private val pla
             throw PluginModuleMissingException(missing)
         }
 
-        val ordered = topologicalOrder(lock)
+        val units = lock.loaderUnits()
         synchronized(monitor) {
             check(!closed) { "Module registry is closed" }
 
-            val keyByDigest = mutableMapOf<String, ModuleKey>()
-            val loaderByDigest = mutableMapOf<String, ModuleClassLoader>()
+            val keyByUnit = HashMap<Int, ModuleKey>()
+            val loaderByUnit = HashMap<Int, ModuleClassLoader>()
+            val loaderByDigest = LinkedHashMap<String, ModuleClassLoader>()
             val acquired = LinkedHashSet<ModuleKey>()
 
             try {
-                ordered.forEach { module ->
+                units.forEach { unit ->
                     val dependencyFingerprints =
-                        module.dependencies
-                            .map { digest ->
-                                keyByDigest[digest]?.fingerprint()
+                        unit.dependencies
+                            .map { id ->
+                                keyByUnit[id]?.fingerprint()
                                     ?: throw PluginModuleLockException(
-                                        "${module.coordinate} depends on an unresolved module $digest",
+                                        "${unitLabel(unit)} depends on an unresolved loader unit $id",
                                     )
                             }.sorted()
-                    val key = ModuleKey(module.coordinate, module.sha256, dependencyFingerprints)
-                    keyByDigest[module.sha256] = key
+                    val key =
+                        ModuleKey(
+                            members = unit.members.map { ModuleMember(it.coordinate, it.sha256) },
+                            dependencies = dependencyFingerprints,
+                        )
+                    keyByUnit[unit.id] = key
 
                     val existing = shared[key]
                     val loader =
@@ -72,16 +78,16 @@ class PluginModuleRegistry(private val store: PluginModuleStore, private val pla
                             existing.loader
                         } else {
                             val dependencyLoaders =
-                                module.dependencies.map { digest ->
-                                    loaderByDigest[digest]
+                                unit.dependencies.map { id ->
+                                    loaderByUnit[id]
                                         ?: throw PluginModuleLockException(
-                                            "${module.coordinate} depends on an unloaded module $digest",
+                                            "${unitLabel(unit)} depends on an unloaded loader unit $id",
                                         )
                                 }
                             val created =
                                 ModuleClassLoader(
                                     key,
-                                    store.path(module.sha256),
+                                    unit.members.map { store.path(it.sha256) },
                                     platform,
                                     dependencyLoaders,
                                 )
@@ -89,19 +95,25 @@ class PluginModuleRegistry(private val store: PluginModuleStore, private val pla
                             acquired.add(key)
                             created
                         }
-                    loaderByDigest[module.sha256] = loader
+                    loaderByUnit[unit.id] = loader
+                    unit.members.forEach { loaderByDigest[it.sha256] = loader }
                 }
             } catch (ex: Throwable) {
                 releaseLocked(acquired)
                 throw ex
             }
 
-            return PluginModuleGraph(loaderByDigest.toMap(), acquired.toList(), this)
+            return PluginModuleGraph(
+                loaderByDigest = loaderByDigest,
+                loaders = units.map { loaderByUnit.getValue(it.id) }.distinct(),
+                keys = acquired.toList(),
+                registry = this,
+            )
         }
     }
 
     /**
-     * Returns the number of shared loaders. Intended for diagnostics and tests.
+     * Returns the number of shared loader units. Intended for diagnostics and tests.
      *
      * @return shared loader count
      * @author FatttSnake, fatttsnake@gmail.com
@@ -110,9 +122,9 @@ class PluginModuleRegistry(private val store: PluginModuleStore, private val pla
     fun sharedLoaderCount(): Int = synchronized(monitor) { shared.size }
 
     /**
-     * Returns the reference count of a shared loader. Intended for diagnostics and tests.
+     * Returns the reference count of a shared loader unit. Intended for diagnostics and tests.
      *
-     * @param key module key
+     * @param key unit key
      * @return reference count, or 0 when absent
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -153,30 +165,8 @@ class PluginModuleRegistry(private val store: PluginModuleStore, private val pla
         }
     }
 
-    private fun topologicalOrder(lock: PluginModuleLock): List<LockedModule> {
-        val byDigest = lock.modules.associateBy { it.sha256 }
-        val visiting = mutableSetOf<String>()
-        val visited = mutableSetOf<String>()
-        val result = mutableListOf<LockedModule>()
-
-        fun visit(module: LockedModule) {
-            if (module.sha256 in visited) {
-                return
-            }
-            if (!visiting.add(module.sha256)) {
-                throw PluginModuleLockException("Dependency cycle at ${module.coordinate}")
-            }
-            module.dependencies.forEach { digest ->
-                visit(byDigest[digest] ?: throw PluginModuleLockException("Missing module $digest"))
-            }
-            visiting.remove(module.sha256)
-            visited.add(module.sha256)
-            result.add(module)
-        }
-
-        lock.modules.forEach(::visit)
-        return result
-    }
+    private fun unitLabel(unit: LoaderUnit): String =
+        unit.members.joinToString(prefix = "[", postfix = "]") { it.coordinate }
 
     private class SharedModule(val loader: ModuleClassLoader) {
         var references: Int = 1
@@ -186,12 +176,13 @@ class PluginModuleRegistry(private val store: PluginModuleStore, private val pla
 /**
  * A plugin's acquired module graph.
  *
- * @property loadersByDigest module loaders by module digest
+ * @property loaders unit loaders in dependency-first order
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
 class PluginModuleGraph internal constructor(
-    val loadersByDigest: Map<String, ModuleClassLoader>,
+    private val loaderByDigest: Map<String, ModuleClassLoader>,
+    private val loaders: List<ModuleClassLoader>,
     private val keys: List<ModuleKey>,
     private val registry: PluginModuleRegistry,
 ) : AutoCloseable {
@@ -205,16 +196,16 @@ class PluginModuleGraph internal constructor(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun loaderFor(sha256: String): ModuleClassLoader? = loadersByDigest[sha256]
+    fun loaderFor(sha256: String): ModuleClassLoader? = loaderByDigest[sha256]
 
     /**
-     * Returns all module loaders.
+     * Returns all unit loaders, without duplicates.
      *
-     * @return module loaders
+     * @return unit loaders
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun loaders(): Collection<ModuleClassLoader> = loadersByDigest.values
+    fun loaders(): Collection<ModuleClassLoader> = loaders
 
     /**
      * Returns the module keys acquired by this graph.

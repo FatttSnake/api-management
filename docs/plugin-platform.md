@@ -119,7 +119,7 @@ sequenceDiagram
     Dev->>G: ./gradlew build
     G->>G: compileKotlin
     G->>G: GeneratePluginDescriptor
-    G->>G: GeneratePluginLock (GAV + sha256 + edges)
+    G->>G: GeneratePluginLock (GAV + sha256 + edges + groups)
     G->>G: CheckPluginAbi (against gateway-api.abi.json)
     G->>G: genPluginKeys / PreparePluginPubKey
     G->>G: SignPlugin (Ed25519)
@@ -133,10 +133,10 @@ sequenceDiagram
 
 | File | Responsibility |
 |---|---|
-| `ApiPluginExtension.kt` | `apiPlugin { }` DSL: pluginId, versionCode, mainClass, requiresGateway, requiresGatewayApi, deploy settings |
+| `ApiPluginExtension.kt` | `apiPlugin { }` DSL: pluginId, versionCode, mainClass, requiresGateway, requiresGatewayApi, `sharedLoader`, deploy settings |
 | `ApiPlugin.kt` | Applies the plugin, adds `compileOnly gateway-api`, registers tasks, puts generated files into the jar |
 | `ApiPluginTasks.kt` | `GeneratePluginDescriptor`, `GenPluginKeys`, `PreparePluginPubKey`, `SignPlugin`, `VerifyPlugin`, `DeployPlugin` |
-| `GeneratePluginLock.kt` | Builds `META-INF/api-plugin-deps.json` from `runtimeClasspath`, copies module jars into `build/generated/api-plugin-modules/` |
+| `GeneratePluginLock.kt` | Builds `META-INF/api-plugin-deps.json` from `runtimeClasspath` (including shared-loader groups), copies module jars into `build/generated/api-plugin-modules/` |
 | `CheckPluginAbi.kt` | Parses plugin class constant pools and checks class/method/field/constructor references to `top.fatweb.apimanagement.api.*` |
 | `plugin-signing/PluginSigner.kt` | Builds the jar manifest, signs, verifies, computes SPKI fingerprints |
 
@@ -157,6 +157,13 @@ META-INF/plugin.sig             Ed25519 signature
 
 All other runtime dependencies enter the lock and are uploaded as independent modules.
 
+`apiPlugin { sharedLoader("group:artifact", ...) }` writes an optional `groups` field into the
+lock: a list of module-digest lists that must be loaded by one class loader. Grouping does not
+change packaging or uploads; every member is still an independent module row and jar. It exists
+for libraries that assume a flat classpath, such as Flyway's static database-type registry or
+MyBatis-Plus's references to POM dependencies marked optional. The DSL takes `group:artifact`
+values without versions; the resolved version comes from the classpath.
+
 ## 5. Runtime: class loading and module store
 
 ### 5.1 Three class loader layers
@@ -164,8 +171,8 @@ All other runtime dependencies enter the lock and are uploaded as independent mo
 ```mermaid
 flowchart TD
     P[PluginClassLoader<br/>plugin jar]
-    M1[ModuleClassLoader<br/>module A]
-    M2[ModuleClassLoader<br/>module B]
+    M1[ModuleClassLoader<br/>loader unit A]
+    M2[ModuleClassLoader<br/>loader unit B]
     GA[GatewayApiClassLoader<br/>platform allowlist]
     JDK[JDK / Kotlin stdlib]
 
@@ -182,25 +189,31 @@ flowchart TD
 | File | Responsibility |
 |---|---|
 | `classloader/GatewayApiClassLoader.kt` | Allows only `java.`, `javax.`, `jdk.`, `sun.`, `kotlin.`, `top.fatweb.apimanagement.api.`; everything else throws `ClassNotFoundException` |
-| `classloader/ModuleClassLoader.kt` | Child-first: own jar → direct dependency module loaders → platform |
-| `classloader/PluginClassLoader.kt` | Child-first: plugin jar → lock module loaders → platform |
-| `classloader/ModuleKey.kt` | Sharing key: GAV + sha256 + direct dependency fingerprints |
-| `classloader/PluginModuleRegistry.kt` | Global sharing, reference counting, topological loading, `PluginModuleGraph` |
+| `classloader/ModuleClassLoader.kt` | Child-first over one loader unit (one module, or a shared-loader group), then its dependency-unit loaders, then the platform |
+| `classloader/PluginClassLoader.kt` | Child-first: plugin jar → lock unit loaders → platform |
+| `classloader/ModuleKey.kt` | Sharing key: member set (GAV + sha256) + external dependency-unit fingerprints |
+| `classloader/PluginModuleRegistry.kt` | Loader units, global sharing, reference counting, topological loading, `PluginModuleGraph` |
 
 ### 5.2 Module store
 
 | File | Responsibility |
 |---|---|
-| `module/PluginModuleLock.kt` | Lock model and validation: duplicate coordinates, invalid digest, missing dependency, cycle, SNAPSHOT |
-| `module/PluginModuleLockParser.kt` | Parses `META-INF/api-plugin-deps.json` |
+| `module/PluginModuleLock.kt` | Lock model and validation: duplicate coordinates, invalid digest, missing dependency, cycle, SNAPSHOT, shared-loader group structure and group-level cycles |
+| `module/PluginModuleLockParser.kt` | Parses `META-INF/api-plugin-deps.json`, including `groups` |
+| `module/LoaderUnit.kt` | Collapses modules and groups into loader units, orders them dependency-first, rejects unit cycles |
 | `module/PluginModuleStore.kt` | Module store interface |
 | `module/FileSystemPluginModuleStore.kt` | `data/plugin-modules/<sha256>.jar`; SHA verification, atomic write, size/count limits, GC |
 
 Sharing rules:
 
-- The same `(GAV, sha256, direct dependency fingerprints)` shares one `ModuleClassLoader`.
+- A loader unit is one module, or one declared shared-loader group. The same unit (member set and
+  digests) with the same external dependency-unit fingerprints shares one `ModuleClassLoader`.
+- Group members see each other without a declared dependency edge. If two members contain the same
+  class, the jar that sorts first by digest wins; do not group alternative implementations.
+- Grouping must not create a cycle between loader units (`A -> B -> C` with a group `{A, C}` is
+  rejected). Groups do not change module rows, edges, references, fetch or GC.
 - Different versions have different GAVs and coexist.
-- Unloading a plugin releases its references; the loader closes when the count reaches zero.
+- Unloading a plugin releases its unit references; the loader closes when the count reaches zero.
 - Disk modules are GC'd against the set of plugin references; unreferenced modules remain until the grace period expires.
 
 ## 6. Spring wiring in the gateway
@@ -254,7 +267,7 @@ sequenceDiagram
     M->>M: store.install + module/edge/ref rows
     S->>R: load(jar, services)
     R->>MR: acquire(lock)
-    MR->>MR: topological order / shared loaders / refcounts
+    MR->>MR: loader units / topological order / shared loaders / refcounts
     MR->>PL: create PluginClassLoader
     R->>PL: loadClass(mainClass)
     R->>R: create RouteCollector + GatewayContextImpl

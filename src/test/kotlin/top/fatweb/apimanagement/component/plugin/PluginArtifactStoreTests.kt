@@ -35,6 +35,13 @@ class PluginArtifactStoreTests {
     }
 
     @Test
+    fun `reads shared loader groups`() {
+        val lock = store.lock(jar("META-INF/api-plugin-deps.json" to GROUPED_LOCK))
+
+        assertEquals(listOf(listOf("a".repeat(64), "b".repeat(64))), lock.groups)
+    }
+
+    @Test
     fun `a jar without a lock has no modules`() {
         val lock = store.lock(jar("META-INF/MANIFEST.MF" to "Manifest-Version: 1.0\n"))
 
@@ -64,6 +71,15 @@ class PluginArtifactStoreTests {
         val LOCK = """
             {"format":1,"constraints":{},"modules":[{"group":"com.example","name":"demo",
             "version":"1.0.0","sha256":"${"a".repeat(64)}","size":12,"dependencies":[]}]}
+        """.trimIndent()
+
+        val GROUPED_LOCK = """
+            {"format":1,"constraints":{},"modules":[
+            {"group":"com.example","name":"demo","version":"1.0.0",
+             "sha256":"${"a".repeat(64)}","size":12,"dependencies":[]},
+            {"group":"com.example","name":"other","version":"1.0.0",
+             "sha256":"${"b".repeat(64)}","size":12,"dependencies":[]}],
+            "groups":[["${"a".repeat(64)}","${"b".repeat(64)}"]]}
         """.trimIndent()
     }
 }
