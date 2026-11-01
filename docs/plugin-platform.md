@@ -55,7 +55,7 @@ Package: `top.fatweb.apimanagement.api.v1`.
 | `RouteDefinition.kt` | HTTP method, plugin-relative path, route API version, `OperationMetadata` |
 | `OperationMetadata.kt` | `operationId`, summary, description, parameters, request body schema, responses, tags |
 | `ParameterSpec.kt` / `ParameterLocation.kt` | Parameter name, location (path/query/header/cookie), type, format, enum, required flag, description, example |
-| `ResponseSpec.kt` | Response description, response body schema, example |
+| `ResponseSpec.kt` | Response description, response body schema, example, media type |
 | `SchemaSpec.kt` | Recursive JSON Schema node for request and response bodies: type, format, properties, required, items, enum, example, nullable |
 
 Routes are exposed as:
@@ -590,7 +590,7 @@ Entities:
 
 - Builds OpenAPI 3.1 JSON from `RegisteredRoute` + `OperationMetadata`.
 - Parameters carry `type`, `format`, `enum`, `required`, `description` and `example`.
-- Responses carry `description`, a `content.application/json` schema and `example`; an operation without responses falls back to `200 OK`.
+- Responses carry `description`, a schema and `example` under the declared `mediaType` (`application/json` by default); an operation without responses falls back to `200 OK`.
 - Request and response body schemas are declared with `SchemaSpec` and rendered to JSON Schema, so plugins never hand-write schema JSON.
 - Writes it to `t_b_api_plugin.openapi`.
 - `ApiDocServiceImpl` reads that field to serve the user-facing API docs page.

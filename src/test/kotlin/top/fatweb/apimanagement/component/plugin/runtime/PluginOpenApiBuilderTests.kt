@@ -112,6 +112,38 @@ class PluginOpenApiBuilderTests {
     }
 
     @Test
+    fun `responses honor the declared media type`() {
+        val route =
+            route(
+                OperationMetadata(
+                    operationId = "download",
+                    responses =
+                    mapOf(
+                        "200" to
+                            ResponseSpec(
+                                description = "文件字节流",
+                                schema = SchemaSpec.string("文件内容", format = "binary"),
+                                mediaType = "application/octet-stream",
+                            ),
+                    ),
+                ),
+            )
+
+        val response =
+            operation(builder.build("filebox", listOf(route)))["responses"]
+                .asMap()
+                .getValue("200")
+                .asMap()
+        val schema =
+            response["content"].asMap().getValue("application/octet-stream")
+                .asMap().getValue("schema").asMap()
+
+        assertEquals("文件字节流", response["description"])
+        assertEquals("string", schema["type"])
+        assertEquals("binary", schema["format"])
+    }
+
+    @Test
     fun `request bodies carry a structured schema`() {
         val route =
             route(

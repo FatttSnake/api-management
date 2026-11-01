@@ -97,7 +97,7 @@ class PluginOpenApiBuilder(private val jsonMapper: JsonMapper) {
 
             val node = linkedMapOf<String, Any>("description" to response.description)
             if (mediaType.isNotEmpty()) {
-                node["content"] = mapOf("application/json" to mediaType)
+                node["content"] = mapOf(response.mediaType to mediaType)
             }
             node
         }
