@@ -8,10 +8,12 @@ import org.aspectj.lang.reflect.MethodSignature
 import org.springframework.stereotype.Component
 import top.fatweb.apimanagement.annotation.EventLogRecord
 import top.fatweb.apimanagement.entity.system.EventLog
+import top.fatweb.apimanagement.param.system.api.ApiPluginConfigUpdateParam
 import top.fatweb.apimanagement.param.system.apiAccount.ApiTopUpParam
 import top.fatweb.apimanagement.param.system.apiKey.ApiKeyDeleteParam
 import top.fatweb.apimanagement.param.system.apiKey.ApiKeyUpdateParam
 import top.fatweb.apimanagement.param.system.apiKey.ApiKeyUpdateStatusParam
+import top.fatweb.apimanagement.service.api.PluginConfigUpdateResult
 import top.fatweb.apimanagement.service.system.IEventLogService
 import top.fatweb.apimanagement.util.getLoginUserId
 import top.fatweb.apimanagement.vo.api.ApiKeyWithSecretVo
@@ -116,6 +118,25 @@ class EventLogInterceptor(private val eventLogService: IEventLogService) {
                 targetUserId = targetUserId,
                 detail = "账户充值${orderNo?.let { "（订单 $it）" } ?: ""}",
             )
+        }
+
+        EventLog.Event.PLUGIN_CONFIG_UPDATE -> {
+            val result = retValue as? PluginConfigUpdateResult
+            val pluginId =
+                result?.pluginId
+                    ?: args.firstNotNullOfOrNull { (it as? ApiPluginConfigUpdateParam)?.pluginId }
+            val keys = result?.changedKeys.orEmpty().sorted()
+            val detail =
+                buildString {
+                    append("修改插件配置")
+                    pluginId?.let { append("「").append(it).append("」") }
+                    if (keys.isEmpty()) {
+                        append("（无实际变更）")
+                    } else {
+                        append("（变更 ").append(keys.size).append(" 项：").append(keys.joinToString()).append("）")
+                    }
+                }
+            KeyLog(detail = detail)
         }
 
         else -> KeyLog()

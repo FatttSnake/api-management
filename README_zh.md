@@ -251,12 +251,12 @@ lock 由 `runtimeClasspath` 生成；运行期不做任何版本解析。模块�
 
 ## 插件配置与数据源
 
-插件在自己的 jar 里放一份 `META-INF/plugin-config.json` 声明它有哪些配置项（类型、默认值、约束、是否密钥项、需要哪些具名数据源、各是什么方言），网关在**挂载时**读取并快照到插件行上，控制台据此渲染配置界面；插件侧通过 `GatewayContext.settings().get(key)` 读取，默认值由网关回落。schema 声明过的 key 归管理员，`settings().save(...)` 写它会抛异常。
+插件在自己的 jar 里放一份 `META-INF/plugin-config.json` 声明它有哪些配置项（类型、默认值、约束、是否密钥项、需要哪些具名数据源、各是什么方言），网关在**挂载时**读取并快照到插件行上，控制台据此渲染配置界面；插件侧通过 `GatewayContext.settings().get(key)` 读取，默认值由网关回落，`all()` 返回所有可读的非 secret 值并补齐这些默认值。schema 声明过的 key 归管理员，`settings().save(...)` 与 `settings().remove(...)` 都会拒绝；未声明的 key 归插件自己写入和删除。
 
 | 接口 | 说明 |
 |---|---|
 | `GET /system/api/plugin/{pluginId}/config` | 配置结构 + 当前值 + 数据源声明。secret 不回值（`hasValue` 表示是否已设置，`unreadable` 表示已存密文解不开）；每个数据源带名称、方言、是否必需与当前状态；每个分组标出它描述的那个数据源（未描述时为 `null`，控制台就在这个分组上给出「测试连接」） |
-| `PUT /system/api/plugin/config` | **按分组保存**：`{pluginId, groups:[{key, values:[{key, value}]}]}`。普通配置项立即生效（插件每次读取都查库）；**改到数据源相关项会重挂载插件**，因为连接是网关按这些值构建的；插件因挂载失败而处于未挂载状态时，**任意一次保存都会重挂载它** |
+| `PUT /system/api/plugin/config` | **按分组保存**：`{pluginId, groups:[{key, values:[{key, value}]}]}`。普通配置项立即生效（插件每次读取都查库），其余实际变更在提交后通过 `onConfigChanged(context, changedKeys)` 通知已挂载实例；**改到数据源相关项会重挂载插件**，因为连接是网关按这些值构建的；插件因挂载失败而处于未挂载状态时，**任意一次保存都会重挂载它**（新实例的 `onStart` 就是通知）。每次保存都写入 `PLUGIN_CONFIG_UPDATE` 审计事件 |
 | `POST /system/api/plugin/{pluginId}/config/datasource/test` | 用**尚未保存**的值试连一次（`name` + 要用的配置项；某项不传或传 `null` 表示用已存值）。仅 MySQL——SQLite 是网关自备的文件，没有管理员的连接可试。失败回 40067 与驱动原文 |
 | `POST /system/api/plugin/{pluginId}/reload` | 用已存储的 jar 原地重挂载，用于**换了 jar**；配置与数据不受影响。改数据源**不需要**它 |
 
@@ -270,7 +270,7 @@ lock 由 `runtimeClasspath` 生成；运行期不做任何版本解析。模块�
 
 `DELETE /system/api/plugin/{pluginId}?purgeData=true` 才会清除插件设置、SQLite 数据库目录与文件区（默认 `false` 即保留，便于重装续用）。插件自己的数据由 `onPurge` 删除：它在数据源、storage、配置都还开着、且没有请求在跑时被调用，正是插件删掉自己建的表（包括网关从不碰的外部 MySQL 库）、释放内容寻址对象的地方。只有「真的卸载」才触发它：升级、reload、被禁用、关闭网关都不触发。没挂载的插件会**先被挂起来**让退出钩子有东西可跑，而**该钩子失败会拒绝这次卸载**（40068），此时什么都还没删，修好原因重跑即可。插件释放掉的内容寻址对象由网关定期回收。
 
-生命周期钩子见 `gateway-api` 的 `ApiPlugin`：`onStart`（每次挂载、路由激活之前）、`onStop`（每次卸载）、`onUninstall`（版本被摘除之时，升级也会走——它**不是删数据的地方**）、`onPurge`（明确要求清除数据的卸载）。
+生命周期钩子见 `gateway-api` 的 `ApiPlugin`：`onStart`（每次挂载、路由激活之前）、`onConfigChanged`（管理员保存配置且未触发重挂载时）、`onStop`（每次卸载）、`onUninstall`（版本被摘除之时，升级也会走——它**不是删数据的地方**）、`onPurge`（明确要求清除数据的卸载）。
 
 ## 调试插件
 

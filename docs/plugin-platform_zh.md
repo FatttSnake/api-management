@@ -48,7 +48,7 @@ flowchart LR
 
 | 文件 | 内容 |
 |---|---|
-| `ApiPlugin.kt` | `onStart(GatewayContext)`、`onStop()`、`onUninstall()`、`onPurge()` |
+| `ApiPlugin.kt` | `onStart(GatewayContext)`、`onConfigChanged(GatewayContext, Set<String>)`、`onStop()`、`onUninstall()`、`onPurge()` |
 | `GatewayContext.kt` | 插件唯一入口，聚合所有能力 |
 | `ApiRoutes.kt` | `register(RouteDefinition, ApiHandler)`，只在 `onStart` 期间有效 |
 | `ApiHandler.kt` | 单请求处理 SAM 接口 |
@@ -81,7 +81,7 @@ flowchart LR
 
 | 文件 | 能力 |
 |---|---|
-| `Settings.kt` | 插件配置读取、secret 读取、插件自有 key 写入 |
+| `Settings.kt` | 插件配置与 secret 读取、插件自有 key 写入与删除 |
 | `DataSources.kt` | 插件私有数据源，返回 `javax.sql.DataSource` |
 | `Storage.kt` | 内容寻址（SHA-256）+ 位置寻址文件 + 免登外链 |
 | `Users.kt` | 只读用户信息、余额 |
@@ -554,9 +554,12 @@ erDiagram
 
 - 插件 jar 内 `META-INF/plugin-config.json`。
 - 安装时 `PluginConfigSchemaUtil.parse`，写入 `PluginConfigSchemaCache`。
-- `GatewayContext.settings().get/save` 由 `PluginSettingReader` / `IApiPluginSettingService` 支撑。
-- 管理员配置的 key 插件不能写；secret 由网关解密。
+- `GatewayContext.settings().get/getSecret/save/remove/all` 由 `PluginSettingReader` / `IApiPluginSettingService` 支撑。
+- `all()` 返回已存储的插件自有 key，以及声明过的非 secret 值（存储值或默认值）；secret 永不出现。
+- 管理员配置的 key 插件不能写也不能删；secret 由网关解密。
 - 数据源相关配置变化后 `updatePluginConfig` 在事务提交后调用 `reload(pluginId)`。
+- 其余已提交的实际变更会在已挂载实例上调用 `ApiPlugin.onConfigChanged(context, changedKeys)`；会触发重挂载的保存（数据源 key 变化，或插件正处于挂载失败状态）改由新实例的 `onStart` 感知。
+- 每次管理员保存配置都写入 `PLUGIN_CONFIG_UPDATE` 审计事件。
 
 ### 13.2 数据源
 
@@ -627,7 +630,7 @@ erDiagram
 | 请求 | `PluginApiHandlerMapping.getHandlerInternal` → `ApiAccessInterceptor.preHandle` → `PluginApiHandlerAdapter.handle` → `ApiHandler.handle` |
 | 停用 | `ApiPluginController.updatePluginStatus` → `PluginPlatformServiceImpl.setEnabled(false)` → `runtimeRegistry.unload` |
 | 卸载 | `ApiPluginController.uninstall` → `PluginPlatformServiceImpl.uninstall` → `runtimeRegistry.unload` → `remove` 行 → `refreshCache` |
-| 配置保存 | `ApiPluginController.updateConfig` → `PluginPlatformServiceImpl.updatePluginConfig` → `onCommitted { reload }` |
+| 配置保存 | `ApiPluginController.updateConfig` → `PluginPlatformServiceImpl.updatePluginConfig` → `onCommitted { reload 或 runtimeRegistry.notifyConfigChanged }` + `PLUGIN_CONFIG_UPDATE` 审计 |
 | 文档 | `UserApiDocController` → `ApiDocServiceImpl` → `PluginOpenApiBuilder` 生成的 `openapi` 字段 |
 
 ## 16. 当前边界

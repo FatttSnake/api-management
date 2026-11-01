@@ -29,6 +29,23 @@ class LoadedPlugin internal constructor(
     val context: GatewayContextImpl,
 ) : AutoCloseable {
     /**
+     * Runs the config-changed hook with the plugin class loader as the thread context loader.
+     *
+     * @param changedKeys Declared keys whose effective value changed
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    fun configChanged(changedKeys: Set<String>) {
+        val previous = Thread.currentThread().contextClassLoader
+        Thread.currentThread().contextClassLoader = classLoader
+        try {
+            plugin.onConfigChanged(context, changedKeys)
+        } finally {
+            Thread.currentThread().contextClassLoader = previous
+        }
+    }
+
+    /**
      * Stops the plugin.
      *
      * @author FatttSnake, fatttsnake@gmail.com

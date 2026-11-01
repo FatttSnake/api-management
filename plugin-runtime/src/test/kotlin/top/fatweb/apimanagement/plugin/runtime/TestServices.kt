@@ -41,6 +41,10 @@ fun testServices(): PluginRuntimeServices {
                 values[key] = value
             }
 
+            override fun remove(key: String) {
+                values.remove(key)
+            }
+
             override fun all(): Map<String, String> = values.toMap()
         }
 

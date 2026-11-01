@@ -21,6 +21,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -101,6 +102,41 @@ class PluginRuntimeLoaderTests {
         assertEquals(3, match.requestedVersion)
         assertEquals("world", match.pathParameters["name"])
 
+        loaded.close()
+        moduleRegistry.close()
+    }
+
+    @Test
+    fun `runs the config-changed hook and removes a plugin-owned setting on purge`() {
+        val platform = GatewayApiClassLoader(javaClass.classLoader)
+        val store = FileSystemPluginModuleStore(root.resolve("modules-hooks"))
+        val moduleRegistry = PluginModuleRegistry(store, platform)
+        val loader = PluginRuntimeLoader(platform, moduleRegistry)
+        val pluginJar = root.resolve("fixture-hooks.jar")
+        Files.write(
+            pluginJar,
+            jarOf(
+                FixtureApiPlugin::class,
+                PingHandler::class,
+                entries =
+                mapOf(
+                    PluginRuntimeLoader.DESCRIPTOR_ENTRY to descriptorJson().toByteArray(),
+                    PluginRuntimeLoader.LOCK_ENTRY to """{"format":1,"modules":[]}""".toByteArray(),
+                ),
+            ),
+        )
+        val services = testServices()
+        val loaded = loader.load(pluginJar, services)
+
+        assertEquals("yes", services.settings.get("startedAt"))
+
+        loaded.configChanged(setOf("b", "a"))
+        assertEquals("a,b", services.settings.get("configChanged"))
+
+        loaded.purge()
+        assertNull(services.settings.get("startedAt"))
+
+        loaded.stop()
         loaded.close()
         moduleRegistry.close()
     }

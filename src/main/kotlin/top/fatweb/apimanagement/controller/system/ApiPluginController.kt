@@ -194,7 +194,9 @@ class ApiPluginController(private val pluginPlatformService: IPluginPlatformServ
      *
      * Changing a value that describes a datasource remounts the plugin once the transaction
      * commits, and so does any save at all while the plugin is down from a failed mount; a
-     * failure shows up in the plugin's `loadError`, not in the response.
+     * failure shows up in the plugin's `loadError`, not in the response. Any other effective
+     * change notifies the mounted instance through `onConfigChanged`. The save is recorded in
+     * the audit log.
      *
      * @param apiPluginConfigUpdateParam Update API plugin config parameters
      * @return Response object

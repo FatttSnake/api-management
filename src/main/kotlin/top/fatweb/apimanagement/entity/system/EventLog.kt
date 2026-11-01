@@ -28,6 +28,7 @@ class EventLog : Serializable {
         KEY_STATUS("KEY_STATUS"),
         KEY_REGENERATE("KEY_REGENERATE"),
         KEY_TOPUP("KEY_TOPUP"),
+        PLUGIN_CONFIG_UPDATE("PLUGIN_CONFIG_UPDATE"),
     }
 
     /**

@@ -44,6 +44,7 @@ class ApiAuditServiceImpl(private val apiKeyService: IApiKeyService, private val
                         EventLog.Event.KEY_STATUS,
                         EventLog.Event.KEY_REGENERATE,
                         EventLog.Event.KEY_TOPUP,
+                        EventLog.Event.PLUGIN_CONFIG_UPDATE,
                     ),
                 )
                 apiAuditGetParam?.event?.let { eq(EventLog::event, it) }

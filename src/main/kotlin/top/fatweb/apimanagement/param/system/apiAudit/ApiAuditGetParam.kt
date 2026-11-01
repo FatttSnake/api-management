@@ -25,7 +25,15 @@ data class ApiAuditGetParam(
      */
     @field:Schema(
         description = "事件类型",
-        allowableValues = ["KEY_CREATE", "KEY_UPDATE", "KEY_DELETE", "KEY_STATUS", "KEY_REGENERATE", "KEY_TOPUP"],
+        allowableValues = [
+            "KEY_CREATE",
+            "KEY_UPDATE",
+            "KEY_DELETE",
+            "KEY_STATUS",
+            "KEY_REGENERATE",
+            "KEY_TOPUP",
+            "PLUGIN_CONFIG_UPDATE",
+        ],
     )
     var event: EventLog.Event?,
     /**

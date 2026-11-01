@@ -93,9 +93,7 @@ class PluginCapabilityFactory(
         override fun getSecret(key: String): String? = pluginSettingReader.resolve(pluginId, key)
 
         override fun save(key: String, value: String) {
-            require(schema?.isDeclared(key) != true) {
-                "Setting '$key' is declared by the plugin config schema and can only be changed by an administrator"
-            }
+            PluginConfigSchemaUtil.requirePluginOwned(schema, key)
             require(key.length <= PluginConfigSchemaUtil.MAX_KEY_LENGTH) {
                 "Setting key '$key' is longer than ${PluginConfigSchemaUtil.MAX_KEY_LENGTH} characters"
             }
@@ -105,13 +103,13 @@ class PluginCapabilityFactory(
             apiPluginSettingService.set(pluginId, key, value)
         }
 
-        override fun all(): Map<String, String> {
-            val keys = apiPluginSettingService.listByPlugin(pluginId).keys
-            return keys
-                .filterNot { schema?.isSecret(it) == true }
-                .mapNotNull { key -> pluginSettingReader.resolveRaw(pluginId, key)?.let { key to it } }
-                .toMap()
+        override fun remove(key: String) {
+            PluginConfigSchemaUtil.requirePluginOwned(schema, key)
+            apiPluginSettingService.delete(pluginId, key)
         }
+
+        override fun all(): Map<String, String> =
+            PluginConfigSchemaUtil.visibleValues(schema, apiPluginSettingService.listByPlugin(pluginId))
     }
 
     private fun dataSources(sources: Map<String, DataSource>): DataSources = object : DataSources {

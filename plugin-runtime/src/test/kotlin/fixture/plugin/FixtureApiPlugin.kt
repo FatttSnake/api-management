@@ -8,6 +8,7 @@ import top.fatweb.apimanagement.api.v1.GatewayContext
 import top.fatweb.apimanagement.api.v1.OperationMetadata
 import top.fatweb.apimanagement.api.v1.ParameterSpec
 import top.fatweb.apimanagement.api.v1.RouteDefinition
+import top.fatweb.apimanagement.api.v1.Settings
 
 class PingHandler(private val pluginId: String) : ApiHandler {
     override fun handle(request: ApiRequest): ApiResponse = ApiResponse.ok(
@@ -19,7 +20,11 @@ class PingHandler(private val pluginId: String) : ApiHandler {
 }
 
 class FixtureApiPlugin : ApiPlugin {
+    private lateinit var settings: Settings
+
     override fun onStart(context: GatewayContext) {
+        settings = context.settings()
+        settings.save("startedAt", "yes")
         context.api().register(
             RouteDefinition(
                 method = "GET",
@@ -34,5 +39,13 @@ class FixtureApiPlugin : ApiPlugin {
             ),
             PingHandler(context.metadata().pluginId),
         )
+    }
+
+    override fun onConfigChanged(context: GatewayContext, changedKeys: Set<String>) {
+        settings.save("configChanged", changedKeys.sorted().joinToString(","))
+    }
+
+    override fun onPurge() {
+        settings.remove("startedAt")
     }
 }

@@ -145,10 +145,11 @@ interface IPluginPlatformService : IService<ApiPlugin> {
      * Saves plugin configuration groups.
      *
      * @param param update parameters
+     * @return plugin ID and the declared keys whose effective value changed
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    fun updatePluginConfig(param: ApiPluginConfigUpdateParam)
+    fun updatePluginConfig(param: ApiPluginConfigUpdateParam): PluginConfigUpdateResult
 
     /**
      * Tests one plugin datasource.

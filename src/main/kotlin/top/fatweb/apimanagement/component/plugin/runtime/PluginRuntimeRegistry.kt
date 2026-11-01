@@ -55,6 +55,39 @@ class PluginRuntimeRegistry(
     fun isRunning(pluginId: String): Boolean = runtimes.containsKey(pluginId)
 
     /**
+     * Returns the mounted runtime of a plugin.
+     *
+     * @param pluginId plugin ID
+     * @return mounted runtime, or null when the plugin is not running
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    fun current(pluginId: String): LoadedPlugin? = runtimes[pluginId]
+
+    /**
+     * Runs the config-changed hook on a runtime that is still the mounted one.
+     *
+     * Runs under the plugin lifecycle lock, so an uninstall, disable or remount cannot close the
+     * runtime while the hook runs. A stale runtime is skipped: the replacement's `onStart` has
+     * already seen the configuration. Failures are logged and never reach the caller.
+     *
+     * @param pluginId plugin ID
+     * @param mounted runtime the save was accepted against
+     * @param changedKeys declared keys whose effective value changed
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    fun notifyConfigChanged(pluginId: String, mounted: LoadedPlugin, changedKeys: Set<String>) {
+        withLock(pluginId) {
+            if (runtimes[pluginId] !== mounted) {
+                return@withLock
+            }
+            runCatching { mounted.configChanged(changedKeys) }
+                .onFailure { logger.warn("Plugin {} onConfigChanged failed", pluginId, it) }
+        }
+    }
+
+    /**
      * Loads and starts a plugin from its stored jar.
      *
      * The runtime is not reachable by requests until [activate] is called.

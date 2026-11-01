@@ -34,20 +34,23 @@ class AsyncConfig {
     }
 
     /**
-     * Executor that carries out post-commit plugin remounts
+     * Executor that delivers post-commit plugin config-change notifications, one at a time
+     *
+     * Running outside the completed request transaction lets a hook that writes settings open
+     * its own transaction; a single thread keeps notifications in save order.
      *
      * @return ThreadPoolTaskExecutor
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @Bean("pluginRemountExecutor")
-    fun pluginRemountExecutor(): ThreadPoolTaskExecutor = ThreadPoolTaskExecutor().apply {
+    @Bean("pluginConfigChangedExecutor")
+    fun pluginConfigChangedExecutor(): ThreadPoolTaskExecutor = ThreadPoolTaskExecutor().apply {
         setTaskDecorator(MdcTaskDecorator())
         corePoolSize = 1
         maxPoolSize = 1
         queueCapacity = Int.MAX_VALUE
         keepAliveSeconds = 60
-        setThreadNamePrefix("plugin-remount-")
+        setThreadNamePrefix("plugin-config-changed-")
         initialize()
     }
 

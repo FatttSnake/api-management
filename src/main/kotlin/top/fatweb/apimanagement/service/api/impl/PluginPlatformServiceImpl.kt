@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.kotlin.KtUpdateWrapper
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.ApplicationArguments
 import org.springframework.boot.ApplicationRunner
 import org.springframework.core.Ordered
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.support.TransactionSynchronization
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.transaction.support.TransactionTemplate
+import top.fatweb.apimanagement.annotation.EventLogRecord
 import top.fatweb.apimanagement.component.plugin.PluginArtifactStore
 import top.fatweb.apimanagement.component.plugin.PluginConfigFieldType
 import top.fatweb.apimanagement.component.plugin.PluginConfigSchema
@@ -36,6 +38,7 @@ import top.fatweb.apimanagement.converter.api.toVo
 import top.fatweb.apimanagement.converter.api.toVoPage
 import top.fatweb.apimanagement.entity.api.ApiInterface
 import top.fatweb.apimanagement.entity.api.ApiPlugin
+import top.fatweb.apimanagement.entity.system.EventLog
 import top.fatweb.apimanagement.exception.NoRecordFoundException
 import top.fatweb.apimanagement.exception.PluginInstallException
 import top.fatweb.apimanagement.exception.PluginNotTrustedException
@@ -58,6 +61,7 @@ import top.fatweb.apimanagement.service.api.IApiPluginSettingService
 import top.fatweb.apimanagement.service.api.IPluginModuleFetchService
 import top.fatweb.apimanagement.service.api.IPluginModuleService
 import top.fatweb.apimanagement.service.api.IPluginPlatformService
+import top.fatweb.apimanagement.service.api.PluginConfigUpdateResult
 import top.fatweb.apimanagement.util.PluginCryptoUtil
 import top.fatweb.apimanagement.util.PluginDatasourceUtil
 import top.fatweb.apimanagement.util.saveOrThrowException
@@ -69,6 +73,7 @@ import top.fatweb.apimanagement.vo.api.ApiPluginConfigVo
 import top.fatweb.apimanagement.vo.api.ApiPluginVo
 import java.nio.file.Files
 import java.time.LocalDateTime
+import java.util.concurrent.Executor
 
 /**
  * Module-based plugin platform.
@@ -98,6 +103,7 @@ class PluginPlatformServiceImpl(
     private val settingService: IApiPluginSettingService,
     private val fileStorageProvider: FileStorageProvider,
     private val apiInterfaceService: IApiInterfaceService,
+    @param:Qualifier("pluginConfigChangedExecutor") private val configChangedExecutor: Executor,
 ) : ServiceImpl<ApiPluginMapper, ApiPlugin>(),
     IPluginPlatformService,
     ApplicationRunner {
@@ -537,50 +543,67 @@ class PluginPlatformServiceImpl(
         )
     }
 
+    @EventLogRecord(EventLog.Event.PLUGIN_CONFIG_UPDATE)
     @Transactional
-    override fun updatePluginConfig(param: ApiPluginConfigUpdateParam) {
+    override fun updatePluginConfig(param: ApiPluginConfigUpdateParam): PluginConfigUpdateResult {
         val pluginId = param.pluginId!!
-        val schema =
-            configSchemaOf(pluginId)
-                ?: throw IllegalArgumentException("Plugin '$pluginId' does not declare any configuration")
-        val submitted = submittedGroupsOf(param)
-        val stored = pluginSettingReader.resolveAll(pluginId)
-        PluginConfigSchemaUtil.validate(schema, submitted, stored)
-        val effective = PluginConfigSchemaUtil.effectiveValues(schema, submitted, stored)
-        schema.datasources.forEach { declaration ->
-            PluginDatasourceUtil.resolve(declaration) { key -> effective[key] }
-        }
-        val previous = PluginConfigSchemaUtil.effectiveValues(schema, emptyMap(), stored)
-        val datasourceChanged = schema.datasourceKeys.any { previous[it] != effective[it] }
-        val down = get(pluginId)?.loadError != null
+        return runtimeRegistry.withLock(pluginId) {
+            val schema =
+                configSchemaOf(pluginId)
+                    ?: throw IllegalArgumentException("Plugin '$pluginId' does not declare any configuration")
+            val submitted = submittedGroupsOf(param)
+            val stored = pluginSettingReader.resolveAll(pluginId)
+            PluginConfigSchemaUtil.validate(schema, submitted, stored)
+            val effective = PluginConfigSchemaUtil.effectiveValues(schema, submitted, stored)
+            schema.datasources.forEach { declaration ->
+                PluginDatasourceUtil.resolve(declaration) { key -> effective[key] }
+            }
+            val previous = PluginConfigSchemaUtil.effectiveValues(schema, emptyMap(), stored)
+            val changedKeys = PluginConfigSchemaUtil.changedKeys(previous, effective)
+            val datasourceChanged = changedKeys.any { it in schema.datasourceKeys }
+            val down = get(pluginId)?.loadError != null
+            val mounted = runtimeRegistry.current(pluginId)
 
-        submitted.values.forEach { values ->
-            values.forEach { (key, value) ->
-                val field = schema.fieldOf(key) ?: return@forEach
-                when (PluginConfigSchemaUtil.actionOf(field, value)) {
-                    PluginConfigValueAction.KEEP -> Unit
-                    PluginConfigValueAction.CLEAR -> settingService.delete(pluginId, key)
-                    PluginConfigValueAction.SET -> {
-                        val set = value!!
-                        settingService.set(
-                            pluginId,
-                            key,
-                            if (field.type == PluginConfigFieldType.SECRET) {
-                                PluginCryptoUtil.encrypt(serverProperties.security.tokenSecret, set)
-                            } else {
-                                set
-                            },
-                        )
+            submitted.values.forEach { values ->
+                values.forEach { (key, value) ->
+                    val field = schema.fieldOf(key) ?: return@forEach
+                    when (PluginConfigSchemaUtil.actionOf(field, value)) {
+                        PluginConfigValueAction.KEEP -> Unit
+                        PluginConfigValueAction.CLEAR -> settingService.delete(pluginId, key)
+                        PluginConfigValueAction.SET -> {
+                            val set = value!!
+                            settingService.set(
+                                pluginId,
+                                key,
+                                if (field.type == PluginConfigFieldType.SECRET) {
+                                    PluginCryptoUtil.encrypt(serverProperties.security.tokenSecret, set)
+                                } else {
+                                    set
+                                },
+                            )
+                        }
                     }
                 }
             }
-        }
 
-        if (datasourceChanged || down) {
-            onCommitted {
-                runCatching { reload(pluginId) }
-                    .onFailure { logger.error("Cannot remount plugin {} after a config change", pluginId, it) }
+            if (datasourceChanged || down) {
+                onCommitted {
+                    runCatching { reload(pluginId) }
+                        .onFailure { logger.error("Cannot remount plugin {} after a config change", pluginId, it) }
+                }
+            } else if (mounted != null && changedKeys.isNotEmpty()) {
+                onCommitted {
+                    runCatching {
+                        configChangedExecutor.execute {
+                            runtimeRegistry.notifyConfigChanged(pluginId, mounted, changedKeys)
+                        }
+                    }.onFailure {
+                        logger.error("Cannot schedule a config change notification for plugin {}", pluginId, it)
+                    }
+                }
             }
+
+            PluginConfigUpdateResult(pluginId, changedKeys)
         }
     }
 

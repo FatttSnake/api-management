@@ -249,6 +249,61 @@ object PluginConfigSchemaUtil {
     }
 
     /**
+     * Refuses a setting key the schema declares as administrator-owned.
+     *
+     * @param schema Schema of the plugin, or null when it declares none
+     * @param key Setting key
+     * @throws IllegalArgumentException when the key is declared
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    fun requirePluginOwned(schema: PluginConfigSchema?, key: String) {
+        require(schema?.isDeclared(key) != true) {
+            "Setting '$key' is declared by the plugin config schema and can only be changed by an administrator"
+        }
+    }
+
+    /**
+     * Read the values a plugin sees through `Settings.all()`
+     *
+     * A declared non-secret key reads as its stored value, or its declared default when none is
+     * stored. An undeclared key reads only when stored. A secret is never included.
+     *
+     * @param schema Schema of the plugin, or null when it declares none
+     * @param stored Values as stored, by setting key
+     * @return Values, by setting key
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    fun visibleValues(schema: PluginConfigSchema?, stored: Map<String, String>): Map<String, String> {
+        val values = linkedMapOf<String, String>()
+        schema?.fields.orEmpty().forEach { field ->
+            if (field.type != PluginConfigFieldType.SECRET) {
+                (stored[field.key] ?: field.default)?.let { values[field.key] = it }
+            }
+        }
+        stored.forEach { (key, value) ->
+            if (schema?.isDeclared(key) != true) {
+                values[key] = value
+            }
+        }
+
+        return values.toMap()
+    }
+
+    /**
+     * Read the keys whose effective value differs between two saves
+     *
+     * @param previous Values before the save, by setting key
+     * @param effective Values after the save, by setting key
+     * @return Changed keys; null and an empty string are different values
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.0
+     */
+    fun changedKeys(previous: Map<String, String?>, effective: Map<String, String?>): Set<String> =
+        (previous.keys + effective.keys).filterTo(linkedSetOf()) { previous[it] != effective[it] }
+
+    /**
      * Validate a submission against a schema
      *
      * A required field is checked only when the group it belongs to is part of the submission.
