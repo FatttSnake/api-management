@@ -17,6 +17,7 @@ import top.fatweb.apimanagement.api.v1.UserInfo
 import top.fatweb.apimanagement.api.v1.Users
 import top.fatweb.apimanagement.plugin.runtime.module.FileSystemPluginModuleStore
 import top.fatweb.apimanagement.plugin.runtime.runtime.PluginRuntimeServices
+import java.lang.reflect.Type
 import java.math.BigDecimal
 import java.time.Duration
 import javax.sql.DataSource
@@ -137,6 +138,22 @@ fun testServices(): PluginRuntimeServices {
             override fun <T> decode(json: ByteArray, type: Class<T>): T = mapper.readValue(json, type)
 
             override fun <T> decode(json: String, type: Class<T>): T = mapper.readValue(json, type)
+
+            override fun <T> decode(json: ByteArray, type: Type): T = mapper.readValue(json, mapper.constructType(type))
+
+            override fun <T> decode(json: String, type: Type): T = mapper.readValue(json, mapper.constructType(type))
+
+            override fun <T> decodeList(json: ByteArray, elementType: Class<T>): List<T> =
+                mapper.readValue(json, mapper.typeFactory.constructCollectionType(List::class.java, elementType))
+
+            override fun <T> decodeList(json: String, elementType: Class<T>): List<T> =
+                mapper.readValue(json, mapper.typeFactory.constructCollectionType(List::class.java, elementType))
+
+            override fun <K, V> decodeMap(json: ByteArray, keyType: Class<K>, valueType: Class<V>): Map<K, V> =
+                mapper.readValue(json, mapper.typeFactory.constructMapType(Map::class.java, keyType, valueType))
+
+            override fun <K, V> decodeMap(json: String, keyType: Class<K>, valueType: Class<V>): Map<K, V> =
+                mapper.readValue(json, mapper.typeFactory.constructMapType(Map::class.java, keyType, valueType))
         }
 
     val logger =

@@ -49,12 +49,14 @@ class PluginCapabilityFactory(
     private val userMapper: UserMapper,
     private val userInfoMapper: UserInfoMapper,
     private val eventLogMapper: EventLogMapper,
-    private val jsonMapper: JsonMapper,
     private val eventBus: PluginEventBus,
     private val scheduler: PluginScheduler,
     private val httpClient: PluginHttpClient,
     private val buildProperties: ObjectProvider<BuildProperties>,
+    jsonMapper: JsonMapper,
 ) {
+    private val jsonCodec: JsonCodec = JacksonJsonCodec(jsonMapper)
+
     /**
      * Creates the capabilities of a plugin.
      *
@@ -79,7 +81,7 @@ class PluginCapabilityFactory(
             events = eventBus.scoped(pluginId),
             http = httpClient.capability(),
             scheduler = scheduler.scoped(pluginId),
-            json = json(),
+            json = jsonCodec,
             loggerFactory = { id -> Slf4jPluginLogger(LoggerFactory.getLogger("plugin.$id")) },
             gatewayVersion = buildProperties.getIfAvailable()?.version ?: "1.0.0",
             gatewayApiVersion = GatewayApiInfo.version,
@@ -149,14 +151,6 @@ class PluginCapabilityFactory(
                 },
             )
         }
-    }
-
-    private fun json(): JsonCodec = object : JsonCodec {
-        override fun encode(value: Any?): ByteArray = jsonMapper.writeValueAsBytes(value)
-
-        override fun <T> decode(json: ByteArray, type: Class<T>): T = jsonMapper.readValue(json, type)
-
-        override fun <T> decode(json: String, type: Class<T>): T = jsonMapper.readValue(json, type)
     }
 
     private class Slf4jPluginLogger(private val logger: org.slf4j.Logger) : PluginLogger {

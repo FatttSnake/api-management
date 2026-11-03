@@ -107,6 +107,7 @@ It contains JVM descriptors for public/protected classes, constructors, methods 
 - Callback interfaces are SAMs: `ApiHandler`, `EventBus.EventSubscriber`, `Subscription`.
 - Factory methods use `@JvmStatic`; constructors with defaults use `@JvmOverloads`.
 - `GatewayContext` exposes accessors such as `ctx.api()` and `ctx.settings()` rather than Kotlin properties.
+- `JsonCodec` decodes typed values: Kotlin plugins use `decode<T>(json)`, Java plugins pass `Class` tokens to `decode`, `decodeList`, `decodeMap`.
 
 ## 4. Build time: `plugin-gradle-plugin`
 

@@ -227,6 +227,22 @@ Java 插件作者使用同一套类型：`ApiHandler`、`EventSubscriber`、`Sub
 
 请求体是原始字节（`request.body` / `request.bodyText()`）；需要结构化 JSON 时用 `context.json()`，或使用插件自带的库。响应体可以是字节、字符串、Map 或普通 Bean；`ApiResponse.raw(...)` 绕过业务信封。
 
+`context.json()` 可直接按类型解析。Kotlin 插件用 reified 重载：
+
+```kotlin
+val item = context.json().decode<Item>(request.body)
+val items = context.json().decode<List<Item>>(request.body)
+```
+
+需要 `import top.fatweb.apimanagement.api.v1.decode`。也可以显式传元素类型：
+
+```kotlin
+val items = context.json().decodeList(request.body, Item::class.java)
+val byId = context.json().decodeMap(request.body, String::class.java, Item::class.java)
+```
+
+Java 插件使用 `Class` 重载（`decode(json, Item.class)`、`decodeList`、`decodeMap`）。
+
 ## 依赖
 
 插件 jar 是瘦包。运行时依赖在构建期解析进 lock，每个模块 jar 单独上传（`deployPlugin` 会先传模块再传插件）。网关按 SHA-256 内容寻址存储在 `app.storage.plugin-module-dir`，同一个装载单元跨插件共享一个类加载器，不同版本并存。

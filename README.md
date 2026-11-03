@@ -239,6 +239,22 @@ The request body is raw bytes (`request.body` / `request.bodyText()`). Use `cont
 structured JSON, or a library the plugin brings itself. A response body can be bytes, a string, a
 map or a plain bean; `ApiResponse.raw(...)` bypasses the business envelope.
 
+`context.json()` decodes typed values directly. Kotlin plugins use the reified overloads:
+
+```kotlin
+val item = context.json().decode<Item>(request.body)
+val items = context.json().decode<List<Item>>(request.body)
+```
+
+with `import top.fatweb.apimanagement.api.v1.decode`. Explicit element types are also available:
+
+```kotlin
+val items = context.json().decodeList(request.body, Item::class.java)
+val byId = context.json().decodeMap(request.body, String::class.java, Item::class.java)
+```
+
+Java plugins use the `Class` overloads (`decode(json, Item.class)`, `decodeList`, `decodeMap`).
+
 ## Dependencies
 
 The plugin jar is thin. Runtime dependencies are resolved at build time into the lock, and each

@@ -107,6 +107,7 @@ META-INF/gateway-api.abi.json
 - 回调接口都是 SAM：`ApiHandler`、`EventBus.EventSubscriber`、`Subscription`。
 - 工厂方法带 `@JvmStatic`，带默认参数构造器带 `@JvmOverloads`。
 - `GatewayContext` 使用访问函数 `ctx.api()`、`ctx.settings()`，不是 Kotlin 属性。
+- `JsonCodec` 按类型解析：Kotlin 插件用 `decode<T>(json)`，Java 插件向 `decode`、`decodeList`、`decodeMap` 传 `Class`。
 
 ## 4. 构建期：`plugin-gradle-plugin`
 
