@@ -59,14 +59,14 @@ class SensitiveWordServiceImpl :
         // rows is already in the state it asks for - and an empty submission stops here
         // instead of reaching the second statement, whose `in ()` is not valid SQL
         update(
-            KtUpdateWrapper(SensitiveWord())
+            KtUpdateWrapper(SensitiveWord::class.java)
                 .set(SensitiveWord::enable, false),
         )
 
         if (ids.isNotEmpty()) {
             updateOrThrowException {
                 update(
-                    KtUpdateWrapper(SensitiveWord())
+                    KtUpdateWrapper(SensitiveWord::class.java)
                         .`in`(SensitiveWord::id, ids)
                         .set(SensitiveWord::enable, true),
                 )
@@ -119,7 +119,7 @@ class SensitiveWordServiceImpl :
      * @since 1.0.0
      */
     private fun loadPatterns(): List<Regex> = list(
-        KtQueryWrapper(SensitiveWord())
+        KtQueryWrapper(SensitiveWord::class.java)
             .eq(SensitiveWord::enable, 1),
     ).mapNotNull(SensitiveWord::word)
         .mapNotNull { runCatching { Regex(it, RegexOption.IGNORE_CASE) }.getOrNull() }

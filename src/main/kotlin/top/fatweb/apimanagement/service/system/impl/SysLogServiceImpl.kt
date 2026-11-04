@@ -49,7 +49,7 @@ class SysLogServiceImpl(private val userService: IUserService) :
 
             val usernames =
                 userService
-                    .list(KtQueryWrapper(User()).select(User::id, User::username).`in`(User::id, userIds))
+                    .list(KtQueryWrapper(User::class.java).select(User::id, User::username).`in`(User::id, userIds))
                     .associate { it.id to it.username }
 
             sysLogIPage.records.forEach { it.operateUsername = usernames[it.operateUserId] }

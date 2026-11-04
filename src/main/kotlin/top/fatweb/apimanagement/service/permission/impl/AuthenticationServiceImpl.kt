@@ -214,7 +214,7 @@ class AuthenticationServiceImpl(
 
         updateOrThrowException {
             userService.update(
-                KtUpdateWrapper(User())
+                KtUpdateWrapper(User::class.java)
                     .eq(User::id, user.id)
                     .set(User::verify, null)
                     .set(User::updateTime, LocalDateTime.now(ZoneOffset.UTC)),
@@ -222,7 +222,7 @@ class AuthenticationServiceImpl(
         }
         updateOrThrowException {
             userInfoService.update(
-                KtUpdateWrapper(UserInfo())
+                KtUpdateWrapper(UserInfo::class.java)
                     .eq(UserInfo::userId, user.id)
                     .set(UserInfo::nickname, verifyParam.nickname)
                     .set(UserInfo::avatar, verifyParam.avatar),
@@ -253,7 +253,7 @@ class AuthenticationServiceImpl(
         }-${UUID.randomUUID()}-${UUID.randomUUID()}-${UUID.randomUUID()}"
         updateOrThrowException {
             userService.update(
-                KtUpdateWrapper(User())
+                KtUpdateWrapper(User::class.java)
                     .eq(User::id, user.id)
                     .set(User::forget, code),
             )
@@ -289,20 +289,20 @@ class AuthenticationServiceImpl(
         val user =
             queryOrThrowException(RetrieveCodeErrorOrExpiredException()) {
                 userService.getOne(
-                    KtQueryWrapper(User())
+                    KtQueryWrapper(User::class.java)
                         .eq(User::forget, retrieveParam.code),
                 )
             }
         val userInfo =
             queryOrThrowException {
                 userInfoService.getOne(
-                    KtQueryWrapper(UserInfo())
+                    KtQueryWrapper(UserInfo::class.java)
                         .eq(UserInfo::userId, user.id),
                 )
             }
         updateOrThrowException {
             userService.update(
-                KtUpdateWrapper(User())
+                KtUpdateWrapper(User::class.java)
                     .eq(User::id, user.id)
                     .set(User::forget, null)
                     .set(User::password, passwordEncoder.encode(retrieveParam.password!!)),
@@ -351,7 +351,7 @@ class AuthenticationServiceImpl(
 
         updateOrThrowException {
             userService.update(
-                KtUpdateWrapper(User())
+                KtUpdateWrapper(User::class.java)
                     .eq(User::id, user.id)
                     .set(User::twoFactor, "$secretKey?"),
             )
@@ -373,7 +373,7 @@ class AuthenticationServiceImpl(
         if (TOTPUtil.validateCode(secretKey, twoFactorValidateParam.code!!)) {
             updateOrThrowException {
                 userService.update(
-                    KtUpdateWrapper(User())
+                    KtUpdateWrapper(User::class.java)
                         .eq(User::id, user.id)
                         .set(User::twoFactor, secretKey),
                 )
@@ -393,7 +393,7 @@ class AuthenticationServiceImpl(
         if (TOTPUtil.validateCode(user.twoFactor!!, twoFactorRemoveParam.code!!)) {
             updateOrThrowException {
                 userService.update(
-                    KtUpdateWrapper(User())
+                    KtUpdateWrapper(User::class.java)
                         .eq(User::id, user.id)
                         .set(User::twoFactor, null),
                 )
@@ -623,7 +623,7 @@ class AuthenticationServiceImpl(
                     lastLoginIp = loginUser.user.currentLoginIp
                     lastLoginTime = loginUser.user.currentLoginTime
                 },
-                KtUpdateWrapper(User())
+                KtUpdateWrapper(User::class.java)
                     .eq(User::username, loginUser.username),
             )
         }

@@ -114,7 +114,7 @@ class PluginModuleServiceImpl(
         val digest = FileSystemPluginModuleStore.sha256(bytes)
         moduleStore.install(digest, bytes)
         val resolved = coordinate ?: MavenCoordinateUtil.read(bytes)
-        val staged = getOne(KtQueryWrapper(PluginModule()).eq(PluginModule::sha256, digest))
+        val staged = getOne(KtQueryWrapper(PluginModule::class.java).eq(PluginModule::sha256, digest))
         if (staged == null) {
             saveOrThrowException(PluginInstallException("Cannot stage module $digest")) {
                 save(
@@ -163,14 +163,14 @@ class PluginModuleServiceImpl(
     @Synchronized
     @Transactional
     override fun delete(sha256: String) {
-        val module = getOne(KtQueryWrapper(PluginModule()).eq(PluginModule::sha256, sha256))
+        val module = getOne(KtQueryWrapper(PluginModule::class.java).eq(PluginModule::sha256, sha256))
         if (module != null) {
             val moduleId =
                 module.id
                     ?: throw PluginInstallException("Module has no ID: ${module.coordinate}")
             val references =
                 pluginModuleRefService.list(
-                    KtQueryWrapper(PluginModuleRef()).eq(PluginModuleRef::moduleId, moduleId),
+                    KtQueryWrapper(PluginModuleRef::class.java).eq(PluginModuleRef::moduleId, moduleId),
                 )
             if (references.isNotEmpty()) {
                 val pluginIds = references.mapNotNull { it.pluginId }.sorted().joinToString()
@@ -192,7 +192,7 @@ class PluginModuleServiceImpl(
     @Transactional
     override fun release(pluginId: String) {
         pluginModuleRefService.remove(
-            KtQueryWrapper(PluginModuleRef()).eq(PluginModuleRef::pluginId, pluginId),
+            KtQueryWrapper(PluginModuleRef::class.java).eq(PluginModuleRef::pluginId, pluginId),
         )
     }
 
@@ -208,7 +208,7 @@ class PluginModuleServiceImpl(
         val page = Page<PluginModule>(param?.currentPage ?: 1, param?.pageSize ?: 20)
         setPageSort(param, page, OrderItem.asc("create_time"))
         val wrapper =
-            KtQueryWrapper(PluginModule()).apply {
+            KtQueryWrapper(PluginModule::class.java).apply {
                 param?.searchGroup?.let { like(PluginModule::groupId, it) }
                 param?.searchArtifact?.let { like(PluginModule::artifactId, it) }
                 param?.searchVersion?.let { like(PluginModule::moduleVersion, it) }
@@ -234,7 +234,7 @@ class PluginModuleServiceImpl(
      * @since 1.0.0
      */
     override fun get(groupId: String, artifactId: String, version: String): PluginModule? = getOne(
-        KtQueryWrapper(PluginModule())
+        KtQueryWrapper(PluginModule::class.java)
             .eq(PluginModule::groupId, groupId)
             .eq(PluginModule::artifactId, artifactId)
             .eq(PluginModule::moduleVersion, version),
@@ -290,7 +290,7 @@ class PluginModuleServiceImpl(
     override fun store(): PluginModuleStore = moduleStore
 
     private fun upsert(module: LockedModule): PluginModule {
-        val staged = getOne(KtQueryWrapper(PluginModule()).eq(PluginModule::sha256, module.sha256))
+        val staged = getOne(KtQueryWrapper(PluginModule::class.java).eq(PluginModule::sha256, module.sha256))
         if (staged != null) {
             claim(module, staged)
             return staged
@@ -367,7 +367,7 @@ class PluginModuleServiceImpl(
         }
         val references =
             pluginModuleRefService.list(
-                KtQueryWrapper(PluginModuleRef()).`in`(PluginModuleRef::moduleId, moduleIds),
+                KtQueryWrapper(PluginModuleRef::class.java).`in`(PluginModuleRef::moduleId, moduleIds),
             )
         val pluginIds = references.mapNotNull { it.pluginId }.distinct()
         val plugins =
@@ -375,7 +375,7 @@ class PluginModuleServiceImpl(
                 emptyMap()
             } else {
                 apiPluginMapper
-                    .selectList(KtQueryWrapper(ApiPlugin()).`in`(ApiPlugin::pluginId, pluginIds))
+                    .selectList(KtQueryWrapper(ApiPlugin::class.java).`in`(ApiPlugin::pluginId, pluginIds))
                     .mapNotNull { plugin -> plugin.pluginId?.let { it to plugin } }
                     .toMap()
             }
@@ -399,7 +399,7 @@ class PluginModuleServiceImpl(
 
     private fun replaceReferences(pluginId: String, modules: List<PluginModule>) {
         pluginModuleRefService.remove(
-            KtQueryWrapper(PluginModuleRef()).eq(PluginModuleRef::pluginId, pluginId),
+            KtQueryWrapper(PluginModuleRef::class.java).eq(PluginModuleRef::pluginId, pluginId),
         )
         modules.forEach { module ->
             val moduleId = module.id ?: throw PluginInstallException("Module has no ID: ${module.coordinate}")

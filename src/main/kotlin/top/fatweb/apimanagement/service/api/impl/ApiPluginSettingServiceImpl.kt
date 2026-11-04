@@ -25,13 +25,13 @@ class ApiPluginSettingServiceImpl :
     ServiceImpl<ApiPluginSettingMapper, ApiPluginSetting>(),
     IApiPluginSettingService {
     override fun get(pluginId: String, key: String): String? = getOne(
-        KtQueryWrapper(ApiPluginSetting())
+        KtQueryWrapper(ApiPluginSetting::class.java)
             .eq(ApiPluginSetting::pluginId, pluginId)
             .eq(ApiPluginSetting::settingKey, key),
     )?.settingValue
 
     override fun listByPlugin(pluginId: String): Map<String, String> =
-        list(KtQueryWrapper(ApiPluginSetting()).eq(ApiPluginSetting::pluginId, pluginId))
+        list(KtQueryWrapper(ApiPluginSetting::class.java).eq(ApiPluginSetting::pluginId, pluginId))
             .mapNotNull { setting ->
                 val key = setting.settingKey
                 val value = setting.settingValue
@@ -43,7 +43,7 @@ class ApiPluginSettingServiceImpl :
     override fun set(pluginId: String, key: String, value: String) {
         val existing =
             getOne(
-                KtQueryWrapper(ApiPluginSetting())
+                KtQueryWrapper(ApiPluginSetting::class.java)
                     .eq(ApiPluginSetting::pluginId, pluginId)
                     .eq(ApiPluginSetting::settingKey, key),
             )
@@ -67,7 +67,7 @@ class ApiPluginSettingServiceImpl :
     @Transactional
     override fun delete(pluginId: String, key: String) {
         remove(
-            KtQueryWrapper(ApiPluginSetting())
+            KtQueryWrapper(ApiPluginSetting::class.java)
                 .eq(ApiPluginSetting::pluginId, pluginId)
                 .eq(ApiPluginSetting::settingKey, key),
         )
@@ -75,6 +75,6 @@ class ApiPluginSettingServiceImpl :
 
     @Transactional
     override fun deleteByPlugin(pluginId: String) {
-        remove(KtQueryWrapper(ApiPluginSetting()).eq(ApiPluginSetting::pluginId, pluginId))
+        remove(KtQueryWrapper(ApiPluginSetting::class.java).eq(ApiPluginSetting::pluginId, pluginId))
     }
 }

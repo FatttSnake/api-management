@@ -105,7 +105,9 @@ class RoleServiceImpl(
         val oldPowerList =
             rPowerRoleService
                 .list(
-                    KtQueryWrapper(RPowerRole()).select(RPowerRole::powerId).eq(RPowerRole::roleId, roleUpdateParam.id),
+                    KtQueryWrapper(RPowerRole::class.java)
+                        .select(RPowerRole::powerId)
+                        .eq(RPowerRole::roleId, roleUpdateParam.id),
                 ).map(RPowerRole::powerId)
         val addPowerIds = HashSet<Long>()
         val removePowerIds = HashSet<Long>()
@@ -118,7 +120,7 @@ class RoleServiceImpl(
 
         removePowerIds.forEach {
             rPowerRoleService.remove(
-                KtQueryWrapper(RPowerRole())
+                KtQueryWrapper(RPowerRole::class.java)
                     .eq(
                         RPowerRole::roleId,
                         roleUpdateParam.id,
@@ -158,7 +160,7 @@ class RoleServiceImpl(
     @Transactional
     override fun delete(roleDeleteParam: RoleDeleteParam) {
         removeBatchByIds(roleDeleteParam.ids)
-        rPowerRoleService.remove(KtQueryWrapper(RPowerRole()).`in`(RPowerRole::roleId, roleDeleteParam.ids))
+        rPowerRoleService.remove(KtQueryWrapper(RPowerRole::class.java).`in`(RPowerRole::roleId, roleDeleteParam.ids))
         offlineUser(*roleDeleteParam.ids!!.toLongArray())
     }
 

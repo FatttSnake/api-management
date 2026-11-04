@@ -34,7 +34,7 @@ class ApiAuditServiceImpl(private val apiKeyService: IApiKeyService, private val
         setPageSort(apiAuditGetParam, page, OrderItem.desc("operate_time"))
 
         val wrapper =
-            KtQueryWrapper(EventLog()).apply {
+            KtQueryWrapper(EventLog::class.java).apply {
                 `in`(
                     EventLog::event,
                     listOf(

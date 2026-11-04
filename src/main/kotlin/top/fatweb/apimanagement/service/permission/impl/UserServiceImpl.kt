@@ -125,7 +125,7 @@ class UserServiceImpl(
         val userId = getLoginUserIdOrThrow()
         updateOrThrowException {
             userInfoService.update(
-                KtUpdateWrapper(UserInfo())
+                KtUpdateWrapper(UserInfo::class.java)
                     .eq(UserInfo::userId, userId)
                     .set(!userInfoUpdateParam.avatar.isNullOrBlank(), UserInfo::avatar, userInfoUpdateParam.avatar)
                     .set(
@@ -151,7 +151,7 @@ class UserServiceImpl(
 
         updateOrThrowException {
             update(
-                KtUpdateWrapper(User())
+                KtUpdateWrapper(User::class.java)
                     .eq(User::id, user.id)
                     .set(User::password, passwordEncoder.encode(userChangePasswordParam.newPassword))
                     .set(User::credentialsExpiration, null)
@@ -253,7 +253,7 @@ class UserServiceImpl(
         val oldRoleList =
             rUserRoleService
                 .list(
-                    KtQueryWrapper(RUserRole())
+                    KtQueryWrapper(RUserRole::class.java)
                         .select(RUserRole::roleId)
                         .eq(RUserRole::userId, userUpdateParam.id),
                 ).map(RUserRole::roleId)
@@ -269,7 +269,7 @@ class UserServiceImpl(
         val oldGroupList =
             rUserGroupService
                 .list(
-                    KtQueryWrapper(RUserGroup())
+                    KtQueryWrapper(RUserGroup::class.java)
                         .select(RUserGroup::groupId)
                         .eq(RUserGroup::userId, userUpdateParam.id),
                 ).map(RUserGroup::groupId)
@@ -285,7 +285,7 @@ class UserServiceImpl(
         updateOrThrowException { updateById(user) }
         updateOrThrowException {
             update(
-                KtUpdateWrapper(User())
+                KtUpdateWrapper(User::class.java)
                     .eq(User::id, user.id)
                     .set(
                         User::verify,
@@ -307,7 +307,7 @@ class UserServiceImpl(
         user.userInfo?.let { userInfo ->
             userInfoService
                 .getOne(
-                    KtQueryWrapper(UserInfo())
+                    KtQueryWrapper(UserInfo::class.java)
                         .select(UserInfo::id)
                         .eq(UserInfo::userId, userUpdateParam.id),
                 )?.let {
@@ -320,7 +320,7 @@ class UserServiceImpl(
 
         removeRoleIds.forEach {
             rUserRoleService.remove(
-                KtQueryWrapper(RUserRole())
+                KtQueryWrapper(RUserRole::class.java)
                     .eq(
                         RUserRole::userId,
                         userUpdateParam.id,
@@ -341,7 +341,7 @@ class UserServiceImpl(
 
         removeGroupIds.forEach {
             rUserGroupService.remove(
-                KtQueryWrapper(RUserGroup())
+                KtQueryWrapper(RUserGroup::class.java)
                     .eq(
                         RUserGroup::userId,
                         userUpdateParam.id,
@@ -371,7 +371,7 @@ class UserServiceImpl(
         val user = queryOrThrowException { getById(userUpdatePasswordParam.id) }
         updateOrThrowException {
             update(
-                KtUpdateWrapper(User())
+                KtUpdateWrapper(User::class.java)
                     .eq(User::id, user.id)
                     .set(User::password, passwordEncoder.encode(userUpdatePasswordParam.password))
                     .set(
@@ -407,9 +407,9 @@ class UserServiceImpl(
         }
 
         removeBatchByIds(ids)
-        userInfoService.remove(KtQueryWrapper(UserInfo()).`in`(UserInfo::userId, ids))
-        rUserRoleService.remove(KtQueryWrapper(RUserRole()).`in`(RUserRole::userId, ids))
-        rUserGroupService.remove(KtQueryWrapper(RUserGroup()).`in`(RUserGroup::userId, ids))
+        userInfoService.remove(KtQueryWrapper(UserInfo::class.java).`in`(UserInfo::userId, ids))
+        rUserRoleService.remove(KtQueryWrapper(RUserRole::class.java).`in`(RUserRole::userId, ids))
+        rUserGroupService.remove(KtQueryWrapper(RUserGroup::class.java).`in`(RUserGroup::userId, ids))
 
         offlineUser(serverProperties = serverProperties, redisProvider = redisProvider, *ids.toLongArray())
     }

@@ -97,9 +97,9 @@ class GroupServiceImpl(
         val oldRoleList =
             rRoleGroupService
                 .list(
-                    KtQueryWrapper(
-                        RRoleGroup(),
-                    ).select(RRoleGroup::roleId).eq(RRoleGroup::groupId, groupUpdateParam.id),
+                    KtQueryWrapper(RRoleGroup::class.java)
+                        .select(RRoleGroup::roleId)
+                        .eq(RRoleGroup::groupId, groupUpdateParam.id),
                 ).map(RRoleGroup::roleId)
         val addRoleIds = HashSet<Long>()
         val removeRoleIds = HashSet<Long>()
@@ -112,7 +112,7 @@ class GroupServiceImpl(
 
         removeRoleIds.forEach {
             rRoleGroupService.remove(
-                KtQueryWrapper(RRoleGroup())
+                KtQueryWrapper(RRoleGroup::class.java)
                     .eq(
                         RRoleGroup::groupId,
                         groupUpdateParam.id,
@@ -152,7 +152,7 @@ class GroupServiceImpl(
     @Transactional
     override fun delete(groupDeleteParam: GroupDeleteParam) {
         removeBatchByIds(groupDeleteParam.ids)
-        rRoleGroupService.remove(KtQueryWrapper(RRoleGroup()).`in`(RRoleGroup::groupId, groupDeleteParam.ids))
+        rRoleGroupService.remove(KtQueryWrapper(RRoleGroup::class.java).`in`(RRoleGroup::groupId, groupDeleteParam.ids))
         offlineUser(*groupDeleteParam.ids!!.toLongArray())
     }
 

@@ -205,7 +205,7 @@ class StatisticsServiceImpl(
         val history: List<OnlineInfoVo.HistoryVo> =
             statisticsLogService
                 .list(
-                    KtQueryWrapper(StatisticsLog())
+                    KtQueryWrapper(StatisticsLog::class.java)
                         .select(StatisticsLog::value, StatisticsLog::recordTime)
                         .eq(StatisticsLog::key, StatisticsLog.KeyItem.ONLINE_USERS_COUNT)
                         .between(

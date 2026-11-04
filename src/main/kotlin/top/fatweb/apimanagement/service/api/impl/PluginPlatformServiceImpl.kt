@@ -379,13 +379,13 @@ class PluginPlatformServiceImpl(
      * @since 1.0.0
      */
     override fun get(pluginId: String): ApiPlugin? =
-        getOne(KtQueryWrapper(ApiPlugin()).eq(ApiPlugin::pluginId, pluginId))
+        getOne(KtQueryWrapper(ApiPlugin::class.java).eq(ApiPlugin::pluginId, pluginId))
 
     override fun getPluginPage(param: ApiPluginGetParam?): PageVo<ApiPluginVo> {
         val page = Page<ApiPlugin>(param?.currentPage ?: 1, param?.pageSize ?: 20)
         setPageSort(param, page, OrderItem.desc("create_time"))
         val wrapper =
-            KtQueryWrapper(ApiPlugin()).apply {
+            KtQueryWrapper(ApiPlugin::class.java).apply {
                 param?.searchName?.let { like(ApiPlugin::name, it) }
                 param?.enable?.let { eq(ApiPlugin::enable, if (it) 1 else 0) }
             }
@@ -402,7 +402,7 @@ class PluginPlatformServiceImpl(
         runtimeRegistry.withLock(pluginId) {
             val wasEnabled = existing.enable == 1
             update(
-                KtUpdateWrapper(ApiPlugin()).apply {
+                KtUpdateWrapper(ApiPlugin::class.java).apply {
                     eq(ApiPlugin::id, param.id)
                     param.enable?.let { set(ApiPlugin::enable, if (it) 1 else 0) }
                     set(ApiPlugin::defaultPrice, param.defaultPrice)
@@ -450,7 +450,7 @@ class PluginPlatformServiceImpl(
 
         val pluginById =
             list(
-                KtQueryWrapper(ApiPlugin()).`in`(ApiPlugin::pluginId, pluginIds),
+                KtQueryWrapper(ApiPlugin::class.java).`in`(ApiPlugin::pluginId, pluginIds),
             ).associateBy { it.pluginId }
         val orderedPluginIds =
             pluginIds.sortedWith(
@@ -467,7 +467,7 @@ class PluginPlatformServiceImpl(
         val interfaces =
             apiInterfaceService
                 .list(
-                    KtQueryWrapper(ApiInterface())
+                    KtQueryWrapper(ApiInterface::class.java)
                         .apply { addInterfaceFilter() }
                         .`in`(ApiInterface::pluginId, pagePluginIds),
                 ).sortedWith(compareByDescending<ApiInterface> { it.createTime }.thenByDescending { it.id })
@@ -488,7 +488,7 @@ class PluginPlatformServiceImpl(
     override fun updateInterface(param: ApiInterfaceUpdateParam) {
         updateOrThrowException(NoRecordFoundException()) {
             apiInterfaceService.update(
-                KtUpdateWrapper(ApiInterface()).apply {
+                KtUpdateWrapper(ApiInterface::class.java).apply {
                     eq(ApiInterface::id, param.id)
                     set(ApiInterface::price, param.price)
                     set(ApiInterface::billingMode, param.billingMode)
@@ -506,7 +506,7 @@ class PluginPlatformServiceImpl(
     override fun updateInterfaceStatus(param: ApiInterfaceUpdateStatusParam) {
         updateOrThrowException(NoRecordFoundException()) {
             apiInterfaceService.update(
-                KtUpdateWrapper(ApiInterface()).apply {
+                KtUpdateWrapper(ApiInterface::class.java).apply {
                     eq(ApiInterface::id, param.id)
                     set(ApiInterface::enable, if (param.enable == true) 1 else 0)
                     set(ApiInterface::updateTime, LocalDateTime.now())
@@ -730,7 +730,7 @@ class PluginPlatformServiceImpl(
         }
         updateOrThrowException {
             update(
-                KtUpdateWrapper(ApiPlugin()).apply {
+                KtUpdateWrapper(ApiPlugin::class.java).apply {
                     eq(ApiPlugin::id, row.id)
                     set(ApiPlugin::configSchema, schemaJson)
                     set(ApiPlugin::openapi, openapiJson)
@@ -746,7 +746,7 @@ class PluginPlatformServiceImpl(
     private fun updateLoadState(row: ApiPlugin, status: String, code: String?, error: String?) {
         updateOrThrowException {
             update(
-                KtUpdateWrapper(ApiPlugin()).apply {
+                KtUpdateWrapper(ApiPlugin::class.java).apply {
                     eq(ApiPlugin::id, row.id)
                     set(ApiPlugin::loadStatus, status)
                     set(ApiPlugin::loadErrorCode, code)

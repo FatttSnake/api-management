@@ -47,7 +47,7 @@ class StorageBlobServiceImpl(private val fileStorageProvider: FileStorageProvide
     @Transactional
     override fun removeFile(fileHash: String): Long {
         baseMapper.update(
-            KtUpdateWrapper(StorageBlob())
+            KtUpdateWrapper(StorageBlob::class.java)
                 .eq(StorageBlob::fileHash, fileHash)
                 .gt(StorageBlob::referenceCount, 0)
                 .setSql("reference_count = reference_count - 1"),
@@ -65,7 +65,7 @@ class StorageBlobServiceImpl(private val fileStorageProvider: FileStorageProvide
 
         val candidates =
             list(
-                KtQueryWrapper(StorageBlob())
+                KtQueryWrapper(StorageBlob::class.java)
                     .le(StorageBlob::referenceCount, 0)
                     .lt(StorageBlob::updateTime, cutoff),
             )
@@ -80,7 +80,7 @@ class StorageBlobServiceImpl(private val fileStorageProvider: FileStorageProvide
             // while a row deleted before its bytes only wastes them
             val forgotten =
                 baseMapper.delete(
-                    KtQueryWrapper(StorageBlob())
+                    KtQueryWrapper(StorageBlob::class.java)
                         .eq(StorageBlob::fileHash, fileHash)
                         .le(StorageBlob::referenceCount, 0),
                 ) > 0

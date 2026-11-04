@@ -46,7 +46,7 @@ class ApiAccountServiceImpl(
         setPageSort(apiAccountGetParam, page, OrderItem.desc("create_time"))
 
         val wrapper =
-            KtQueryWrapper(ApiAccount()).apply {
+            KtQueryWrapper(ApiAccount::class.java).apply {
                 apiAccountGetParam?.enable?.let { eq(ApiAccount::enable, if (it) 1 else 0) }
             }
         val accountPage = page(page, wrapper)
@@ -108,7 +108,7 @@ class ApiAccountServiceImpl(
         cost.signum() <= 0 || getBalance(userId) >= cost
 
     private fun getOrCreate(userId: Long): ApiAccount {
-        getOne(KtQueryWrapper(ApiAccount()).eq(ApiAccount::userId, userId))?.let { return it }
+        getOne(KtQueryWrapper(ApiAccount::class.java).eq(ApiAccount::userId, userId))?.let { return it }
 
         val account =
             ApiAccount().apply {

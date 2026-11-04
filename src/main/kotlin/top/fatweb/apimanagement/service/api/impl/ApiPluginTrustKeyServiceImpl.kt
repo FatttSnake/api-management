@@ -36,7 +36,7 @@ class ApiPluginTrustKeyServiceImpl :
     ServiceImpl<ApiPluginTrustKeyMapper, ApiPluginTrustKey>(),
     IApiPluginTrustKeyService {
     override fun getByKeyId(keyId: String): ApiPluginTrustKey? =
-        getOne(KtQueryWrapper(ApiPluginTrustKey()).eq(ApiPluginTrustKey::keyId, keyId))
+        getOne(KtQueryWrapper(ApiPluginTrustKey::class.java).eq(ApiPluginTrustKey::keyId, keyId))
 
     override fun get(apiPluginTrustKeyGetParam: ApiPluginTrustKeyGetParam?): PageVo<ApiPluginTrustKeyVo> {
         val page =
@@ -47,7 +47,7 @@ class ApiPluginTrustKeyServiceImpl :
         setPageSort(apiPluginTrustKeyGetParam, page, OrderItem.asc("create_time"))
 
         val wrapper =
-            KtQueryWrapper(ApiPluginTrustKey()).apply {
+            KtQueryWrapper(ApiPluginTrustKey::class.java).apply {
                 apiPluginTrustKeyGetParam?.searchAlias?.let { like(ApiPluginTrustKey::alias, it) }
                 apiPluginTrustKeyGetParam?.enable?.let { eq(ApiPluginTrustKey::enable, if (it) 1 else 0) }
             }

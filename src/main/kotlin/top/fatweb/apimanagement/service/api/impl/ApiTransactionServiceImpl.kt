@@ -46,7 +46,7 @@ class ApiTransactionServiceImpl :
                 getLoginUserIdOrThrow()
             }
         val wrapper =
-            KtQueryWrapper(ApiTransaction()).apply {
+            KtQueryWrapper(ApiTransaction::class.java).apply {
                 eq(ApiTransaction::userId, targetUserId)
                 apiTransactionGetParam?.type?.let { eq(ApiTransaction::type, it) }
                 apiTransactionGetParam?.startTime?.let { ge(ApiTransaction::createTime, it) }
@@ -57,12 +57,12 @@ class ApiTransactionServiceImpl :
     }
 
     override fun getByOrderNo(orderNo: String): ApiTransaction? =
-        getOne(KtQueryWrapper(ApiTransaction()).eq(ApiTransaction::orderNo, orderNo))
+        getOne(KtQueryWrapper(ApiTransaction::class.java).eq(ApiTransaction::orderNo, orderNo))
 
     @Transactional
     override fun saveDeduct(apiUsage: ApiUsage, balanceAfter: BigDecimal): Boolean {
         val usageId = apiUsage.id ?: return false
-        if (count(KtQueryWrapper(ApiTransaction()).eq(ApiTransaction::apiUsageId, usageId)) > 0) {
+        if (count(KtQueryWrapper(ApiTransaction::class.java).eq(ApiTransaction::apiUsageId, usageId)) > 0) {
             return true
         }
 

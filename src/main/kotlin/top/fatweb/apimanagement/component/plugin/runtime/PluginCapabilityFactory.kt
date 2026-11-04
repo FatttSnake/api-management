@@ -127,7 +127,7 @@ class PluginCapabilityFactory(
             val user = userMapper.selectById(userId) ?: return null
             val info =
                 userInfoMapper.selectOne(
-                    KtQueryWrapper(UserInfoEntity()).eq(UserInfoEntity::userId, userId),
+                    KtQueryWrapper(UserInfoEntity::class.java).eq(UserInfoEntity::userId, userId),
                 )
             return ApiUserInfo(
                 id = user.id ?: userId,

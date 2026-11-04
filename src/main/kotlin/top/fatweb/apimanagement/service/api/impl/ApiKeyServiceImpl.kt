@@ -81,7 +81,7 @@ class ApiKeyServiceImpl(
         val loginUserId = getLoginUserIdOrThrow()
         val targetUserId = if (managed) apiKeyGetParam?.userId ?: loginUserId else loginUserId
         val wrapper =
-            KtQueryWrapper(ApiKey()).apply {
+            KtQueryWrapper(ApiKey::class.java).apply {
                 eq(ApiKey::userId, targetUserId)
                 apiKeyGetParam?.searchName?.let { like(ApiKey::name, it) }
                 apiKeyGetParam?.enable?.let { eq(ApiKey::enable, if (it) 1 else 0) }
@@ -124,7 +124,7 @@ class ApiKeyServiceImpl(
 
         updateOrThrowException {
             update(
-                KtUpdateWrapper(ApiKey()).apply {
+                KtUpdateWrapper(ApiKey::class.java).apply {
                     eq(ApiKey::id, apiKeyUpdateParam.id)
                     set(ApiKey::name, apiKeyUpdateParam.name)
                     set(
@@ -190,7 +190,7 @@ class ApiKeyServiceImpl(
     }
 
     override fun getByAccessKey(accessKey: String): ApiKey? =
-        getOne(KtQueryWrapper(ApiKey()).eq(ApiKey::accessKey, accessKey))
+        getOne(KtQueryWrapper(ApiKey::class.java).eq(ApiKey::accessKey, accessKey))
 
     override fun touchLastUsedTime(keyId: Long) {
         val gateKey = "${serverProperties.security.tokenIssuer}_apikey_lastused:$keyId"
@@ -202,7 +202,7 @@ class ApiKeyServiceImpl(
         // Wrapper-based partial update: bypasses the optimistic-lock version check and does
         // not auto-fill update_time — a "last used" touch should not count as an edit.
         update(
-            KtUpdateWrapper(ApiKey()).apply {
+            KtUpdateWrapper(ApiKey::class.java).apply {
                 eq(ApiKey::id, keyId)
                 set(ApiKey::lastUsedTime, LocalDateTime.now(ZoneOffset.UTC))
             },

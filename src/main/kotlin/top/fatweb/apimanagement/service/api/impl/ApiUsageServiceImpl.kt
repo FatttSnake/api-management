@@ -40,7 +40,7 @@ class ApiUsageServiceImpl(
         val loginUserId = getLoginUserIdOrThrow()
         val targetUserId = if (managed) apiUsageGetParam?.userId ?: loginUserId else loginUserId
         val wrapper =
-            KtQueryWrapper(ApiUsage()).apply {
+            KtQueryWrapper(ApiUsage::class.java).apply {
                 eq(ApiUsage::userId, targetUserId)
                 apiUsageGetParam?.apiKeyId?.let { eq(ApiUsage::apiKeyId, it) }
                 apiUsageGetParam?.apiCode?.let { like(ApiUsage::apiCode, it) }

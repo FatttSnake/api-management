@@ -54,7 +54,7 @@ class PluginEndpointRegistrar(
         val previousByCode =
             apiInterfaceService
                 .list(
-                    KtQueryWrapper(ApiInterface()).eq(ApiInterface::pluginId, pluginId),
+                    KtQueryWrapper(ApiInterface::class.java).eq(ApiInterface::pluginId, pluginId),
                 ).mapNotNull { interfaceRow -> interfaceRow.code?.let { code -> code to interfaceRow } }
                 .toMap()
 
@@ -70,7 +70,7 @@ class PluginEndpointRegistrar(
             if (interfaceRow.path != path || interfaceRow.method != route.definition.method) {
                 updateOrThrowException {
                     apiInterfaceService.update(
-                        KtUpdateWrapper(ApiInterface()).apply {
+                        KtUpdateWrapper(ApiInterface::class.java).apply {
                             eq(ApiInterface::id, interfaceRow.id)
                             set(ApiInterface::path, "#moving:${interfaceRow.id}")
                         },
@@ -114,7 +114,7 @@ class PluginEndpointRegistrar(
         }
 
         (previousByCode.keys - routesByCode.keys).forEach { code ->
-            operationService.getOne(KtQueryWrapper(Operation()).eq(Operation::code, code))?.let { operation ->
+            operationService.getOne(KtQueryWrapper(Operation::class.java).eq(Operation::code, code))?.let { operation ->
                 operation.id?.let { powerService.removeById(it) }
                 operation.id?.let { operationService.removeById(it) }
             }
@@ -130,17 +130,17 @@ class PluginEndpointRegistrar(
      */
     fun remove(pluginId: String) {
         apiInterfaceService.remove(
-            KtQueryWrapper(ApiInterface()).eq(ApiInterface::pluginId, pluginId),
+            KtQueryWrapper(ApiInterface::class.java).eq(ApiInterface::pluginId, pluginId),
         )
-        val menu = menuService.getOne(KtQueryWrapper(Menu()).eq(Menu::pluginId, pluginId)) ?: return
+        val menu = menuService.getOne(KtQueryWrapper(Menu::class.java).eq(Menu::pluginId, pluginId)) ?: return
         val menuId = menu.id ?: return
-        val scopes = scopeService.list(KtQueryWrapper(Scope()).eq(Scope::menuId, menuId))
+        val scopes = scopeService.list(KtQueryWrapper(Scope::class.java).eq(Scope::menuId, menuId))
         val scopeIds = scopes.mapNotNull { it.id }
         val operations =
             if (scopeIds.isEmpty()) {
                 emptyList()
             } else {
-                operationService.list(KtQueryWrapper(Operation()).`in`(Operation::scopeId, scopeIds))
+                operationService.list(KtQueryWrapper(Operation::class.java).`in`(Operation::scopeId, scopeIds))
             }
         operations.forEach { operation ->
             operation.id?.let { powerService.removeById(it) }
@@ -158,7 +158,7 @@ class PluginEndpointRegistrar(
         "/api/$pluginId/v${route.definition.apiVersion}${route.definition.path}"
 
     private fun ensureMenu(pluginId: String, name: String): Menu {
-        menuService.getOne(KtQueryWrapper(Menu()).eq(Menu::pluginId, pluginId))?.let { return it }
+        menuService.getOne(KtQueryWrapper(Menu::class.java).eq(Menu::pluginId, pluginId))?.let { return it }
         val menu =
             Menu().apply {
                 this.pluginId = pluginId
@@ -178,7 +178,7 @@ class PluginEndpointRegistrar(
     private fun ensureScope(name: String, menuId: Long): Long {
         scopeService
             .getOne(
-                KtQueryWrapper(Scope()).eq(Scope::name, name).eq(Scope::menuId, menuId),
+                KtQueryWrapper(Scope::class.java).eq(Scope::name, name).eq(Scope::menuId, menuId),
             )?.let { scope ->
                 return scope.id ?: throw PluginInstallException("Scope $name has no ID")
             }
@@ -196,7 +196,7 @@ class PluginEndpointRegistrar(
     }
 
     private fun upsertOperation(code: String, name: String, scopeId: Long) {
-        val existing = operationService.getOne(KtQueryWrapper(Operation()).eq(Operation::code, code))
+        val existing = operationService.getOne(KtQueryWrapper(Operation::class.java).eq(Operation::code, code))
         if (existing == null) {
             val operation =
                 Operation().apply {

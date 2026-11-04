@@ -32,8 +32,8 @@ class InitConfig(
 
     @PostConstruct
     fun init() {
-        if (!userService.exists(KtQueryWrapper(User()).eq(User::id, 0))) {
-            userInfoService.remove(KtQueryWrapper(UserInfo()).eq(UserInfo::userId, 0))
+        if (!userService.exists(KtQueryWrapper(User::class.java).eq(User::id, 0))) {
+            userInfoService.remove(KtQueryWrapper(UserInfo::class.java).eq(UserInfo::userId, 0))
 
             val rawPassword =
                 serverProperties.admin.password ?: let {
