@@ -191,11 +191,16 @@ Every API is contributed by a plugin. A plugin is a standalone Gradle project ap
 **`top.fatweb.api-plugin`** Gradle plugin; its only compile dependency is
 `top.fatweb:api-management-gateway-api`.
 
-Publish the contract and tooling once:
+The contract and tooling are published to the project's Nexus repository:
 
 ```shell
-./gradlew :gateway-api:publishToMavenLocal :plugin-signing:publishToMavenLocal :plugin-gradle-plugin:publishToMavenLocal
+./gradlew publishAllPublicationsToNexusRepository
 ```
+
+The publish target and its credentials stay machine-local: create `gradle/nexus-publish.local.gradle.kts`
+(it is gitignored) and set `nexusUsername` / `nexusPassword` in `~/.gradle/gradle.properties`
+(or `NEXUS_USERNAME` / `NEXUS_PASSWORD`). Plugin projects resolve both artifacts from
+`https://nexus.fatweb.top/repository/maven-public/`.
 
 `./gradlew build` produces a signed jar containing:
 

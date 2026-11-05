@@ -189,11 +189,16 @@ knife4j:
 
 平台的全部 API 都由插件提供。插件是独立 Gradle 工程，应用 **`top.fatweb.api-plugin`**，唯一编译依赖是 `top.fatweb:api-management-gateway-api`。
 
-发布契约与工具（本仓库内执行一次）：
+契约与工具发布到项目的 Nexus 仓库：
 
 ```shell
-./gradlew :gateway-api:publishToMavenLocal :plugin-signing:publishToMavenLocal :plugin-gradle-plugin:publishToMavenLocal
+./gradlew publishAllPublicationsToNexusRepository
 ```
+
+发布目标与凭据只保留在本地：创建 `gradle/nexus-publish.local.gradle.kts`（已在 gitignore 中），
+并在 `~/.gradle/gradle.properties` 配置 `nexusUsername` / `nexusPassword`（或使用环境变量
+`NEXUS_USERNAME` / `NEXUS_PASSWORD`）。插件工程从
+`https://nexus.fatweb.top/repository/maven-public/` 解析这两个构件。
 
 `./gradlew build` 产出已签名 jar，包含：
 

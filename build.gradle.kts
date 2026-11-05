@@ -215,3 +215,9 @@ if (env == "release") {
         finalizedBy("signBootJar")
     }
 }
+
+// The Nexus publishing target and its credentials are machine-local configuration, so the
+// script is gitignored and only applied when the maintainer has created it.
+file("gradle/nexus-publish.local.gradle.kts")
+    .takeIf { it.isFile }
+    ?.let { apply(from = it) }

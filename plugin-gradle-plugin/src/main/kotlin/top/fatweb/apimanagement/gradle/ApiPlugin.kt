@@ -220,6 +220,14 @@ class ApiPlugin : Plugin<Project> {
                 .map { it.url.toString() }
                 .toSet()
 
+        val nexusUrl = "https://nexus.fatweb.top/repository/maven-public/"
+        if (existing.none { url -> url.startsWith(nexusUrl) }) {
+            project.repositories.maven { repository ->
+                repository.name = "nexusPublic"
+                repository.url = project.uri(nexusUrl)
+            }
+        }
+
         val centralUrls =
             setOf(
                 "https://repo.maven.apache.org/maven2/",
