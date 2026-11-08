@@ -6,8 +6,7 @@ plugins {
     `maven-publish`
 }
 
-group = "top.fatweb"
-version = "1.0.0-SNAPSHOT"
+version = providers.gradleProperty("pluginToolingVersion").get()
 description = "api-management plugin signing"
 
 java {

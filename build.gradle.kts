@@ -43,8 +43,12 @@ tasks.named("check") {
 }
 
 group = "top.fatweb"
-version = "1.0.0-SNAPSHOT"
+version = providers.gradleProperty("apiManagementVersion").get()
 description = "api-management"
+
+subprojects {
+    group = rootProject.group
+}
 
 springBoot {
     buildInfo()

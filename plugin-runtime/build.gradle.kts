@@ -5,8 +5,7 @@ plugins {
     `java-library`
 }
 
-group = "top.fatweb"
-version = "1.0.0-SNAPSHOT"
+version = providers.gradleProperty("apiManagementVersion").get()
 description = "api-management plugin runtime"
 
 java {
