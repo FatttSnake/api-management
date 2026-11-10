@@ -195,9 +195,10 @@ knife4j:
 ./gradlew publishAllPublicationsToNexusRepository
 ```
 
-发布目标与凭据只保留在本地：创建 `gradle/nexus-publish.local.gradle.kts`（已在 gitignore 中），
-并在 `~/.gradle/gradle.properties` 配置 `nexusUsername` / `nexusPassword`（或使用环境变量
-`NEXUS_USERNAME` / `NEXUS_PASSWORD`）。插件工程从
+发布目标已提交为 `gradle/nexus-publish.gradle.kts`，其中不含任何凭据：在
+`~/.gradle/gradle.properties` 配置 `nexusUsername` / `nexusPassword`，或使用环境变量
+`NEXUS_USERNAME` / `NEXUS_PASSWORD`。本地可用 gitignore 的
+`gradle/nexus-publish.local.gradle.kts` 覆盖。插件工程从
 `https://nexus.fatweb.top/repository/maven-public/` 解析这两个构件。
 
 `./gradlew build` 产出已签名 jar，包含：

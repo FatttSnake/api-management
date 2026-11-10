@@ -205,7 +205,9 @@ tasks.named("assemble") {
 
 if (env == "release") {
     signing {
-        val signingKey = envOrProperty("GPG_SIGNING_KEY").orNull
+        val signingKey =
+            envOrProperty("GPG_SIGNING_KEY").orNull
+                ?: envOrProperty("GPG_SIGNING_KEY_FILE").orNull?.let { File(it).readText() }
         val signingPassword = envOrProperty("GPG_SIGNING_PASSWORD").orNull
         if (signingKey != null) {
             useInMemoryPgpKeys(signingKey.replace("\\n", "\n"), signingPassword)
@@ -220,8 +222,9 @@ if (env == "release") {
     }
 }
 
-// The Nexus publishing target and its credentials are machine-local configuration, so the
-// script is gitignored and only applied when the maintainer has created it.
-file("gradle/nexus-publish.local.gradle.kts")
-    .takeIf { it.isFile }
-    ?.let { apply(from = it) }
+// The checked-in publishing target reads credentials from the environment;
+// a machine-local override takes precedence when it exists.
+val nexusPublishScript =
+    file("gradle/nexus-publish.local.gradle.kts").takeIf { it.isFile }
+        ?: file("gradle/nexus-publish.gradle.kts").takeIf { it.isFile }
+nexusPublishScript?.let { apply(from = it) }

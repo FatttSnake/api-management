@@ -42,5 +42,5 @@ out/
 ### Custom ###
 /application-config.yml
 data
-# Machine-local publish target/credentials for the private Nexus
+# Optional machine-local override for the Nexus publishing target
 /gradle/nexus-publish.local.gradle.kts

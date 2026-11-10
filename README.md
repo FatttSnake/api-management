@@ -197,10 +197,11 @@ The contract and tooling are published to the project's Nexus repository:
 ./gradlew publishAllPublicationsToNexusRepository
 ```
 
-The publish target and its credentials stay machine-local: create `gradle/nexus-publish.local.gradle.kts`
-(it is gitignored) and set `nexusUsername` / `nexusPassword` in `~/.gradle/gradle.properties`
-(or `NEXUS_USERNAME` / `NEXUS_PASSWORD`). Plugin projects resolve both artifacts from
-`https://nexus.fatweb.top/repository/maven-public/`.
+The publish target is checked in as `gradle/nexus-publish.gradle.kts` and contains no
+credentials: set `nexusUsername` / `nexusPassword` in `~/.gradle/gradle.properties` or
+`NEXUS_USERNAME` / `NEXUS_PASSWORD` in the environment. A gitignored
+`gradle/nexus-publish.local.gradle.kts` takes precedence for machine-local overrides.
+Plugin projects resolve both artifacts from `https://nexus.fatweb.top/repository/maven-public/`.
 
 `./gradlew build` produces a signed jar containing:
 
