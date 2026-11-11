@@ -14,29 +14,31 @@ val nexusRepositories = "https://nexus.fatweb.top/repository"
 
 subprojects {
     plugins.withId("maven-publish") {
-        extensions.configure<PublishingExtension> {
-            repositories {
-                maven {
-                    name = "nexus"
-                    url =
-                        uri(
-                            if (project.version.toString().endsWith("-SNAPSHOT")) {
-                                "$nexusRepositories/maven-snapshots/"
-                            } else {
-                                "$nexusRepositories/maven-releases/"
-                            },
-                        )
-                    credentials {
-                        username =
-                            providers
-                                .gradleProperty("nexusUsername")
-                                .orElse(providers.environmentVariable("NEXUS_USERNAME"))
-                                .orNull
-                        password =
-                            providers
-                                .gradleProperty("nexusPassword")
-                                .orElse(providers.environmentVariable("NEXUS_PASSWORD"))
-                                .orNull
+        afterEvaluate {
+            extensions.configure<PublishingExtension> {
+                repositories {
+                    maven {
+                        name = "nexus"
+                        url =
+                            uri(
+                                if (project.version.toString().endsWith("-SNAPSHOT")) {
+                                    "$nexusRepositories/maven-snapshots/"
+                                } else {
+                                    "$nexusRepositories/maven-releases/"
+                                },
+                            )
+                        credentials {
+                            username =
+                                providers
+                                    .gradleProperty("nexusUsername")
+                                    .orElse(providers.environmentVariable("NEXUS_USERNAME"))
+                                    .orNull
+                            password =
+                                providers
+                                    .gradleProperty("nexusPassword")
+                                    .orElse(providers.environmentVariable("NEXUS_PASSWORD"))
+                                    .orNull
+                        }
                     }
                 }
             }
