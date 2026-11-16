@@ -77,7 +77,7 @@ abstract class GeneratePluginLock : DefaultTask() {
     abstract val outputFile: RegularFileProperty
 
     /**
-     * Directory receiving one `<sha256>.jar` per module.
+     * Directory receiving one `<group>-<artifact>-<version>.jar` per module.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -102,12 +102,14 @@ abstract class GeneratePluginLock : DefaultTask() {
                 }.associate { (coordinate, artifact) -> coordinate to artifact }
 
         val byDigest = artifacts.values.associateBy { it.sha256 }
+        val names = HashMap<String, String>()
         byDigest.values.forEach { module ->
-            Files.copy(
-                module.file.toPath(),
-                modulesDir.resolve("${module.sha256}.jar").toPath(),
-                StandardCopyOption.REPLACE_EXISTING,
-            )
+            val fileName = "${module.group}-${module.name}-${module.version}.jar"
+            val previous = names.put(fileName, module.coordinate)
+            if (previous != null) {
+                throw IllegalArgumentException("Modules $previous and ${module.coordinate} both export as $fileName")
+            }
+            Files.copy(module.file.toPath(), modulesDir.resolve(fileName).toPath(), StandardCopyOption.REPLACE_EXISTING)
         }
 
         val gatewayProvided =
@@ -166,7 +168,7 @@ abstract class GeneratePluginLock : DefaultTask() {
         return group == "org.jetbrains.kotlin" && name.startsWith("kotlin-stdlib")
     }
 
-    private class Artifact(coordinate: String, val file: File) {
+    private class Artifact(val coordinate: String, val file: File) {
         val parts: List<String> = coordinate.split(':')
         val group: String = parts[0]
         val name: String = parts[1]
