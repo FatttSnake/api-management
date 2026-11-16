@@ -137,7 +137,7 @@ sequenceDiagram
 | `ApiPluginExtension.kt` | `apiPlugin { }` DSL：pluginId、versionCode、mainClass、requiresGateway、requiresGatewayApi、`sharedLoader`、部署参数 |
 | `ApiPlugin.kt` | 应用插件、加 `compileOnly gateway-api`、注册所有 task、把生成目录放进 jar |
 | `GeneratePluginDescriptor.kt`、`GenPluginKeys.kt`、`PreparePluginPubKey.kt`、`SignPlugin.kt`、`VerifyPlugin.kt`、`DeployPlugin.kt` | 描述符、密钥、签名、验签与部署 task |
-| `GeneratePluginLock.kt` | 从 `runtimeClasspath` 生成 `META-INF/api-plugin-deps.json`（含共享 loader 组），并把模块 jar 复制到 `build/generated/api-plugin-modules/` |
+| `GeneratePluginLock.kt` | 从 `runtimeClasspath` 生成 `META-INF/api-plugin-deps.json`（含共享 loader 组），并把模块 jar 以 `<group>-<artifact>-<version>.jar` 复制到 `build/generated/api-plugin-modules/` |
 | `CheckPluginAbi.kt` | 解析插件 class 常量池，检查对 `top.fatweb.apimanagement.api.*` 的类/方法/字段/构造器引用 |
 | `plugin-signing/PluginSigner.kt` | 构建 jar 清单、签名、验签、SPKI 指纹 |
 

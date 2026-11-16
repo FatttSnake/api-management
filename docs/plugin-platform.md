@@ -137,7 +137,7 @@ sequenceDiagram
 | `ApiPluginExtension.kt` | `apiPlugin { }` DSL: pluginId, versionCode, mainClass, requiresGateway, requiresGatewayApi, `sharedLoader`, deploy settings |
 | `ApiPlugin.kt` | Applies the plugin, adds `compileOnly gateway-api`, registers tasks, puts generated files into the jar |
 | `GeneratePluginDescriptor.kt`, `GenPluginKeys.kt`, `PreparePluginPubKey.kt`, `SignPlugin.kt`, `VerifyPlugin.kt`, `DeployPlugin.kt` | Descriptor, key, signing, verification and deploy tasks |
-| `GeneratePluginLock.kt` | Builds `META-INF/api-plugin-deps.json` from `runtimeClasspath` (including shared-loader groups), copies module jars into `build/generated/api-plugin-modules/` |
+| `GeneratePluginLock.kt` | Builds `META-INF/api-plugin-deps.json` from `runtimeClasspath` (including shared-loader groups), copies module jars into `build/generated/api-plugin-modules/` as `<group>-<artifact>-<version>.jar` |
 | `CheckPluginAbi.kt` | Parses plugin class constant pools and checks class/method/field/constructor references to `top.fatweb.apimanagement.api.*` |
 | `plugin-signing/PluginSigner.kt` | Builds the jar manifest, signs, verifies, computes SPKI fingerprints |
 
