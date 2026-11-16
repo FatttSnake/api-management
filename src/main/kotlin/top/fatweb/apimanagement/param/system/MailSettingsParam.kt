@@ -2,6 +2,7 @@ package top.fatweb.apimanagement.param.system
 
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.NotNull
 import top.fatweb.apimanagement.annotation.ParamProcessor
 import top.fatweb.apimanagement.settings.MailSecurityType
 
@@ -30,7 +31,7 @@ data class MailSettingsParam(
      * @since 1.0.0
      */
     @field:Schema(description = "端口号")
-    @field:NotBlank(message = "Port can not be null")
+    @field:NotNull(message = "Port can not be null")
     var port: Int?,
     /**
      * Security type
