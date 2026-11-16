@@ -45,6 +45,12 @@ class ApiPlugin : Plugin<Project> {
             providers.gradleProperty("apiPlugin.trustSigner").map { it.toBoolean() }.orElse(false),
         )
         ext.sharedLoaders.convention(emptyList())
+        ext.signingKeyFile.convention(
+            providers
+                .gradleProperty("apiPlugin.signingKeyFile")
+                .orElse(providers.environmentVariable("API_PLUGIN_SIGNING_KEY_FILE"))
+                .map { path -> layout.projectDirectory.file(path) },
+        )
 
         val projectVersion = providers.provider { project.version.toString() }
         val versionName =
@@ -79,6 +85,13 @@ class ApiPlugin : Plugin<Project> {
         val keysDir = layout.projectDirectory.dir("keys")
         val libsDir = layout.buildDirectory.dir("libs")
         val runtimeClasspath = project.configurations.named("runtimeClasspath")
+
+        // CI passes an external private key (a credential-bound file path) so the key
+        // never lands in the project's keys/ directory. Without it, keep the local
+        // developer workflow based on keys/private.pem.
+        val externalSigningKey = ext.signingKeyFile
+        val signingKey = externalSigningKey.orElse(layout.projectDirectory.file("keys/private.pem"))
+        val hasExternalSigningKey = externalSigningKey.map { true }.orElse(false)
 
         val lockTask =
             project.tasks.register("generatePluginLock", GeneratePluginLock::class.java) { task ->
@@ -120,12 +133,20 @@ class ApiPlugin : Plugin<Project> {
                 task.keysDir.set(keysDir)
             }
 
+        // When a signing key is supplied externally, generating keys/ would write an unused
+        // private key into the project directory; skip that task instead.
+        val keyTasks =
+            providers.provider {
+                if (hasExternalSigningKey.get()) emptyList<Any>() else listOf<Any>(genKeysTask)
+            }
+
         val pubKeyTask =
             project.tasks.register("preparePluginPubKey", PreparePluginPubKey::class.java) { task ->
                 task.group = "api plugin"
-                task.description = "Stages keys/public.pem as META-INF/plugin.pub.pem for the jar"
-                task.dependsOn(genKeysTask)
+                task.description = "Stages the plugin public key as META-INF/plugin.pub.pem for the jar"
+                task.dependsOn(keyTasks)
                 task.keysDir.set(keysDir)
+                task.privateKeyFile.set(externalSigningKey)
                 task.outputFile.set(generatedRoot.map { it.file("META-INF/plugin.pub.pem") })
             }
 
@@ -157,10 +178,10 @@ class ApiPlugin : Plugin<Project> {
         val signTask =
             project.tasks.register("signPlugin", SignPlugin::class.java) { task ->
                 task.group = "api plugin"
-                task.description = "Signs the plugin jar (Ed25519) using keys/private.pem"
-                task.dependsOn(genKeysTask, project.tasks.named("jar"), abiTask)
+                task.description = "Signs the plugin jar (Ed25519) with the configured private key"
+                task.dependsOn(keyTasks, project.tasks.named("jar"), abiTask)
                 task.jarFile.set(jarFile)
-                task.privateKeyFile.set(layout.projectDirectory.file("keys/private.pem"))
+                task.privateKeyFile.set(signingKey)
             }
 
         project.tasks.named("build").configure { build ->

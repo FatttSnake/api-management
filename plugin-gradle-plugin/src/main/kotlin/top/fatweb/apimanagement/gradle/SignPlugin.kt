@@ -8,13 +8,16 @@ import org.gradle.work.DisableCachingByDefault
 import top.fatweb.apimanagement.plugin.signing.PluginSigner
 
 /**
- * Signs the produced jar in place with `keys/private.pem` and embeds the Ed25519
- * signature as `META-INF/plugin.sig`. Runs after every `jar`.
+ * Signs the produced jar in place with the configured private key and embeds the
+ * Ed25519 signature as `META-INF/plugin.sig`. Runs after every `jar`.
+ *
+ * The key comes from `apiPlugin.signingKeyFile`, the `API_PLUGIN_SIGNING_KEY_FILE`
+ * environment variable, or falls back to `keys/private.pem`.
  *
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
-@DisableCachingByDefault(because = "Rewrites the jar in place with a signature that depends on the local private key")
+@DisableCachingByDefault(because = "Rewrites the jar in place with a signature that depends on the private key")
 abstract class SignPlugin : DefaultTask() {
     @get:Internal
     abstract val jarFile: RegularFileProperty
@@ -26,7 +29,8 @@ abstract class SignPlugin : DefaultTask() {
     fun run() {
         val keyFile = privateKeyFile.get().asFile
         require(keyFile.exists()) {
-            "$keyFile not found — run ./gradlew genPluginKeys first"
+            "$keyFile not found — configure apiPlugin.signingKeyFile / " +
+                "API_PLUGIN_SIGNING_KEY_FILE, or run ./gradlew genPluginKeys first"
         }
         val jarPath = jarFile.get().asFile.toPath()
         PluginSigner.signAndEmbed(jarPath, keyFile.readText())
