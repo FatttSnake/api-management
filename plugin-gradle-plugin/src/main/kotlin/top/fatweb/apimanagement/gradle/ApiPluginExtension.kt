@@ -1,5 +1,6 @@
 package top.fatweb.apimanagement.gradle
 
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 
@@ -117,6 +118,25 @@ interface ApiPluginExtension {
      * @since 1.0.0
      */
     val trustSigner: Property<Boolean>
+
+    /**
+     * Optional Ed25519 private key file used by `signPlugin` and `preparePluginPubKey`.
+     *
+     * When unset, the build uses `keys/private.pem` and may generate it through
+     * `genPluginKeys`. CI should point this at a credential-provided file instead so the
+     * private key never enters the project directory:
+     *
+     * - DSL: `apiPlugin { signingKeyFile = file("...") }`
+     * - Gradle property: `-PapiPlugin.signingKeyFile=/path/to/private.pem`
+     * - Environment variable: `API_PLUGIN_SIGNING_KEY_FILE=/path/to/private.pem`
+     *
+     * The public key embedded in the jar is derived from this file, so it always
+     * matches the signature.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.1
+     */
+    val signingKeyFile: RegularFileProperty
 
     /**
      * Groups of modules that share one class loader. Each entry is a list of `group:artifact`
