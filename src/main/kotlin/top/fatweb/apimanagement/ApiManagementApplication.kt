@@ -7,6 +7,7 @@ import org.springframework.boot.runApplication
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.transaction.annotation.EnableTransactionManagement
 import java.io.File
+import java.net.URLConnection
 import java.util.UUID
 
 @SpringBootApplication
@@ -16,6 +17,12 @@ import java.util.UUID
 class ApiManagementApplication
 
 fun main(args: Array<String>) {
+    // A jar opened through a jar: URL is cached by the JDK for the life of the JVM, which keeps
+    // the file undeletable on Windows once a library has scanned it (Flyway scans the plugin
+    // jar for its classpath: migrations). Plugin jars are deleted on uninstall and upgrade, so
+    // plugin libraries must not cache them.
+    URLConnection.setDefaultUseCaches("jar", false)
+
     val logger = LoggerFactory.getLogger("main")
 
     if (!File("data").isDirectory) {

@@ -72,6 +72,7 @@ import top.fatweb.apimanagement.vo.api.ApiGroupVo
 import top.fatweb.apimanagement.vo.api.ApiPluginConfigVo
 import top.fatweb.apimanagement.vo.api.ApiPluginVo
 import java.nio.file.Files
+import java.time.Duration
 import java.time.LocalDateTime
 import java.util.concurrent.Executor
 
@@ -117,7 +118,31 @@ class PluginPlatformServiceImpl(
      * @since 1.0.0
      */
     override fun run(args: ApplicationArguments) {
+        deleteUnreferencedJars()
         loadInstalled()
+    }
+
+    /**
+     * Deletes plugin jars no installed row references and stale staged temporary files.
+     *
+     * A jar opened through a `jar:` URL stays cached for the life of the JVM, so a jar whose
+     * uninstall or upgrade could not delete it on Windows is collected at the next startup.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.2
+     */
+    private fun deleteUnreferencedJars() {
+        val referenced = list().mapNotNull { it.fileHash }.toSet()
+        val deleted =
+            runCatching {
+                artifactStore.deleteUnreferenced(referenced, ARTIFACT_GC_GRACE)
+            }.getOrElse {
+                logger.warn("Cannot delete unreferenced plugin jars", it)
+                0
+            }
+        if (deleted > 0) {
+            logger.info("Deleted {} unreferenced plugin jar file(s)", deleted)
+        }
     }
 
     /**
@@ -293,7 +318,11 @@ class PluginPlatformServiceImpl(
                     logger.warn("Cannot delete stored files of plugin {}", pluginId, it)
                 }
             }
-            row.fileHash?.let { hash -> runCatching { Files.deleteIfExists(artifactStore.path(hash)) } }
+            row.fileHash?.let { hash ->
+                runCatching { Files.deleteIfExists(artifactStore.path(hash)) }.onFailure {
+                    logger.warn("Cannot delete the jar of plugin {}", pluginId, it)
+                }
+            }
             onCommitted {
                 configSchemaCache.put(pluginId, null)
                 refreshCache()
@@ -856,5 +885,16 @@ class PluginPlatformServiceImpl(
 
     private companion object {
         const val MAX_ERROR_LENGTH = 512
+
+        /**
+         * How long an unreferenced jar must have been on disk before startup may delete it
+         *
+         * Long enough that another instance's install, which stores the jar before its row is
+         * committed, cannot lose it to this instance's sweep.
+         *
+         * @author FatttSnake, fatttsnake@gmail.com
+         * @since 1.0.2
+         */
+        val ARTIFACT_GC_GRACE: Duration = Duration.ofHours(1)
     }
 }
