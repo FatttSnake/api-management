@@ -136,9 +136,9 @@ class ApiKeyServiceImpl(
                     set(ApiKey::enable, apiKeyUpdateParam.enable)
                     set(ApiKey::expireTime, apiKeyUpdateParam.expireTime)
                     set(ApiKey::ipWhitelist, apiKeyUpdateParam.ipWhitelist)
-                    set(ApiKey::rateLimit, apiKeyUpdateParam.rateLimit)
-                    set(ApiKey::quota, apiKeyUpdateParam.quota)
-                    set(ApiKey::quotaPeriod, apiKeyUpdateParam.quotaPeriod)
+                    set(ApiKey::rateLimit, apiKeyUpdateParam.rateLimit ?: 0)
+                    set(ApiKey::quota, apiKeyUpdateParam.quota ?: 0)
+                    set(ApiKey::quotaPeriod, apiKeyUpdateParam.quotaPeriod ?: 0)
                     set(ApiKey::remark, apiKeyUpdateParam.remark)
                 },
             )

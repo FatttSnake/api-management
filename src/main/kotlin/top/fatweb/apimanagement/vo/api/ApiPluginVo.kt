@@ -65,12 +65,12 @@ data class ApiPluginVo(
     @field:JsonSerialize(using = ToStringSerializer::class)
     val defaultPrice: BigDecimal?,
     /**
-     * Default rate limit per minute
+     * Default per-API total rate limit per minute
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "默认每分钟限流次数 (null=不限)", example = "100")
+    @field:Schema(description = "默认每接口每分钟总限流次数 (null/0=不限)", example = "100")
     val defaultRateLimit: Int?,
     /**
      * Default access mode inherited by interfaces whose access_mode is null

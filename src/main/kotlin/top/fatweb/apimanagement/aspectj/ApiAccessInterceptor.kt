@@ -10,6 +10,11 @@ import org.springframework.web.servlet.AsyncHandlerInterceptor
 import top.fatweb.apimanagement.component.api.ApiPath
 import top.fatweb.apimanagement.component.plugin.PluginInFlightTracker
 import top.fatweb.apimanagement.component.plugin.PluginRegistryCache
+import top.fatweb.apimanagement.component.ratelimit.RateLimitDimension
+import top.fatweb.apimanagement.component.ratelimit.RateLimitHeaders
+import top.fatweb.apimanagement.component.ratelimit.RateLimitPolicy
+import top.fatweb.apimanagement.component.ratelimit.RateLimitResult
+import top.fatweb.apimanagement.component.ratelimit.RateLimiter
 import top.fatweb.apimanagement.component.storage.RedisProvider
 import top.fatweb.apimanagement.entity.api.ApiInterface
 import top.fatweb.apimanagement.entity.api.ApiKeyPrincipal
@@ -53,6 +58,8 @@ class ApiAccessInterceptor(
     private val apiAccountService: IApiAccountService,
     private val apiTransactionService: IApiTransactionService,
     private val pluginInFlightTracker: PluginInFlightTracker,
+    private val rateLimitPolicy: RateLimitPolicy,
+    private val rateLimiter: RateLimiter,
 ) : AsyncHandlerInterceptor {
     private val logger = LoggerFactory.getLogger(ApiAccessInterceptor::class.java)
 
@@ -91,6 +98,7 @@ class ApiAccessInterceptor(
 
         return admit(
             request = request,
+            response = response,
             plugin = plugin,
             api = apiInterface,
             pluginId = pluginId,
@@ -100,6 +108,7 @@ class ApiAccessInterceptor(
 
     private fun admit(
         request: HttpServletRequest,
+        response: HttpServletResponse,
         plugin: ApiPlugin,
         api: ApiInterface,
         pluginId: String,
@@ -112,6 +121,7 @@ class ApiAccessInterceptor(
             is ApiKeyPrincipal ->
                 admitApiKey(
                     request = request,
+                    response = response,
                     plugin = plugin,
                     api = api,
                     principal = principal,
@@ -120,6 +130,7 @@ class ApiAccessInterceptor(
             is LoginUser ->
                 admitAccount(
                     request = request,
+                    response = response,
                     plugin = plugin,
                     api = api,
                     principal = principal,
@@ -129,8 +140,12 @@ class ApiAccessInterceptor(
                 if (api.needKey == 1) {
                     throw ApiKeyRequiredException()
                 }
-                request.setAttribute(ATTR_COST, BigDecimal.ZERO)
-                request.setAttribute(ATTR_BILLING_MODE, ApiInterface.BillingMode.FREE)
+                admitAnonymous(
+                    request = request,
+                    response = response,
+                    plugin = plugin,
+                    api = api,
+                )
             }
         }
 
@@ -260,6 +275,7 @@ class ApiAccessInterceptor(
 
     private fun admitApiKey(
         request: HttpServletRequest,
+        response: HttpServletResponse,
         plugin: ApiPlugin,
         api: ApiInterface,
         principal: ApiKeyPrincipal,
@@ -271,9 +287,64 @@ class ApiAccessInterceptor(
         request.setAttribute(ATTR_API_KEY_ID, principal.keyId)
         request.setAttribute(ATTR_USER_ID, principal.userId)
 
-        checkRateLimit(principal = principal, plugin = plugin, api = api)
-        checkQuota(principal)
+        applyApiKeyRateLimits(request = request, response = response, plugin = plugin, api = api, principal = principal)
+        checkKeyQuota(principal = principal, api = api)
+        principal.userId?.let { checkUserQuota(userId = it, api = api) }
+        applyApiKeyBilling(request = request, plugin = plugin, api = api, principal = principal)
+    }
 
+    private fun applyApiKeyRateLimits(
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+        plugin: ApiPlugin,
+        api: ApiInterface,
+        principal: ApiKeyPrincipal,
+    ) {
+        val decisions = mutableListOf<RateLimitResult>()
+        // Key first: a request rejected by its own key limit must not consume the user's
+        // aggregate, or one throttled key would throttle every other key of the same user.
+        principal.keyId?.let {
+            acquireOrReject(
+                request = request,
+                plugin = plugin,
+                api = api,
+                dimension = RateLimitDimension.KEY_TOTAL,
+                scopeId = it.toString(),
+                limit = rateLimitPolicy.keyTotal(principal),
+                decisions = decisions,
+            )
+        }
+        principal.userId?.let {
+            acquireOrReject(
+                request = request,
+                plugin = plugin,
+                api = api,
+                dimension = RateLimitDimension.USER_TOTAL,
+                scopeId = it.toString(),
+                limit = rateLimitPolicy.userTotal(),
+                decisions = decisions,
+            )
+        }
+        api.id?.let {
+            acquireOrReject(
+                request = request,
+                plugin = plugin,
+                api = api,
+                dimension = RateLimitDimension.API_TOTAL,
+                scopeId = it.toString(),
+                limit = rateLimitPolicy.apiTotal(api, plugin),
+                decisions = decisions,
+            )
+        }
+        applyTightestHeaders(response = response, decisions = decisions)
+    }
+
+    private fun applyApiKeyBilling(
+        request: HttpServletRequest,
+        plugin: ApiPlugin,
+        api: ApiInterface,
+        principal: ApiKeyPrincipal,
+    ) {
         val cost = api.price ?: plugin.defaultPrice ?: BigDecimal.ZERO
         val billingMode = api.billingMode ?: ApiInterface.BillingMode.SUCCESS_ONLY
         request.setAttribute(ATTR_COST, cost)
@@ -298,25 +369,70 @@ class ApiAccessInterceptor(
         }
     }
 
-    private fun admitAccount(request: HttpServletRequest, plugin: ApiPlugin, api: ApiInterface, principal: LoginUser) {
+    private fun admitAccount(
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+        plugin: ApiPlugin,
+        api: ApiInterface,
+        principal: LoginUser,
+    ) {
         val userId = principal.user.id ?: throw ApiAccountNotFoundException()
         request.setAttribute(ATTR_USER_ID, userId)
 
+        checkAccountAccess(plugin = plugin, api = api, principal = principal)
+        applyAccountRateLimits(request = request, response = response, plugin = plugin, api = api, userId = userId)
+        checkUserQuota(userId = userId, api = api)
+        applyAccountBilling(request = request, plugin = plugin, api = api, userId = userId)
+    }
+
+    private fun checkAccountAccess(plugin: ApiPlugin, api: ApiInterface, principal: LoginUser) {
         // Access mode: RESTRICTED requires the caller to hold the api:* operation code
         val accessMode = api.accessMode ?: plugin.defaultAccessMode ?: ApiInterface.AccessMode.RESTRICTED
-        if (accessMode == ApiInterface.AccessMode.RESTRICTED) {
-            val codes =
-                principal.user.operations
-                    ?.mapNotNull { it.code }
-                    ?.toSet() ?: emptySet()
-            if (api.code !in codes) {
-                throw ApiPermissionDeniedException()
-            }
+        if (accessMode != ApiInterface.AccessMode.RESTRICTED) {
+            return
         }
 
-        // Account/JWT callers share the per-API global rate limit with API keys
-        checkApiGlobalRateLimit(plugin = plugin, api = api)
+        val codes =
+            principal.user.operations
+                ?.mapNotNull { it.code }
+                ?.toSet() ?: emptySet()
+        if (api.code !in codes) {
+            throw ApiPermissionDeniedException()
+        }
+    }
 
+    private fun applyAccountRateLimits(
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+        plugin: ApiPlugin,
+        api: ApiInterface,
+        userId: Long,
+    ) {
+        val decisions = mutableListOf<RateLimitResult>()
+        acquireOrReject(
+            request = request,
+            plugin = plugin,
+            api = api,
+            dimension = RateLimitDimension.USER_TOTAL,
+            scopeId = userId.toString(),
+            limit = rateLimitPolicy.userTotal(),
+            decisions = decisions,
+        )
+        api.id?.let {
+            acquireOrReject(
+                request = request,
+                plugin = plugin,
+                api = api,
+                dimension = RateLimitDimension.API_TOTAL,
+                scopeId = it.toString(),
+                limit = rateLimitPolicy.apiTotal(api, plugin),
+                decisions = decisions,
+            )
+        }
+        applyTightestHeaders(response = response, decisions = decisions)
+    }
+
+    private fun applyAccountBilling(request: HttpServletRequest, plugin: ApiPlugin, api: ApiInterface, userId: Long) {
         // Built-in super admin (user id 0) is exempt from billing but still recorded in usage
         if (userId == 0L) {
             request.setAttribute(ATTR_COST, BigDecimal.ZERO)
@@ -346,69 +462,136 @@ class ApiAccessInterceptor(
         }
     }
 
-    private fun balanceCheckEnabled(): Boolean = SettingsOperator.getValue(ApiSettings::balanceCheckEnable, true)
+    private fun admitAnonymous(
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+        plugin: ApiPlugin,
+        api: ApiInterface,
+    ) {
+        request.setAttribute(ATTR_COST, BigDecimal.ZERO)
+        request.setAttribute(ATTR_BILLING_MODE, ApiInterface.BillingMode.FREE)
 
-    private fun checkRateLimit(principal: ApiKeyPrincipal, plugin: ApiPlugin, api: ApiInterface) {
-        val epochMinute = Instant.now().epochSecond / 60
-        val keyId = principal.keyId ?: return
-        val apiId = api.id ?: return
-
-        val keyLimit = principal.rateLimit ?: SettingsOperator.getValue(ApiSettings::defaultRateLimitPerMin, 0)
-        if (keyLimit > 0) {
-            val count =
-                redisProvider.increment(
-                    key = "${serverProperties.security.tokenIssuer}_apikey_rl:$keyId:$apiId:$epochMinute",
-                    delta = 1,
-                    ttlSeconds = 60,
-                )
-            if (count > keyLimit) {
-                throw RequestTooFrequentException()
-            }
+        val decisions = mutableListOf<RateLimitResult>()
+        val ip = getRequestIp(request, serverProperties.security.trustProxyHeaders)
+        acquireOrReject(
+            request = request,
+            plugin = plugin,
+            api = api,
+            dimension = RateLimitDimension.ANONYMOUS_IP,
+            scopeId = ip,
+            limit = rateLimitPolicy.anonymousIpTotal(),
+            decisions = decisions,
+        )
+        api.id?.let {
+            acquireOrReject(
+                request = request,
+                plugin = plugin,
+                api = api,
+                dimension = RateLimitDimension.API_TOTAL,
+                scopeId = it.toString(),
+                limit = rateLimitPolicy.apiTotal(api, plugin),
+                decisions = decisions,
+            )
         }
-
-        checkApiGlobalRateLimit(plugin = plugin, api = api)
+        applyTightestHeaders(response = response, decisions = decisions)
     }
 
-    private fun checkApiGlobalRateLimit(plugin: ApiPlugin, api: ApiInterface) {
-        val epochMinute = Instant.now().epochSecond / 60
-        val apiId = api.id ?: return
-        val apiLimit = api.rateLimit ?: plugin.defaultRateLimit ?: 0
-        if (apiLimit > 0) {
-            val count =
-                redisProvider.increment(
-                    key = "${serverProperties.security.tokenIssuer}_apikey_rl:$apiId:global:$epochMinute",
-                    delta = 1,
-                    ttlSeconds = 60,
-                )
-            if (count > apiLimit) {
-                throw RequestTooFrequentException()
-            }
+    private fun acquireOrReject(
+        request: HttpServletRequest,
+        plugin: ApiPlugin,
+        api: ApiInterface,
+        dimension: RateLimitDimension,
+        scopeId: String,
+        limit: Int,
+        decisions: MutableList<RateLimitResult>,
+    ) {
+        val result = rateLimiter.acquire(dimension, scopeId, limit)
+        decisions += result
+        if (result.allowed) {
+            return
         }
+
+        recordRateLimitRejection(api)
+        logger.debug(
+            "Rate limit hit: dimension={} plugin={} api={} scope={} ip={} limit={} remaining={} retryAfter={}",
+            dimension.segment,
+            plugin.pluginId,
+            api.code,
+            scopeId,
+            getRequestIp(request, serverProperties.security.trustProxyHeaders),
+            result.limit,
+            result.remaining,
+            result.retryAfterSeconds,
+        )
+        throw RequestTooFrequentException(
+            scope = dimension.segment,
+            limit = result.limit,
+            remaining = result.remaining,
+            retryAfterSeconds = result.retryAfterSeconds,
+        )
     }
 
-    private fun checkQuota(principal: ApiKeyPrincipal) {
-        val quotaLimit = principal.quota ?: SettingsOperator.getValue(ApiSettings::defaultQuota, 0)
-        if (quotaLimit <= 0) {
+    private fun applyTightestHeaders(response: HttpServletResponse, decisions: List<RateLimitResult>) {
+        decisions
+            .filter { it.limit > 0 }
+            .minByOrNull { it.remaining }
+            ?.let { RateLimitHeaders.apply(response, it) }
+    }
+
+    private fun checkUserQuota(userId: Long, api: ApiInterface) {
+        val limit = rateLimitPolicy.userQuota()
+        val period = rateLimitPolicy.userQuotaPeriod()
+        if (limit <= 0 || period <= 0) {
             return
         }
-        val periodSeconds =
-            (
-                principal.quotaPeriod
-                    ?: SettingsOperator.getValue(ApiSettings::defaultQuotaPeriodSeconds, 86400)
-                ).toLong()
-        if (periodSeconds <= 0) {
-            return
-        }
-        val keyId = principal.keyId ?: return
-        val periodIdx = Instant.now().epochSecond / periodSeconds
+
+        val periodIdx = Instant.now().epochSecond / period
         val count =
             redisProvider.increment(
-                key = "${serverProperties.security.tokenIssuer}_apikey_quota:$keyId:$periodIdx",
+                key = "${serverProperties.security.tokenIssuer}_user_quota:$userId:$periodIdx",
                 delta = 1,
-                ttlSeconds = periodSeconds,
+                ttlSeconds = period.toLong(),
             )
-        if (count > quotaLimit) {
+        if (count > limit) {
+            logger.debug("User quota exceeded: user={} api={} limit={} count={}", userId, api.code, limit, count)
             throw QuotaExceededException()
+        }
+    }
+
+    private fun checkKeyQuota(principal: ApiKeyPrincipal, api: ApiInterface) {
+        val limit = rateLimitPolicy.keyQuota(principal)
+        if (limit <= 0) {
+            return
+        }
+        val period = rateLimitPolicy.keyQuotaPeriod(principal)
+        if (period <= 0) {
+            return
+        }
+
+        val keyId = principal.keyId ?: return
+        val periodIdx = Instant.now().epochSecond / period
+        val count =
+            redisProvider.increment(
+                key = "${serverProperties.security.tokenIssuer}_key_quota:$keyId:$periodIdx",
+                delta = 1,
+                ttlSeconds = period.toLong(),
+            )
+        if (count > limit) {
+            logger.debug("Key quota exceeded: key={} api={} limit={} count={}", keyId, api.code, limit, count)
+            throw QuotaExceededException()
+        }
+    }
+
+    private fun balanceCheckEnabled(): Boolean = SettingsOperator.getValue(ApiSettings::balanceCheckEnable, true)
+
+    private fun recordRateLimitRejection(api: ApiInterface) {
+        val code = api.code ?: return
+        runCatching {
+            redisProvider.increment(
+                key = "${serverProperties.security.tokenIssuer}_apimetrics_ratelimited:$code",
+                delta = 1,
+                ttlSeconds = METRICS_WINDOW_SECONDS,
+            )
         }
     }
 

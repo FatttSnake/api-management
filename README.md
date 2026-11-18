@@ -31,7 +31,7 @@ The backend is written in **Kotlin + Spring Boot**. The stable API surface neede
 - **Pluginized API hosting** — upload a plugin jar; the gateway verifies its **Ed25519 signature** (against the trust key store maintained by the administrator), then hot-installs / upgrades / uninstalls it with an **isolated plugin class loader and per-plugin module graph** — no restart required.
 - **Namespaced & versioned routing** — every plugin endpoint is uniformly exposed as `/api/{plugin}/v{version}/...`; routes are persisted to the database and automatically restored after a restart.
 - **Multi-layer access control** — accounts log in with **JWT**; callers may also use an **AccessKey / SecretKey**; optional **two-factor authentication (TOTP)**; each interface supports a `need-key` switch, an enable toggle and two access modes, `DEFAULT` / `RESTRICTED`, all expressed as RBAC powers.
-- **Metering & billing** — per-interface price and billing mode (`FREE` / `SUCCESS_ONLY` / `ALWAYS`), **per-minute rate limits**; per-account **balance** and quota windows.
+- **Metering & billing** — per-interface price and billing mode (`FREE` / `SUCCESS_ONLY` / `ALWAYS`); **per-API total, per-user and per-IP sliding-window rate limits** for overload and abuse control; per-account **balance** and **quota windows**.
 - **RBAC permission tree** — users, groups, roles and fine-grained powers (module / menu / operation / scope); available APIs are **grouped by plugin** in the permission tree.
 - **Self-service for consumers** — "My API accounts", "My API keys", "API docs" and "My usage" endpoints for end users.
 - **Observability & audit** — API usage statistics, monitoring, reports and aggregated statistics (periodically computed), plus operation audit and system logs.

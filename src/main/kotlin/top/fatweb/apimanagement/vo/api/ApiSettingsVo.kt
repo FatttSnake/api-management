@@ -11,28 +11,44 @@ import io.swagger.v3.oas.annotations.media.Schema
 @Schema(description = "API 平台设置返回参数")
 data class ApiSettingsVo(
     /**
-     * Default rate limit per minute per key
+     * Default per-user rate limit per minute
      *
      * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
+     * @since 1.0.2
      */
-    @field:Schema(description = "每 Key 每分钟默认限流次数(0=不限)", example = "60")
-    val defaultRateLimitPerMin: Int?,
+    @field:Schema(description = "每用户每分钟默认限流次数（所有 Key 与登录态合计；0=不限）", example = "60")
+    val defaultUserRateLimitPerMin: Int?,
     /**
-     * Default quota requests per period per key
+     * Default per-IP rate limit per minute for anonymous callers
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.2
+     */
+    @field:Schema(description = "匿名调用每 IP 每分钟默认限流次数（0=不限）", example = "60")
+    val defaultAnonymousRateLimitPerMin: Int?,
+    /**
+     * Per-IP authentication failure limit per minute
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.2
+     */
+    @field:Schema(description = "每 IP 每分钟鉴权失败上限（0=关闭；默认 30）", example = "30")
+    val authFailureLimitPerMin: Int?,
+    /**
+     * Default per-user quota requests per period
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "每 Key 每个周期默认额度次数(0=不限)", example = "100000")
+    @field:Schema(description = "每用户每个周期默认额度次数（所有 Key 与登录态合计；0=不限）", example = "100000")
     val defaultQuota: Long?,
     /**
-     * Default quota period in seconds
+     * Default per-user quota period in seconds
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "默认额度周期(秒)", example = "86400")
+    @field:Schema(description = "每用户额度周期(秒)", example = "86400")
     val defaultQuotaPeriodSeconds: Int?,
     /**
      * Length of generated access key

@@ -14,30 +14,48 @@ import top.fatweb.apimanagement.annotation.ParamProcessor
 @Schema(description = "API 平台设置请求参数")
 data class ApiSettingsParam(
     /**
-     * Default rate limit per minute per key
+     * Default per-user rate limit per minute
      *
      * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
+     * @since 1.0.2
      */
-    @field:Schema(description = "每 Key 每分钟默认限流次数(0=不限)", example = "60")
+    @field:Schema(description = "每用户每分钟默认限流次数（所有 Key 与登录态合计；0=不限）", example = "60")
     @field:Min(value = 0, message = "Rate limit must be greater than or equal to 0")
-    var defaultRateLimitPerMin: Int?,
+    var defaultUserRateLimitPerMin: Int?,
     /**
-     * Default quota requests per period per key
+     * Default per-IP rate limit per minute for anonymous callers
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.2
+     */
+    @field:Schema(description = "匿名调用每 IP 每分钟默认限流次数（0=不限）", example = "60")
+    @field:Min(value = 0, message = "Rate limit must be greater than or equal to 0")
+    var defaultAnonymousRateLimitPerMin: Int?,
+    /**
+     * Per-IP authentication failure limit per minute
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.2
+     */
+    @field:Schema(description = "每 IP 每分钟鉴权失败上限（0=关闭；不填默认 30）", example = "30")
+    @field:Min(value = 0, message = "Rate limit must be greater than or equal to 0")
+    var authFailureLimitPerMin: Int?,
+    /**
+     * Default per-user quota requests per period
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "每 Key 每个周期默认额度次数(0=不限)", example = "100000")
+    @field:Schema(description = "每用户每个周期默认额度次数（所有 Key 与登录态合计；0=不限）", example = "100000")
     @field:Min(value = 0, message = "Quota must be greater than or equal to 0")
     var defaultQuota: Long?,
     /**
-     * Default quota period in seconds
+     * Default per-user quota period in seconds
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "默认额度周期(秒)", example = "86400")
+    @field:Schema(description = "每用户额度周期(秒)", example = "86400")
     @field:Min(value = 1, message = "Quota period must be greater than or equal to 1")
     var defaultQuotaPeriodSeconds: Int?,
     /**
