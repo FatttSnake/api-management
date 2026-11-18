@@ -4,10 +4,13 @@ import com.auth0.jwt.exceptions.JWTDecodeException
 import com.auth0.jwt.exceptions.SignatureVerificationException
 import com.auth0.jwt.exceptions.TokenExpiredException
 import io.swagger.v3.oas.annotations.Hidden
+import jakarta.servlet.RequestDispatcher
 import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.dao.DuplicateKeyException
+import org.springframework.http.HttpStatus
 import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.jdbc.BadSqlGrammarException
 import org.springframework.jdbc.UncategorizedSQLException
@@ -27,6 +30,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.servlet.resource.NoResourceFoundException
 import top.fatweb.apimanagement.api.v1.ApiResponse
+import top.fatweb.apimanagement.component.ratelimit.RateLimitHeaders
 import top.fatweb.apimanagement.entity.common.ResponseCode
 import top.fatweb.apimanagement.entity.common.ResponseResult
 import top.fatweb.apimanagement.exception.AccountNeedInitException
@@ -97,7 +101,7 @@ class ExceptionHandler {
      * @see ApiResponse
      */
     @ExceptionHandler(value = [Exception::class])
-    fun exceptionHandler(e: Exception, request: HttpServletRequest): Any {
+    fun exceptionHandler(e: Exception, request: HttpServletRequest, response: HttpServletResponse): Any {
         val result =
             when (e) {
                 // Request
@@ -119,6 +123,17 @@ class ExceptionHandler {
 
                 is RequestTooFrequentException -> {
                     logger.debug(e.localizedMessage, e)
+                    if (e.rateLimited) {
+                        val resetSeconds = e.retryAfterSeconds ?: 0
+                        response.status = HttpStatus.TOO_MANY_REQUESTS.value()
+                        RateLimitHeaders.applyRetry(
+                            response = response,
+                            limit = e.limit ?: 0,
+                            remaining = e.remaining ?: 0,
+                            resetSeconds = resetSeconds,
+                            retryAfterSeconds = resetSeconds,
+                        )
+                    }
                     ResponseResult.fail(ResponseCode.SYSTEM_REQUEST_TOO_FREQUENT, e.localizedMessage, null)
                 }
 
@@ -439,7 +454,19 @@ class ExceptionHandler {
                     ResponseResult.fail(ResponseCode.SYSTEM_ERROR, "Internal server error", null)
                 }
             }
-        return if (request.requestURI.startsWith("/api/")) result.toApiResponse() else result
+        val apiRequest =
+            request.requestURI.startsWith("/api/") ||
+                (request.getAttribute(RequestDispatcher.FORWARD_REQUEST_URI) as? String)?.startsWith("/api/") == true
+        if (!apiRequest) {
+            return result
+        }
+
+        val apiResponse = result.toApiResponse()
+        return if (response.status == HttpStatus.TOO_MANY_REQUESTS.value()) {
+            apiResponse.withHttpStatus(response.status)
+        } else {
+            apiResponse
+        }
     }
 
     private fun ResponseResult<*>.toApiResponse(): ApiResponse =

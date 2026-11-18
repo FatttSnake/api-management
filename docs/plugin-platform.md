@@ -382,7 +382,7 @@ sequenceDiagram
     MVC->>AI: preHandle
     AI->>AI: resolve interface/plugin, check enabled
     AI->>AI: AccessKey/user/anonymous admission
-    AI->>AI: permissions, rate limit, quota, billing precheck
+    AI->>AI: permissions, sliding-window limits, quota, billing precheck
     AI->>AI: in-flight tryEnter + TCCL
     MVC->>AD: handle
     AD->>AD: build ApiRequest
@@ -418,9 +418,10 @@ sequenceDiagram
 - For `PluginInvocation`:
   - Resolve `ApiInterface` and `ApiPlugin` from `PluginRegistryCache`.
   - Check enabled state.
-  - `ApiKeyPrincipal`: permission code, key rate limit, quota, billing precheck, balance deduction.
-  - `LoginUser`: RESTRICTED permission check, interface rate limit, balance precheck; super admin is free.
-  - Anonymous: reject when `needKey == 1`.
+  - `ApiKeyPrincipal`: permission code; per-user total, per-key and per-API total sliding-window limits; per-user quota and optional per-key quota; billing precheck and balance deduction.
+  - `LoginUser`: RESTRICTED permission check; per-user total and per-API total limits; per-user quota; billing precheck; super admin is free.
+  - Anonymous: reject when `needKey == 1`; otherwise per-IP and per-API total limits, no quota.
+  - Rate limit rejections answer 429 with `Retry-After` and `X-RateLimit-*`; quota rejections keep the business envelope.
   - `PluginInFlightTracker.tryEnter`.
   - Set TCCL to the plugin loader.
 - `afterCompletion`:

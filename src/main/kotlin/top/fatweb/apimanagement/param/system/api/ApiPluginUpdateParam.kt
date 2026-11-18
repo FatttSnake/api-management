@@ -41,12 +41,12 @@ data class ApiPluginUpdateParam(
     @field:Schema(description = "默认每次调用单价 (null=免费)", example = "0.0100")
     var defaultPrice: BigDecimal?,
     /**
-     * Default rate limit per minute (null = unlimited)
+     * Default per-API total rate limit per minute (null/0 = unlimited)
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "默认每分钟限流次数 (null=不限)", example = "100")
+    @field:Schema(description = "默认每接口每分钟总限流次数 (null/0=不限)", example = "100")
     var defaultRateLimit: Int?,
     /**
      * Default access mode inherited by interfaces whose access_mode is null

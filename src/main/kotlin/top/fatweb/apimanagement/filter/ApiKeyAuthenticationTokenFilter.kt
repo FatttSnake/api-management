@@ -3,10 +3,14 @@ package top.fatweb.apimanagement.filter
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.slf4j.LoggerFactory
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
+import top.fatweb.apimanagement.component.ratelimit.RateLimitDimension
+import top.fatweb.apimanagement.component.ratelimit.RateLimitPolicy
+import top.fatweb.apimanagement.component.ratelimit.RateLimiter
 import top.fatweb.apimanagement.component.storage.RedisProvider
 import top.fatweb.apimanagement.entity.api.ApiKey
 import top.fatweb.apimanagement.entity.api.ApiKeyPrincipal
@@ -15,6 +19,7 @@ import top.fatweb.apimanagement.exception.ApiKeyExpiredException
 import top.fatweb.apimanagement.exception.ApiKeyInvalidException
 import top.fatweb.apimanagement.exception.ApiKeyIpNotAllowedException
 import top.fatweb.apimanagement.exception.ApiKeySecretMismatchException
+import top.fatweb.apimanagement.exception.RequestTooFrequentException
 import top.fatweb.apimanagement.properties.ServerProperties
 import top.fatweb.apimanagement.service.api.IApiKeyService
 import top.fatweb.apimanagement.settings.ApiSettings
@@ -38,7 +43,11 @@ class ApiKeyAuthenticationTokenFilter(
     private val serverProperties: ServerProperties,
     private val redisProvider: RedisProvider,
     private val apiKeyService: IApiKeyService,
+    private val rateLimitPolicy: RateLimitPolicy,
+    private val rateLimiter: RateLimiter,
 ) : OncePerRequestFilter() {
+    private val _logger = LoggerFactory.getLogger(ApiKeyAuthenticationTokenFilter::class.java)
+
     override fun shouldNotFilter(request: HttpServletRequest): Boolean {
         val uri = request.requestURI
         if (!uri.startsWith("/api/")) {
@@ -66,20 +75,25 @@ class ApiKeyAuthenticationTokenFilter(
             try {
                 String(Base64.getDecoder().decode(encoded), Charsets.UTF_8)
             } catch (_: Exception) {
-                throw ApiKeyInvalidException()
+                throttleOrThrow(request, ApiKeyInvalidException())
             }
         val separator = decoded.indexOf(':')
         if (separator <= 0) {
-            throw ApiKeyInvalidException()
+            throttleOrThrow(request, ApiKeyInvalidException())
         }
         val accessKey = decoded.substring(0, separator)
         val secretKey = decoded.substring(separator + 1)
 
-        val apiKey = loadApiKey(accessKey)
+        val apiKey =
+            try {
+                loadApiKey(accessKey)
+            } catch (ex: ApiKeyInvalidException) {
+                throttleOrThrow(request, ex)
+            }
         val actualHash = sha256(secretKey).toByteArray(Charsets.UTF_8)
         val expectedHash = apiKey.secretKeyHash?.toByteArray(Charsets.UTF_8) ?: ByteArray(0)
         if (!MessageDigest.isEqual(actualHash, expectedHash)) {
-            throw ApiKeySecretMismatchException()
+            throttleOrThrow(request, ApiKeySecretMismatchException())
         }
         checkStatus(apiKey)
         checkIpWhitelist(apiKey, request)
@@ -104,6 +118,32 @@ class ApiKeyAuthenticationTokenFilter(
             UsernamePasswordAuthenticationToken(principal, null, principal.authorities)
 
         filterChain.doFilter(request, response)
+    }
+
+    private fun throttleOrThrow(request: HttpServletRequest, failure: RuntimeException): Nothing {
+        val limit = rateLimitPolicy.authFailureTotal()
+        if (limit <= 0) {
+            throw failure
+        }
+
+        val ip = getRequestIp(request, serverProperties.security.trustProxyHeaders)
+        val result = rateLimiter.acquire(RateLimitDimension.AUTH_FAILURE, ip, limit)
+        if (result.allowed) {
+            throw failure
+        }
+
+        _logger.debug(
+            "Auth failure limit hit: ip={} limit={} retryAfter={}",
+            ip,
+            result.limit,
+            result.retryAfterSeconds,
+        )
+        throw RequestTooFrequentException(
+            scope = RateLimitDimension.AUTH_FAILURE.segment,
+            limit = result.limit,
+            remaining = result.remaining,
+            retryAfterSeconds = result.retryAfterSeconds,
+        )
     }
 
     private fun loadApiKey(accessKey: String): ApiKey {

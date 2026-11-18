@@ -39,6 +39,7 @@ class ApiMetricsCron(
             val countMap = readMetricMap(prefix, "count")
             val errorMap = readMetricMap(prefix, "error")
             val latencyMap = readMetricMap(prefix, "latency")
+            val rateLimitedMap = readMetricMap(prefix, "ratelimited")
             val activeKeys = redisProvider.getSet<Any>("${prefix}_keys")?.size ?: 0
 
             if (countMap.isNotEmpty()) {
@@ -49,6 +50,9 @@ class ApiMetricsCron(
             }
             if (latencyMap.isNotEmpty()) {
                 save(StatisticsLog.KeyItem.API_LATENCY_MS, latencyMap)
+            }
+            if (rateLimitedMap.isNotEmpty()) {
+                save(StatisticsLog.KeyItem.API_RATE_LIMITED_COUNT, rateLimitedMap)
             }
             save(StatisticsLog.KeyItem.API_ACTIVE_KEYS, mapOf("activeKeys" to activeKeys))
         } catch (e: Exception) {

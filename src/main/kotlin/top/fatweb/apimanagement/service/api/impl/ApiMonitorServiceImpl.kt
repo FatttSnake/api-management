@@ -34,10 +34,14 @@ class ApiMonitorServiceImpl(
     override fun dashboard(): ApiMonitorDashboardVo {
         val prefix = "${serverProperties.security.tokenIssuer}_apimetrics"
         val countKeys = redisProvider.keys("${prefix}_count:*")
+        val rateLimitedKeys = redisProvider.keys("${prefix}_ratelimited:*")
+        val apiCodes =
+            (
+                countKeys.map { it.removePrefix("${prefix}_count:") } +
+                    rateLimitedKeys.map { it.removePrefix("${prefix}_ratelimited:") }
+                ).toSet()
         val interfaces =
-            countKeys
-                .map { it.removePrefix("${prefix}_count:") }
-                .toSet()
+            apiCodes
                 .associateWith { pluginRegistryCache.getByCode(it) }
                 .filterValues { it != null }
                 .mapValues { it.value!! }
@@ -49,14 +53,15 @@ class ApiMonitorServiceImpl(
                 .filterValues { it != null }
                 .mapValues { it.value!! }
         val live =
-            countKeys
-                .map { key ->
-                    val apiCode = key.removePrefix("${prefix}_count:")
+            apiCodes
+                .map { apiCode ->
                     val apiInterface = interfaces[apiCode]
                     ApiMonitorDashboardVo.ApiMonitorItemVo(
                         apiCode = apiCode,
-                        count = redisProvider.getObject<Number>(key)?.toLong() ?: 0L,
+                        count = redisProvider.getObject<Number>("${prefix}_count:$apiCode")?.toLong() ?: 0L,
                         error = redisProvider.getObject<Number>("${prefix}_error:$apiCode")?.toLong() ?: 0L,
+                        rateLimited =
+                        redisProvider.getObject<Number>("${prefix}_ratelimited:$apiCode")?.toLong() ?: 0L,
                         latencyMs = redisProvider.getObject<Number>("${prefix}_latency:$apiCode")?.toLong() ?: 0L,
                         pluginVo = apiInterface?.pluginId?.let { plugins[it]?.toVo() },
                         interfaceVo = apiInterface?.toVo(),
