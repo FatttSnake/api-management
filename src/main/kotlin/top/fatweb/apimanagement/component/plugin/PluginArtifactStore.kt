@@ -16,6 +16,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
+import java.time.Duration
+import java.time.Instant
 import java.util.jar.JarFile
 import java.util.jar.JarInputStream
 
@@ -65,6 +67,48 @@ class PluginArtifactStore(
             Files.deleteIfExists(temp)
         }
         return StoredJar(digest, path, created = true)
+    }
+
+    /**
+     * Deletes stored jars no installed plugin references and stale staged temporary files.
+     *
+     * Must run before any plugin is mounted: a jar opened through a `jar:` URL keeps its
+     * `JarFile` cached for the life of the JVM, so a jar left behind by an uninstall or upgrade
+     * can only be removed at a later startup.
+     *
+     * @param referenced digests still referenced by installed plugins
+     * @param grace minimum age before an unreferenced file is deleted
+     * @return number of files deleted
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.2
+     */
+    fun deleteUnreferenced(referenced: Set<String>, grace: Duration): Int {
+        val dir = Path.of(serverProperties.storage.pluginDir)
+        if (!Files.isDirectory(dir)) {
+            return 0
+        }
+
+        val cutoff = Instant.now().minus(grace)
+        val files = Files.list(dir).use { it.toList() }
+        var deleted = 0
+        files.forEach { file ->
+            val name = file.fileName.toString()
+            val orphan =
+                (name.endsWith(JAR_SUFFIX) && name.removeSuffix(JAR_SUFFIX) !in referenced) ||
+                    name.endsWith(TEMP_SUFFIX)
+            if (!orphan) {
+                return@forEach
+            }
+
+            val removed = runCatching {
+                Files.getLastModifiedTime(file).toInstant().isBefore(cutoff) && Files.deleteIfExists(file)
+            }.getOrDefault(false)
+            if (removed) {
+                deleted++
+            }
+        }
+
+        return deleted
     }
 
     /**
@@ -232,5 +276,7 @@ class PluginArtifactStore(
         const val DESCRIPTOR_ENTRY = "META-INF/api-plugin.json"
         const val LOCK_ENTRY = "META-INF/api-plugin-deps.json"
         const val CONFIG_ENTRY = "META-INF/plugin-config.json"
+        const val JAR_SUFFIX = ".jar"
+        const val TEMP_SUFFIX = ".tmp"
     }
 }
