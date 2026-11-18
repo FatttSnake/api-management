@@ -13,7 +13,8 @@ import java.math.BigDecimal
  * @property price price per call, or null when free or inherited
  * @property billingMode billing mode
  * @property needKey whether an AccessKey is required
- * @property rateLimit per-minute rate limit, or null when inherited or unlimited
+ * @property rateLimit resolved effective per-minute API total, 0 when unlimited; null only when
+ * the interface row is not registered
  * @property accessMode access mode
  * @property path full path
  * @property method HTTP method
