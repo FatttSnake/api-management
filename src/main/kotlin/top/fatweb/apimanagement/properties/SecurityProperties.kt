@@ -100,8 +100,8 @@ data class SecurityProperties(
      */
     @field:NotBlank val secretKeyPrefix: String = "Basic ",
     /**
-     * Whether the gateway runs behind a reverse proxy that sets `X-Real-IP` /
-     * `X-Forwarded-For`
+     * Whether the gateway runs behind a reverse proxy or CDN that sets the client IP headers
+     * `X-Real-IP` / `X-Forwarded-For`
      *
      * Off by default: those headers are client-controlled unless a proxy overwrites them, and
      * they feed the API key IP allowlist and the audit log.
@@ -111,6 +111,28 @@ data class SecurityProperties(
      */
     val trustProxyHeaders: Boolean = false,
     /**
+     * Address ranges of the proxies and CDN edges that may set the client IP headers
+     *
+     * When set, headers are only believed for requests whose peer is in these ranges, and
+     * `X-Forwarded-For` is walked from the right past these ranges. When empty, headers are
+     * believed from any peer and the first `X-Forwarded-For` entry is taken.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.2
+     */
+    val trustedProxies: List<String> = emptyList(),
+    /**
+     * Header the proxy overwrites with the single caller address, for example
+     * `CF-Connecting-IP` behind Cloudflare
+     *
+     * Requires [trustedProxies]: other proxies should leave this unset so a client-supplied
+     * copy of the header is not believed.
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.2
+     */
+    val clientIpHeader: String? = null,
+    /**
      * Origins the management console may call from
      *
      * Spring origin patterns are accepted, for example `http://localhost:*`.
@@ -119,4 +141,10 @@ data class SecurityProperties(
      * @since 1.0.0
      */
     val allowedOriginPatterns: List<String> = listOf("http://localhost:*", "http://127.0.0.1:*"),
-)
+) {
+    init {
+        require(clientIpHeader == null || trustedProxies.isNotEmpty()) {
+            "trusted-proxies must be set when client-ip-header is configured"
+        }
+    }
+}

@@ -57,7 +57,7 @@ data class ApiKeyAddParam(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "IP 白名单（逗号分隔 IP/CIDR，空则不限）", example = "10.0.0.0/8,192.168.1.1")
+    @field:Schema(description = "IP 白名单（逗号分隔 IP/CIDR，空则不限）", example = "10.0.0.0/8,192.168.1.1,2001:db8::/32")
     var ipWhitelist: String?,
     /**
      * Per-key rate limit per minute (0 = inherit the per-user default)

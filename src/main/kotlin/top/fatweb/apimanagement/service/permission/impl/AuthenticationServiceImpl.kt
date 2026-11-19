@@ -261,7 +261,7 @@ class AuthenticationServiceImpl(
 
         sendRetrieveMail(
             user.username!!,
-            getRequestIp(request, serverProperties.security.trustProxyHeaders),
+            getRequestIp(request, serverProperties.security),
             code,
             forgetParam.email!!,
         )
@@ -313,7 +313,7 @@ class AuthenticationServiceImpl(
 
         sendPasswordChangedMail(
             user.username!!,
-            getRequestIp(request, serverProperties.security.trustProxyHeaders),
+            getRequestIp(request, serverProperties.security),
             userInfo.email!!,
         )
     }
@@ -613,12 +613,12 @@ class AuthenticationServiceImpl(
         logger.info(
             "用户登录 [用户名: '{}', IP: '{}']",
             loginUser.username,
-            getRequestIp(request, serverProperties.security.trustProxyHeaders),
+            getRequestIp(request, serverProperties.security),
         )
         updateOrThrowException {
             userService.update(
                 User().apply {
-                    currentLoginIp = getRequestIp(request, serverProperties.security.trustProxyHeaders)
+                    currentLoginIp = getRequestIp(request, serverProperties.security)
                     currentLoginTime = LocalDateTime.now(ZoneOffset.UTC)
                     lastLoginIp = loginUser.user.currentLoginIp
                     lastLoginTime = loginUser.user.currentLoginTime

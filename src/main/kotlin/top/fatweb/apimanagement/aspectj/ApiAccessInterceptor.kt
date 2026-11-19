@@ -209,7 +209,7 @@ class ApiAccessInterceptor(
                 this.responseCode = response.status
                 this.success = if (success) 1 else 0
                 this.executeTime = executeTime
-                this.requestIp = getRequestIp(request, serverProperties.security.trustProxyHeaders)
+                this.requestIp = getRequestIp(request, serverProperties.security)
                 this.traceId = TraceIdUtil.get()
                 this.cost = cost
                 this.billingMode = billingMode
@@ -472,7 +472,7 @@ class ApiAccessInterceptor(
         request.setAttribute(ATTR_BILLING_MODE, ApiInterface.BillingMode.FREE)
 
         val decisions = mutableListOf<RateLimitResult>()
-        val ip = getRequestIp(request, serverProperties.security.trustProxyHeaders)
+        val ip = getRequestIp(request, serverProperties.security)
         acquireOrReject(
             request = request,
             plugin = plugin,
@@ -518,7 +518,7 @@ class ApiAccessInterceptor(
             plugin.pluginId,
             api.code,
             scopeId,
-            getRequestIp(request, serverProperties.security.trustProxyHeaders),
+            getRequestIp(request, serverProperties.security),
             result.limit,
             result.remaining,
             result.retryAfterSeconds,
