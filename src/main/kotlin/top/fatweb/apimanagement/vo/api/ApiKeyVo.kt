@@ -75,7 +75,7 @@ data class ApiKeyVo(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "IP 白名单", example = "10.0.0.0/8,192.168.1.1")
+    @field:Schema(description = "IP 白名单", example = "10.0.0.0/8,192.168.1.1,2001:db8::/32")
     val ipWhitelist: String?,
     /**
      * Per-key rate limit per minute (0 = inherit the per-user default)

@@ -25,6 +25,7 @@ import top.fatweb.apimanagement.service.api.IApiKeyService
 import top.fatweb.apimanagement.settings.ApiSettings
 import top.fatweb.apimanagement.settings.SettingsOperator
 import top.fatweb.apimanagement.util.getRequestIp
+import top.fatweb.apimanagement.util.ipMatches
 import top.fatweb.apimanagement.util.sha256
 import java.security.MessageDigest
 import java.time.LocalDateTime
@@ -126,7 +127,7 @@ class ApiKeyAuthenticationTokenFilter(
             throw failure
         }
 
-        val ip = getRequestIp(request, serverProperties.security.trustProxyHeaders)
+        val ip = getRequestIp(request, serverProperties.security)
         val result = rateLimiter.acquire(RateLimitDimension.AUTH_FAILURE, ip, limit)
         if (result.allowed) {
             throw failure
@@ -178,36 +179,10 @@ class ApiKeyAuthenticationTokenFilter(
             return
         }
 
-        val ip = getRequestIp(request, serverProperties.security.trustProxyHeaders)
+        val ip = getRequestIp(request, serverProperties.security)
         if (allowed.none { ipMatches(it, ip) }) {
             throw ApiKeyIpNotAllowedException()
         }
-    }
-
-    private fun ipMatches(pattern: String, ip: String): Boolean {
-        if (pattern == ip) {
-            return true
-        }
-        if (!pattern.contains("/")) {
-            return false
-        }
-
-        return try {
-            val (network, prefixText) = pattern.split("/", limit = 2)
-            val prefix = prefixText.trim().toInt()
-            val mask = if (prefix == 0) 0 else -1 shl (32 - prefix)
-            val networkAddress = parseIpV4(network.trim())
-            val ipAddress = parseIpV4(ip)
-            (networkAddress and mask) == (ipAddress and mask)
-        } catch (_: Exception) {
-            false
-        }
-    }
-
-    private fun parseIpV4(ip: String): Int {
-        val parts = ip.split(".").map { it.trim().toInt() }
-        require(parts.size == 4)
-        return (parts[0] shl 24) or (parts[1] shl 16) or (parts[2] shl 8) or parts[3]
     }
 
     private fun cacheKey(accessKey: String) = "${serverProperties.security.tokenIssuer}_apikey_$accessKey"
