@@ -31,7 +31,7 @@ The backend is written in **Kotlin + Spring Boot**. The stable API surface neede
 - **Pluginized API hosting** — upload a plugin jar; the gateway verifies its **Ed25519 signature** (against the trust key store maintained by the administrator), then hot-installs / upgrades / uninstalls it with an **isolated plugin class loader and per-plugin module graph** — no restart required.
 - **Namespaced & versioned routing** — every plugin endpoint is uniformly exposed as `/api/{plugin}/v{version}/...`; routes are persisted to the database and automatically restored after a restart.
 - **Multi-layer access control** — accounts log in with **JWT**; callers may also use an **AccessKey / SecretKey**; optional **two-factor authentication (TOTP)**; each interface supports a `need-key` switch, an enable toggle and two access modes, `DEFAULT` / `RESTRICTED`, all expressed as RBAC powers.
-- **Metering & billing** — per-interface price and billing mode (`FREE` / `SUCCESS_ONLY` / `ALWAYS`); **per-API total, per-user and per-IP sliding-window rate limits** for overload and abuse control; per-account **balance** and **quota windows**.
+- **Metering & billing** — per-interface price and billing mode (`FREE` / `SUCCESS_ONLY` / `ALWAYS`); **per-API, per-user, per-key and per-IP (anonymous) sliding-window rate limits**, plus per-IP authentication-failure limits, for overload and abuse control; per-account **balance** and **quota windows**.
 - **RBAC permission tree** — users, groups, roles and fine-grained powers (module / menu / operation / scope); available APIs are **grouped by plugin** in the permission tree.
 - **Self-service for consumers** — "My API accounts", "My API keys", "API docs" and "My usage" endpoints for end users.
 - **Observability & audit** — API usage statistics, monitoring, reports and aggregated statistics (periodically computed), plus operation audit and system logs.
@@ -67,6 +67,7 @@ api-management/
 │   ├── component/
 │   │   ├── api/                                  # Route registration & version matching (/api/{plugin}/v{version}/...)
 │   │   ├── plugin/                               # Plugin artifacts, config schema, datasources, runtime registry
+│   │   ├── ratelimit/                            # Sliding-window rate limits and quota policies
 │   │   ├── security/                             # JWT, CSRF tokens
 │   │   └── storage/                              # Local / S3 file storage
 │   ├── config/                                   # Security / Jackson / Redis / Flyway / MyBatis-Plus / Knife4j ...
@@ -81,7 +82,8 @@ api-management/
 ├── src/main/resources/
 │   ├── application.yaml                          # Base application config (datasource skeleton, SQLite, logging, MyBatis-Plus)
 │   ├── application-config-template.yml           # Config template generated on first run
-│   └── db/migration/{master,sqlite}/             # Flyway SQL migrations
+│   ├── db/migration/{master,sqlite}/             # Flyway SQL migrations
+│   └── lua/                                      # Redis scripts (sliding-window rate limit)
 └── data/                                         # Runtime data (auto-created when absent)
     ├── db/sqlite.db                              # SQLite (high-volume data such as logs)
     ├── log/                                      # Application logs
@@ -144,7 +146,7 @@ The program reads `application-config.yml` from the **running directory or the `
 | Block | Purpose | Key options |
 | --- | --- | --- |
 | `app.admin` | Administrator created when the database is initialized (optional) | `username`, `password`, `nickname`, `email` |
-| `app.security` | JWT token & security | `token-secret` (required; random value in the generated template), `token-prefix`, `access-token-ttl`, `refresh-token-ttl`, `trust-proxy-headers`, `allowed-origin-patterns` |
+| `app.security` | JWT token & security | `token-secret` (required; random value in the generated template), `token-prefix`, `access-token-ttl`, `refresh-token-ttl`, `trust-proxy-headers`, `trusted-proxies`, `client-ip-header`, `allowed-origin-patterns` |
 | `app.storage` | File storage | `mode` (`local`/`s3`), `local.root`, `public-base-url`, `external-url-*`, `s3.*` |
 | `server.port` | Server port | default `8080` |
 | `spring.datasource.dynamic.datasource.master` | MySQL (key business data) | `url`, `username`, `password` |
@@ -182,6 +184,33 @@ logging:
 knife4j:
   production: true
 ```
+
+## Client IP behind a proxy
+
+When the gateway runs behind a CDN or reverse proxy, `request.remoteAddr` is the proxy. Set
+`app.security.trust-proxy-headers: true` to take the caller address from the forwarding headers
+instead; it feeds the API key IP allowlist, the per-IP rate limits and the audit logs.
+
+| Option | Purpose |
+| --- | --- |
+| `trust-proxy-headers` | Read `X-Real-IP` / `X-Forwarded-For`. Enable it only when the proxy overwrites them |
+| `trusted-proxies` | IP/CIDR ranges (IPv4 and IPv6) of the proxies and CDN edges. Requests from other peers ignore the headers, and `X-Forwarded-For` is walked from the right past these ranges, so appended chains and multiple proxy layers resolve correctly |
+| `client-ip-header` | Single-value header the proxy overwrites itself, such as `CF-Connecting-IP` behind Cloudflare. It wins over the other headers and requires `trusted-proxies` |
+
+```yaml
+app:
+  security:
+    trust-proxy-headers: true
+    trusted-proxies:
+      - 127.0.0.1/32        # nginx on the same host
+      - 173.245.48.0/20     # Cloudflare origin-pull ranges, see cloudflare.com/ips
+      - 2400:cb00::/32
+    client-ip-header: CF-Connecting-IP   # only when the CDN overwrites it
+```
+
+Name in `client-ip-header` only a header the proxy guarantees to overwrite; one that passes a
+client-supplied value through would let callers choose the IP that is recorded and checked. The
+origin should also accept traffic from the proxies only.
 
 # Plugin Development
 
@@ -350,6 +379,7 @@ Both settings also read an environment variable (`API_PLUGIN_SERVER_URL`, `API_P
 
 - Integrates **Spring Security** and uses **JWT** tokens (access token 2 hours / refresh token 128 days by default, both configurable); the signing secret `app.security.token-secret` lives in the configuration file.
 - Supports **two-factor authentication (TOTP)**, along with CSRF token management and related security filters.
+- Behind a CDN or reverse proxy, set `app.security.trust-proxy-headers` — and usually `trusted-proxies` — so the IP allowlist, rate limits and audit logs see the caller rather than the proxy; see [Client IP behind a proxy](#client-ip-behind-a-proxy).
 - On first startup an administrator is created: the account configured under `app.admin` is used if present; otherwise the username defaults to `admin` with a **randomly generated password**, printed to the console exactly once — change it promptly after logging in.
 
 # Storage
