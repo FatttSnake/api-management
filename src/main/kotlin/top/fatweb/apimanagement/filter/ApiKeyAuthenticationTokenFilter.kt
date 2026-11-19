@@ -46,7 +46,7 @@ class ApiKeyAuthenticationTokenFilter(
     private val rateLimitPolicy: RateLimitPolicy,
     private val rateLimiter: RateLimiter,
 ) : OncePerRequestFilter() {
-    private val _logger = LoggerFactory.getLogger(ApiKeyAuthenticationTokenFilter::class.java)
+    private val log = LoggerFactory.getLogger(this::class.java)
 
     override fun shouldNotFilter(request: HttpServletRequest): Boolean {
         val uri = request.requestURI
@@ -132,7 +132,7 @@ class ApiKeyAuthenticationTokenFilter(
             throw failure
         }
 
-        _logger.debug(
+        log.debug(
             "Auth failure limit hit: ip={} limit={} retryAfter={}",
             ip,
             result.limit,
