@@ -31,7 +31,7 @@ API Management 是一个**可自托管的 API 网关与管理平台**。它将�
 - **插件化 API 托管** —— 上传插件 Jar，网关会先校验其 **Ed25519 签名**（对照管理员维护的信任公钥库），再装入**隔离的插件类加载器与模块图**中完成**热安装/升级/卸载**，无需重启。
 - **命名空间与版本化路由** —— 每个插件接口被统一暴露为 `/api/{plugin}/v{version}/...`，接口路由注册到数据库，重启后自动恢复。
 - **多级访问控制** —— 账户通过 JWT 登录，调用方亦可使用 **AccessKey / SecretKey**；可选 **两步验证（TOTP）**；每个接口支持 `need-key`、启停开关以及 `DEFAULT` / `RESTRICTED` 两种访问模式，并以 RBAC 权限点的形式统一表达。
-- **计量与计费** —— 每个接口可独立设置单价与计费模式（`FREE` / `SUCCESS_ONLY` / `ALWAYS`）；支持**接口总量、每用户、每 IP 的滑动窗口限流**（分别防过载与防滥用）；账户维度支持**余额**与**配额周期**。
+- **计量与计费** —— 每个接口可独立设置单价与计费模式（`FREE` / `SUCCESS_ONLY` / `ALWAYS`）；支持**按接口、按用户、按 Key 和按 IP（匿名调用）的滑动窗口限流**，以及按 IP 的认证失败次数限制（分别防过载与防滥用）；账户维度支持**余额**与**配额周期**。
 - **RBAC 权限体系** —— 用户、分组、角色与细粒度权限点（模块 / 菜单 / 操作 / 范围）；可用 API 在权限树中**按插件分组**展示。
 - **用户自助服务** —— 面向终端用户的「我的 API 账户」「我的密钥」「API 文档」「我的用量」等接口。
 - **可观测与审计** —— API 用量统计、监控、报表与汇总统计（定时聚合），以及操作审计日志、系统日志。
@@ -67,6 +67,7 @@ api-management/
 │   ├── component/
 │   │   ├── api/                                  # API 路由注册与版本匹配（/api/{plugin}/v{version}/...）
 │   │   ├── plugin/                               # 插件产物、配置 schema、数据源、运行时注册表
+│   │   ├── ratelimit/                            # 滑动窗口限流与配额策略
 │   │   ├── security/                             # JWT、CSRF 令牌
 │   │   └── storage/                              # 本地 / S3 文件存储
 │   ├── config/                                   # Security / Jackson / Redis / Flyway / MyBatis-Plus / Knife4j 等
@@ -81,7 +82,8 @@ api-management/
 ├── src/main/resources/
 │   ├── application.yaml                          # 应用基础配置（数据源骨架、SQLite、日志、MyBatis-Plus）
 │   ├── application-config-template.yml           # 首次运行生成的配置模板
-│   └── db/migration/{master,sqlite}/             # Flyway SQL 迁移
+│   ├── db/migration/{master,sqlite}/             # Flyway SQL 迁移
+│   └── lua/                                      # Redis 脚本（滑动窗口限流）
 └── data/                                         # 运行期数据（目录不存在时自动创建）
     ├── db/sqlite.db                              # SQLite（日志等大量读写的数据）
     ├── log/                                      # 应用日志
@@ -144,7 +146,7 @@ java -jar api-management-<version>.jar
 | 配置块 | 说明 | 关键项 |
 | --- | --- | --- |
 | `app.admin` | 初始化数据库时创建的管理员（可选） | `username`、`password`、`nickname`、`email` |
-| `app.security` | JWT 令牌与安全相关 | `token-secret`（必填，模板已生成随机值）、`token-prefix`、`access-token-ttl`、`refresh-token-ttl`、`trust-proxy-headers`、`allowed-origin-patterns` |
+| `app.security` | JWT 令牌与安全相关 | `token-secret`（必填，模板已生成随机值）、`token-prefix`、`access-token-ttl`、`refresh-token-ttl`、`trust-proxy-headers`、`trusted-proxies`、`client-ip-header`、`allowed-origin-patterns` |
 | `app.storage` | 文件存储 | `mode`（`local`/`s3`）、`local.root`、`public-base-url`、`external-url-*`、`s3.*` |
 | `server.port` | 服务端口 | 默认 `8080` |
 | `spring.datasource.dynamic.datasource.master` | MySQL（关键业务数据） | `url`、`username`、`password` |
@@ -182,6 +184,32 @@ logging:
 knife4j:
   production: true
 ```
+
+## 获取客户端真实 IP
+
+网关运行在 CDN 或反向代理后面时，`request.remoteAddr` 是对端代理的地址。开启
+`app.security.trust-proxy-headers: true` 后改为从转发头读取客户端地址；它用于 API Key 的 IP
+白名单、按 IP 的限流和审计日志。
+
+| 配置项 | 说明 |
+| --- | --- |
+| `trust-proxy-headers` | 读取 `X-Real-IP` / `X-Forwarded-For`。仅当代理会覆写这些头时开启 |
+| `trusted-proxies` | 代理与 CDN 回源地址的 IP/CIDR 网段（IPv4 与 IPv6）。对端不在其中的请求一律忽略转发头；`X-Forwarded-For` 从右往左跳过这些网段，追加式链路和多层代理都能解析正确 |
+| `client-ip-header` | 代理自己覆写的单值头，例如 Cloudflare 的 `CF-Connecting-IP`。优先级最高，且必须同时配置 `trusted-proxies` |
+
+```yaml
+app:
+  security:
+    trust-proxy-headers: true
+    trusted-proxies:
+      - 127.0.0.1/32        # 与网关同机的 nginx
+      - 173.245.48.0/20     # Cloudflare 回源网段，列表见 cloudflare.com/ips
+      - 2400:cb00::/32
+    client-ip-header: CF-Connecting-IP   # 仅在 CDN 会覆写该头时配置
+```
+
+`client-ip-header` 只能填代理保证覆写的头：如果代理原样透传客户端自带的值，调用方就能自选被记录、
+被校验的 IP。同时源站应只接受这些代理的流量。
 
 # 插件开发
 
@@ -316,6 +344,7 @@ lock 由 `runtimeClasspath` 生成；运行期不做任何版本解析。模块�
 
 - 集成 **Spring Security**，采用 **JWT** 令牌（访问令牌默认 2 小时、刷新令牌默认 128 天，均可在配置中调整），密钥 `app.security.token-secret` 存于配置文件中。
 - 支持**两步验证（TOTP）**，并提供 CSRF 令牌管理与相关安全过滤器。
+- 部署在 CDN 或反向代理后面时，开启 `app.security.trust-proxy-headers`（通常还要配置 `trusted-proxies`），让 IP 白名单、限流与审计日志看到调用方而不是代理，见[获取客户端真实 IP](#获取客户端真实-ip)。
 - 首次启动创建管理员：如已在 `app.admin` 中指定账号则使用之；否则默认用户名 `admin` 并**随机生成密码**，仅在控制台打印一次，请及时修改。
 
 # 存储
