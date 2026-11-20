@@ -102,8 +102,10 @@ class SettingsServiceImpl : ISettingsService {
     }
 
     override fun getApi() = ApiSettingsVo(
-        defaultRateLimitPerMin = SettingsOperator.getValue(ApiSettings::defaultRateLimitPerMin, 0),
-        defaultQuota = SettingsOperator.getValue(ApiSettings::defaultQuota, 0),
+        defaultUserRateLimitPerMin = SettingsOperator.getValue(ApiSettings::defaultUserRateLimitPerMin, 0),
+        defaultAnonymousRateLimitPerMin = SettingsOperator.getValue(ApiSettings::defaultAnonymousRateLimitPerMin, 0),
+        authFailureLimitPerMin = SettingsOperator.getValue(ApiSettings::authFailureLimitPerMin, 30),
+        defaultQuota = SettingsOperator.getValue(ApiSettings::defaultQuota, 0L),
         defaultQuotaPeriodSeconds = SettingsOperator.getValue(ApiSettings::defaultQuotaPeriodSeconds, 86400),
         accessKeyLength = SettingsOperator.getValue(ApiSettings::accessKeyLength, 20),
         secretKeyLength = SettingsOperator.getValue(ApiSettings::secretKeyLength, 40),
@@ -113,7 +115,9 @@ class SettingsServiceImpl : ISettingsService {
 
     override fun updateApi(apiSettingsParam: ApiSettingsParam) {
         apiSettingsParam.run {
-            SettingsOperator.setValue(ApiSettings::defaultRateLimitPerMin, defaultRateLimitPerMin)
+            SettingsOperator.setValue(ApiSettings::defaultUserRateLimitPerMin, defaultUserRateLimitPerMin)
+            SettingsOperator.setValue(ApiSettings::defaultAnonymousRateLimitPerMin, defaultAnonymousRateLimitPerMin)
+            SettingsOperator.setValue(ApiSettings::authFailureLimitPerMin, authFailureLimitPerMin)
             SettingsOperator.setValue(ApiSettings::defaultQuota, defaultQuota)
             SettingsOperator.setValue(ApiSettings::defaultQuotaPeriodSeconds, defaultQuotaPeriodSeconds)
             SettingsOperator.setValue(ApiSettings::accessKeyLength, accessKeyLength)

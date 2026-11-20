@@ -1,5 +1,6 @@
 package top.fatweb.apimanagement.settings
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude
 
 /**
@@ -8,24 +9,39 @@ import com.fasterxml.jackson.annotation.JsonInclude
  * @author FatttSnake, fatttsnake@gmail.com
  * @since 1.0.0
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 data class ApiSettings(
     /**
-     * Default rate limit per minute per key (0 = unlimited)
+     * Default per-user rate limit per minute across all keys and login-state calls (0 = unlimited)
      *
      * @author FatttSnake, fatttsnake@gmail.com
-     * @since 1.0.0
+     * @since 1.0.2
      */
-    var defaultRateLimitPerMin: Int? = null,
+    var defaultUserRateLimitPerMin: Int? = null,
     /**
-     * Default quota requests per period per key (0 = unlimited)
+     * Default per-IP rate limit per minute for anonymous callers (0 = unlimited)
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.2
+     */
+    var defaultAnonymousRateLimitPerMin: Int? = null,
+    /**
+     * Per-IP authentication failure limit per minute (0 = disabled, unset = 30)
+     *
+     * @author FatttSnake, fatttsnake@gmail.com
+     * @since 1.0.2
+     */
+    var authFailureLimitPerMin: Int? = null,
+    /**
+     * Default per-user quota requests per period (0 = unlimited)
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
     var defaultQuota: Long? = null,
     /**
-     * Default quota period in seconds
+     * Default per-user quota period in seconds
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0

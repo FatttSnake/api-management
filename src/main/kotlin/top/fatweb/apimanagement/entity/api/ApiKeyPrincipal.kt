@@ -55,7 +55,7 @@ class ApiKeyPrincipal : UserDetails {
     var permissions: List<String> = emptyList()
 
     /**
-     * Per-key rate limit per minute
+     * Per-key rate limit per minute (0 = inherit the per-user default)
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -63,7 +63,7 @@ class ApiKeyPrincipal : UserDetails {
     var rateLimit: Int? = null
 
     /**
-     * Quota requests per period
+     * Optional per-key quota per period (0 = no per-key cap; the per-user quota still applies)
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -71,7 +71,7 @@ class ApiKeyPrincipal : UserDetails {
     var quota: Long? = null
 
     /**
-     * Quota period in seconds
+     * Quota period in seconds (null/0 = use the system period)
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0

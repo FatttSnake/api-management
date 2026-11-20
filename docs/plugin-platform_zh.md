@@ -374,7 +374,7 @@ sequenceDiagram
     MVC->>AI: preHandle
     AI->>AI: 取 interface/plugin，校验启用
     AI->>AI: AccessKey/用户/匿名准入
-    AI->>AI: 权限、限流、配额、计费预检
+    AI->>AI: 权限、滑动窗口限流、配额、计费预检
     AI->>AI: in-flight tryEnter + TCCL
     MVC->>AD: handle
     AD->>AD: 构造 ApiRequest
@@ -410,9 +410,10 @@ sequenceDiagram
 - `PluginInvocation`：
   - 从 `PluginRegistryCache` 取 `ApiInterface` 和 `ApiPlugin`。
   - 校验启用状态。
-  - `ApiKeyPrincipal`：权限 code、key 限流、配额、计费预检、余额扣减。
-  - `LoginUser`：RESTRICTED 模式权限、接口限流、余额预检；超管免费。
-  - 匿名：`needKey == 1` 时拒绝。
+  - `ApiKeyPrincipal`：权限 code；用户总量、Key 总量、接口总量滑动窗口限流；用户配额 + 可选 Key 配额；计费预检、余额扣减。
+  - `LoginUser`：RESTRICTED 模式权限；用户总量、接口总量限流；用户配额；余额预检；超管免费。
+  - 匿名：`needKey == 1` 时拒绝；否则按 IP 总量 + 接口总量限流，不做配额。
+  - 限流拒绝返回 429 + `Retry-After`/`X-RateLimit-*`；配额拒绝保持业务信封。
   - `PluginInFlightTracker.tryEnter`。
   - 设置 TCCL 为插件 loader。
 - `afterCompletion`：

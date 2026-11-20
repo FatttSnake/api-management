@@ -3,10 +3,14 @@ package top.fatweb.apimanagement.filter
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.slf4j.LoggerFactory
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
+import top.fatweb.apimanagement.component.ratelimit.RateLimitDimension
+import top.fatweb.apimanagement.component.ratelimit.RateLimitPolicy
+import top.fatweb.apimanagement.component.ratelimit.RateLimiter
 import top.fatweb.apimanagement.component.storage.RedisProvider
 import top.fatweb.apimanagement.entity.api.ApiKey
 import top.fatweb.apimanagement.entity.api.ApiKeyPrincipal
@@ -15,11 +19,13 @@ import top.fatweb.apimanagement.exception.ApiKeyExpiredException
 import top.fatweb.apimanagement.exception.ApiKeyInvalidException
 import top.fatweb.apimanagement.exception.ApiKeyIpNotAllowedException
 import top.fatweb.apimanagement.exception.ApiKeySecretMismatchException
+import top.fatweb.apimanagement.exception.RequestTooFrequentException
 import top.fatweb.apimanagement.properties.ServerProperties
 import top.fatweb.apimanagement.service.api.IApiKeyService
 import top.fatweb.apimanagement.settings.ApiSettings
 import top.fatweb.apimanagement.settings.SettingsOperator
 import top.fatweb.apimanagement.util.getRequestIp
+import top.fatweb.apimanagement.util.ipMatches
 import top.fatweb.apimanagement.util.sha256
 import java.security.MessageDigest
 import java.time.LocalDateTime
@@ -38,7 +44,11 @@ class ApiKeyAuthenticationTokenFilter(
     private val serverProperties: ServerProperties,
     private val redisProvider: RedisProvider,
     private val apiKeyService: IApiKeyService,
+    private val rateLimitPolicy: RateLimitPolicy,
+    private val rateLimiter: RateLimiter,
 ) : OncePerRequestFilter() {
+    private val log = LoggerFactory.getLogger(this::class.java)
+
     override fun shouldNotFilter(request: HttpServletRequest): Boolean {
         val uri = request.requestURI
         if (!uri.startsWith("/api/")) {
@@ -66,20 +76,25 @@ class ApiKeyAuthenticationTokenFilter(
             try {
                 String(Base64.getDecoder().decode(encoded), Charsets.UTF_8)
             } catch (_: Exception) {
-                throw ApiKeyInvalidException()
+                throttleOrThrow(request, ApiKeyInvalidException())
             }
         val separator = decoded.indexOf(':')
         if (separator <= 0) {
-            throw ApiKeyInvalidException()
+            throttleOrThrow(request, ApiKeyInvalidException())
         }
         val accessKey = decoded.substring(0, separator)
         val secretKey = decoded.substring(separator + 1)
 
-        val apiKey = loadApiKey(accessKey)
+        val apiKey =
+            try {
+                loadApiKey(accessKey)
+            } catch (ex: ApiKeyInvalidException) {
+                throttleOrThrow(request, ex)
+            }
         val actualHash = sha256(secretKey).toByteArray(Charsets.UTF_8)
         val expectedHash = apiKey.secretKeyHash?.toByteArray(Charsets.UTF_8) ?: ByteArray(0)
         if (!MessageDigest.isEqual(actualHash, expectedHash)) {
-            throw ApiKeySecretMismatchException()
+            throttleOrThrow(request, ApiKeySecretMismatchException())
         }
         checkStatus(apiKey)
         checkIpWhitelist(apiKey, request)
@@ -104,6 +119,32 @@ class ApiKeyAuthenticationTokenFilter(
             UsernamePasswordAuthenticationToken(principal, null, principal.authorities)
 
         filterChain.doFilter(request, response)
+    }
+
+    private fun throttleOrThrow(request: HttpServletRequest, failure: RuntimeException): Nothing {
+        val limit = rateLimitPolicy.authFailureTotal()
+        if (limit <= 0) {
+            throw failure
+        }
+
+        val ip = getRequestIp(request, serverProperties.security)
+        val result = rateLimiter.acquire(RateLimitDimension.AUTH_FAILURE, ip, limit)
+        if (result.allowed) {
+            throw failure
+        }
+
+        log.debug(
+            "Auth failure limit hit: ip={} limit={} retryAfter={}",
+            ip,
+            result.limit,
+            result.retryAfterSeconds,
+        )
+        throw RequestTooFrequentException(
+            scope = RateLimitDimension.AUTH_FAILURE.segment,
+            limit = result.limit,
+            remaining = result.remaining,
+            retryAfterSeconds = result.retryAfterSeconds,
+        )
     }
 
     private fun loadApiKey(accessKey: String): ApiKey {
@@ -138,36 +179,10 @@ class ApiKeyAuthenticationTokenFilter(
             return
         }
 
-        val ip = getRequestIp(request, serverProperties.security.trustProxyHeaders)
+        val ip = getRequestIp(request, serverProperties.security)
         if (allowed.none { ipMatches(it, ip) }) {
             throw ApiKeyIpNotAllowedException()
         }
-    }
-
-    private fun ipMatches(pattern: String, ip: String): Boolean {
-        if (pattern == ip) {
-            return true
-        }
-        if (!pattern.contains("/")) {
-            return false
-        }
-
-        return try {
-            val (network, prefixText) = pattern.split("/", limit = 2)
-            val prefix = prefixText.trim().toInt()
-            val mask = if (prefix == 0) 0 else -1 shl (32 - prefix)
-            val networkAddress = parseIpV4(network.trim())
-            val ipAddress = parseIpV4(ip)
-            (networkAddress and mask) == (ipAddress and mask)
-        } catch (_: Exception) {
-            false
-        }
-    }
-
-    private fun parseIpV4(ip: String): Int {
-        val parts = ip.split(".").map { it.trim().toInt() }
-        require(parts.size == 4)
-        return (parts[0] shl 24) or (parts[1] shl 16) or (parts[2] shl 8) or parts[3]
     }
 
     private fun cacheKey(accessKey: String) = "${serverProperties.security.tokenIssuer}_apikey_$accessKey"

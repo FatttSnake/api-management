@@ -72,7 +72,7 @@ class ApiPlugin : Serializable {
     var defaultPrice: BigDecimal? = null
 
     /**
-     * Default rate limit per minute (null = unlimited)
+     * Default per-API total rate limit per minute (null/0 = unlimited)
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0

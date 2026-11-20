@@ -217,7 +217,7 @@ object SettingsOperator {
     /**
      * Set API platform settings value
      *
-     * @param field Field to set value. e.g. ApiSettings::defaultRateLimitPerMin
+     * @param field Field to set value. e.g. ApiSettings::defaultUserRateLimitPerMin
      * @param value Value to set
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -234,7 +234,7 @@ object SettingsOperator {
     /**
      * Get value from API platform settings
      *
-     * @param field Field to get value from. e.g. ApiSettings::defaultRateLimitPerMin
+     * @param field Field to get value from. e.g. ApiSettings::defaultUserRateLimitPerMin
      * @return Value
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -245,7 +245,7 @@ object SettingsOperator {
     /**
      * Get value from API platform settings with default value
      *
-     * @param field Field to get value from. e.g. ApiSettings::defaultRateLimitPerMin
+     * @param field Field to get value from. e.g. ApiSettings::defaultUserRateLimitPerMin
      * @param default Return default value when setting not found
      * @return Value
      * @author FatttSnake, fatttsnake@gmail.com

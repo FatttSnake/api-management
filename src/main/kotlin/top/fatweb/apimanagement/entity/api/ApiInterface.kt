@@ -35,9 +35,10 @@ class ApiInterface : Serializable {
      * Access mode enum
      *
      * DEFAULT means normal (account/password) users may call the API without an
-     * admin grant; RESTRICTED means they must hold the api:* operation code. This
-     * only governs the account/JWT path — an AccessKey always needs the code in its
-     * permissions regardless of mode.
+     * admin grant; RESTRICTED means they must hold the api:* operation code. It governs
+     * JWT calls at request time and also decides which interfaces an owner may grant to
+     * an AccessKey; an AccessKey always needs the code in its permissions regardless of
+     * mode.
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
@@ -147,7 +148,7 @@ class ApiInterface : Serializable {
     var needKey: Int? = null
 
     /**
-     * Rate limit per minute (null = inherit plugin default)
+     * Per-API total rate limit per minute across all callers (null/0 = inherit plugin default)
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0

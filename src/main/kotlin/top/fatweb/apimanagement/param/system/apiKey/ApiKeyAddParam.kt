@@ -57,34 +57,34 @@ data class ApiKeyAddParam(
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "IP 白名单（逗号分隔 IP/CIDR，空则不限）", example = "10.0.0.0/8,192.168.1.1")
+    @field:Schema(description = "IP 白名单（逗号分隔 IP/CIDR，空则不限）", example = "10.0.0.0/8,192.168.1.1,2001:db8::/32")
     var ipWhitelist: String?,
     /**
-     * Per-key rate limit per minute
+     * Per-key rate limit per minute (0 = inherit the per-user default)
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "每分钟限流次数(0=用全局默认)", example = "60")
+    @field:Schema(description = "每分钟限流次数(0=继承用户默认)", example = "60")
     @field:Min(value = 0, message = "Rate limit must be greater than or equal to 0")
     var rateLimit: Int?,
     /**
-     * Quota requests per period
+     * Optional per-key quota per period (0 = no per-key cap; the per-user quota still applies)
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "周期额度次数(0=用全局默认)", example = "100000")
+    @field:Schema(description = "单个 Key 周期额度(0=不单独限制，仍受用户配额约束)", example = "100000")
     @field:Min(value = 0, message = "Quota must be greater than or equal to 0")
     var quota: Long?,
     /**
-     * Quota period in seconds
+     * Quota period in seconds (null/0 = use the system period)
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "额度周期(秒)", example = "86400")
-    @field:Min(value = 1, message = "Quota period must be greater than or equal to 1")
+    @field:Schema(description = "额度周期(秒，0=用系统周期)", example = "86400")
+    @field:Min(value = 0, message = "Quota period must be greater than or equal to 0")
     var quotaPeriod: Int?,
     /**
      * Remark

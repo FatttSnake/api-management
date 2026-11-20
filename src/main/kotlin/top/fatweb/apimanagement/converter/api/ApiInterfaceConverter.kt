@@ -1,5 +1,6 @@
 package top.fatweb.apimanagement.converter.api
 
+import top.fatweb.apimanagement.component.ratelimit.RateLimitResolver
 import top.fatweb.apimanagement.entity.api.ApiInterface
 import top.fatweb.apimanagement.entity.api.ApiPlugin
 import top.fatweb.apimanagement.vo.api.ApiInterfaceVo
@@ -37,7 +38,8 @@ fun ApiInterface.toVo() = ApiInterfaceVo(
  * the gateway enforces at call time, so a caller-facing page needs no knowledge of plugin
  * defaults and never renders an "inherit" placeholder.
  *
- * price is never null and "0" means free; rateLimit is never null and 0 means unlimited.
+ * price is never null and "0" means free; rateLimit is the effective per-API total and 0 means
+ * unlimited.
  *
  * @param plugin Owning plugin, or null when it is no longer registered
  * @return Resolved ApiInterfaceVo object
@@ -57,7 +59,7 @@ fun ApiInterface.toResolvedVo(plugin: ApiPlugin?) = ApiInterfaceVo(
     price = this.price ?: plugin?.defaultPrice ?: BigDecimal.ZERO,
     billingMode = this.billingMode ?: ApiInterface.BillingMode.SUCCESS_ONLY,
     needKey = this.needKey?.let { it == 1 },
-    rateLimit = this.rateLimit ?: plugin?.defaultRateLimit ?: 0,
+    rateLimit = RateLimitResolver.resolveChildWithParent(this.rateLimit, plugin?.defaultRateLimit),
     enable = this.enable?.let { it == 1 },
     accessMode = this.accessMode ?: plugin?.defaultAccessMode ?: ApiInterface.AccessMode.RESTRICTED,
     createTime = this.createTime,

@@ -92,6 +92,14 @@ data class ApiMonitorDashboardVo(
         @field:Schema(description = "错误次数")
         val error: Long?,
         /**
+         * Rate limited request count
+         *
+         * @author FatttSnake, fatttsnake@gmail.com
+         * @since 1.0.2
+         */
+        @field:Schema(description = "限流拒绝次数")
+        val rateLimited: Long?,
+        /**
          * Total latency in ms
          *
          * @author FatttSnake, fatttsnake@gmail.com

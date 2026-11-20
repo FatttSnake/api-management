@@ -53,12 +53,12 @@ data class ApiInterfaceUpdateParam(
     @field:Schema(description = "是否需要 API Key", example = "true")
     var needKey: Boolean?,
     /**
-     * Rate limit per minute (null = inherit plugin default)
+     * Per-API total rate limit per minute across all callers (null/0 = inherit plugin default)
      *
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      */
-    @field:Schema(description = "每分钟限流次数 (null=继承插件默认)", example = "100")
+    @field:Schema(description = "每接口每分钟总限流次数 (null/0=继承插件默认)", example = "100")
     var rateLimit: Int?,
     /**
      * Enable status

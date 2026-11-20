@@ -10,6 +10,7 @@ import top.fatweb.apimanagement.api.v1.PrincipalType
 import top.fatweb.apimanagement.aspectj.ApiAccessInterceptor
 import top.fatweb.apimanagement.aspectj.SysLogInterceptor
 import top.fatweb.apimanagement.component.plugin.PluginRegistryCache
+import top.fatweb.apimanagement.component.ratelimit.RateLimitResolver
 import top.fatweb.apimanagement.entity.api.ApiKeyPrincipal
 import top.fatweb.apimanagement.entity.permission.LoginUser
 import top.fatweb.apimanagement.plugin.runtime.route.PluginApiHandlerAdapter
@@ -86,6 +87,7 @@ class PluginWebConfig(
                     method = invocation.definition.method,
                 )
             } else {
+                val pluginRow = row.pluginId?.let { registryCache.getByPluginId(it) }
                 InterfaceInfo(
                     code = row.code ?: invocation.apiCode,
                     pluginId = row.pluginId ?: invocation.pluginId,
@@ -95,7 +97,7 @@ class PluginWebConfig(
                     price = row.price,
                     billingMode = row.billingMode?.code.orEmpty(),
                     needKey = row.needKey == 1,
-                    rateLimit = row.rateLimit,
+                    rateLimit = RateLimitResolver.resolveChildWithParent(row.rateLimit, pluginRow?.defaultRateLimit),
                     accessMode = row.accessMode?.code.orEmpty(),
                     path = row.path.orEmpty(),
                     method = row.method.orEmpty(),
