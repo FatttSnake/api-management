@@ -95,7 +95,7 @@ class ExceptionHandler {
      * @see ResponseResult
      */
     @ExceptionHandler(value = [Exception::class])
-    fun exceptionHandler(e: Exception, response: HttpServletResponse): ResponseResult<*> {
+    fun exceptionHandler(e: Exception, response: HttpServletResponse): Any {
         val result =
             when (e) {
                 // Request
