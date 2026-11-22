@@ -4,8 +4,6 @@ import com.auth0.jwt.exceptions.JWTDecodeException
 import com.auth0.jwt.exceptions.SignatureVerificationException
 import com.auth0.jwt.exceptions.TokenExpiredException
 import io.swagger.v3.oas.annotations.Hidden
-import jakarta.servlet.RequestDispatcher
-import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -29,7 +27,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.servlet.resource.NoResourceFoundException
-import top.fatweb.apimanagement.api.v1.ApiResponse
 import top.fatweb.apimanagement.component.ratelimit.RateLimitHeaders
 import top.fatweb.apimanagement.entity.common.ResponseCode
 import top.fatweb.apimanagement.entity.common.ResponseResult
@@ -91,17 +88,14 @@ class ExceptionHandler {
      * Handle all exception
      *
      * @param e Exception
-     * @param request Request object
-     * @return Response object; for API requests (path starting with /api/) the
-     * response uses the user-facing [ApiResponse] envelope, otherwise the internal
-     * [ResponseResult] envelope
+     * @param response Response object
+     * @return Response object
      * @author FatttSnake, fatttsnake@gmail.com
      * @since 1.0.0
      * @see ResponseResult
-     * @see ApiResponse
      */
     @ExceptionHandler(value = [Exception::class])
-    fun exceptionHandler(e: Exception, request: HttpServletRequest, response: HttpServletResponse): Any {
+    fun exceptionHandler(e: Exception, response: HttpServletResponse): ResponseResult<*> {
         val result =
             when (e) {
                 // Request
@@ -454,21 +448,6 @@ class ExceptionHandler {
                     ResponseResult.fail(ResponseCode.SYSTEM_ERROR, "Internal server error", null)
                 }
             }
-        val apiRequest =
-            request.requestURI.startsWith("/api/") ||
-                (request.getAttribute(RequestDispatcher.FORWARD_REQUEST_URI) as? String)?.startsWith("/api/") == true
-        if (!apiRequest) {
-            return result
-        }
-
-        val apiResponse = result.toApiResponse()
-        return if (response.status == HttpStatus.TOO_MANY_REQUESTS.value()) {
-            apiResponse.withHttpStatus(response.status)
-        } else {
-            apiResponse
-        }
+        return result
     }
-
-    private fun ResponseResult<*>.toApiResponse(): ApiResponse =
-        if (success) ApiResponse.ok(data, msg) else ApiResponse.fail(code, msg, data)
 }
